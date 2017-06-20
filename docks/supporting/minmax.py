@@ -24,8 +24,11 @@ def min_map(image,s):
 	shifted = make_shift(image,s)
 	return clip(np.argmin(shifted,axis=0) == s*s/2,s)
 
-def minmax_map(image,s):
+def minmax_map(image,s,clip_level=None):
+	if clip_level is None:
+		clip_level = s
 	shifted = make_shift(image,s)
 	mmax = np.argmax(shifted,axis=0) == s*s/2
 	mmin = np.argmin(shifted,axis=0) == s*s/2
-	return clip(mmin,s),clip(mmax,s)
+	# return clip(mmin,s),clip(mmax,s)
+	return clip(mmin,clip_level),clip(mmax,clip_level)

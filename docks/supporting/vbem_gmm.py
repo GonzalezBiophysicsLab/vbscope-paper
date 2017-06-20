@@ -1,4 +1,5 @@
 import numpy as np
+np.seterr(all="ignore")
 from kmeans import kmeans
 from scipy.special import psi,gammaln
 import normal_minmax_dist as nmd
@@ -34,7 +35,7 @@ def initialize_priors(x,k,init_kmeans=True):
 	prior  = theta(k)
 
 	if init_kmeans:
-		km = kmeans(x,k,nrestarts=10)
+		km = kmeans(x,k,nrestarts=5)
 		xsort = np.argsort(km.mu[:,0])
 		mu = km.mu[:,0][xsort]
 		var = km.var[:,0,0][xsort] + 1e-300
@@ -64,13 +65,13 @@ def initialize_priors(x,k,init_kmeans=True):
 	prior.m = mu
 
 	# prior.beta *= 1./np.abs(prior.m).max()#**.5
-	prior.beta *= 1./var**.75
+	prior.beta *= 1./var**.5
 	# prior.beta *= 1./var
 
 	prior.a *= 1.
 
-	# prior.b *= var**.5
-	prior.b *= var**.75
+	prior.b *= var**.5
+	# prior.b *= var**.75
 	# prior.b *= np.var(x)
 	# prior.b *= (np.abs(x.max()-x.min()))
 
@@ -91,7 +92,7 @@ class background():
 def initialize_priors_bg(x,k,bg,init_kmeans=True):
 	# Only use points that are above background
 	p_bg = np.exp(bg.lnprob(x)) # prob of being max-val background
-	cut = (x > bg.e_max_m)*(p_bg < p_bg.max()*.001) # when drops < 0.1% and greater than mean
+	cut = (x > bg.e_max_m)*(p_bg < p_bg.max()*.01) # when drops < 0.1% and greater than mean
 	if cut.sum() < 1:
 		cut = np.isfinite(x)
 	prior = initialize_priors(x[cut],k-1,init_kmeans=init_kmeans)
@@ -136,7 +137,7 @@ class vbem_gmm():
 
 		self.lowerbound = -np.inf
 
-		self.threshold = 1e-6
+		self.threshold = 1e-10
 		self.maxiters = 1000
 		self._debug = False
 
@@ -250,7 +251,7 @@ def _run(a):
 	a.run()
 	return a
 
-def robust_vbem(x,nstates,bg=None,nrestarts=7,nthreads=None):
+def robust_vbem(x,nstates,bg=None,nrestarts=7,nthreads=None,maxiters=1000):
 	import multiprocessing as mp
 
 	vbems = [vbem_gmm(x,nstates,bg,init_kmeans=1)]
@@ -258,6 +259,9 @@ def robust_vbem(x,nstates,bg=None,nrestarts=7,nthreads=None):
 	if nrestarts > 1:
 		for i in range(nrestarts - 1):
 			vbems.append(vbem_gmm(x,nstates,bg,init_kmeans=False))
+
+	for i in range(len(vbems)):
+		vbems[i].maxiters = maxiters
 
 	if not nthreads is None and nrestarts > 1:
 		pool = mp.Pool(nthreads)
