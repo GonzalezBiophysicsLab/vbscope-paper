@@ -104,7 +104,7 @@ class plotter(QWidget):
 		oname = QFileDialog.getSaveFileName(self, 'Export Traces', self.gui.data.filename[:-4]+'_traces.dat','*.dat')
 		if oname[0] != "":
 			try:
-				np.savetxt(oname[0],q,delimiter=',')
+				np.savetxt(oname[0],q.T,delimiter=',')
 			except:
 				QMessageBox.critical(self,'Export Traces','There was a problem trying to export the traces')
 
