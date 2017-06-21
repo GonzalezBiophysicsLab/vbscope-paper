@@ -189,11 +189,13 @@ class plotter(QWidget):
 
 
 	def cross_corr_order(self):
-		x = self.d[:,0] - self.d[:,0].mean(1)[:,None]
-		y = self.d[:,1] - self.d[:,1].mean(1)[:,None]
+		x = self.d[:,0] #- self.d[:,0].mean(1)[:,None]
+		y = self.d[:,1] #- self.d[:,1].mean(1)[:,None]
+		x = np.gradient(x,axis=1)
+		y = np.gradient(y,axis=1)
+
 		a = np.fft.fft(x,axis=1)
 		b = np.conjugate(np.fft.fft(y,axis=1))
-		b = np.fft.fft(y,axis=1)
 		order = np.fft.ifft((a*b),axis=1)
 		order = order[:,0].real.argsort()
 		return order
