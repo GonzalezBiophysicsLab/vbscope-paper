@@ -63,6 +63,7 @@ class dock_prefs(QWidget):
 	def update_table(self):
 		self.viewer.blockSignals(True)
 		p = self.gui.prefs.items()
+		p.sort()
 		rows = len(p)
 
 		columns = np.max([np.size(p[i][1]) for i in range(rows)])
