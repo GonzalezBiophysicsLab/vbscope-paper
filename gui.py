@@ -156,6 +156,8 @@ class gui(QMainWindow):
 
 				self.statusbar.showMessage('Loaded %s'%(self.data.dispname))
 				self.setWindowTitle('vbscope - %s'%(self.data.dispname))
+				self.prefs['filename'] = self.data.filename
+				self.docks['prefs'][1].update_table()
 			else:
 				QMessageBox.critical(None,'Could Not Load File','Could not load file: %s.\nMake sure to use a .TIF format file'%(fname[0]))
 
