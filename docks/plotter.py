@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog
+from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox
 from PyQt5.QtCore import Qt
 
 import numpy as np
@@ -53,6 +53,7 @@ class plotter(QWidget):
 		self.slider_select.setSizePolicy(sizePolicy)
 
 		self.button_export = QPushButton('Export')
+		self.checkbox_spot = QCheckBox('Plot Spot')
 
 		sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		self.canvas.setSizePolicy(sizePolicy)
@@ -73,6 +74,7 @@ class plotter(QWidget):
 		twidg = QWidget()
 		hbox = QHBoxLayout()
 		hbox.addWidget(self.slider_select)
+		hbox.addWidget(self.checkbox_spot)
 		hbox.addWidget(self.button_export)
 		twidg.setLayout(hbox)
 
@@ -118,23 +120,24 @@ class plotter(QWidget):
 		self.update()
 
 	def plot_spot(self):
-		self.gui.plot.clear_collections()
-		self.ts = self.gui.docks['transform'][1].transforms
-		regions,shifts = self.gui.data.regions_shifts()
+		if self.checkbox_spot.checkState():
+			self.gui.plot.clear_collections()
+			self.ts = self.gui.docks['transform'][1].transforms
+			regions,shifts = self.gui.data.regions_shifts()
 
-		# xys = [self.spots[:,np.nonzero(np.arange(self.spots.shape[1]) != self.index)[0]] for _ in range(self.gui.data.ncolors)]
-		# for j in range(1,self.gui.data.ncolors):
-		# 	xys[j] = self.ts[j][0](xys[j].T).T + shifts[j][:,None]
-		#
-		# self.gui.plot.scatter(xys[0][0],xys[0][1],radius=.66,color='red')
-		# self.gui.plot.scatter(xys[1][0],xys[1][1],radius=.66,color='red')
+			# xys = [self.spots[:,np.nonzero(np.arange(self.spots.shape[1]) != self.index)[0]] for _ in range(self.gui.data.ncolors)]
+			# for j in range(1,self.gui.data.ncolors):
+			# 	xys[j] = self.ts[j][0](xys[j].T).T + shifts[j][:,None]
+			#
+			# self.gui.plot.scatter(xys[0][0],xys[0][1],radius=.66,color='red')
+			# self.gui.plot.scatter(xys[1][0],xys[1][1],radius=.66,color='red')
 
-		xys = [self.spots[:,self.index] for _ in range(self.gui.data.ncolors)]
-		for j in range(1,self.gui.data.ncolors):
-			xys[j] = self.ts[j][0](xys[j].reshape((1,2))).T[:,0] + shifts[j]
-		xys = np.array(xys)
-		self.gui.plot.scatter(xys[:,0],xys[:,1],radius=1.25,color='yellow')
-		self.gui.plot.canvas.draw()
+			xys = [self.spots[:,self.index] for _ in range(self.gui.data.ncolors)]
+			for j in range(1,self.gui.data.ncolors):
+				xys[j] = self.ts[j][0](xys[j].reshape((1,2))).T[:,0] + shifts[j]
+			xys = np.array(xys)
+			self.gui.plot.scatter(xys[:,0],xys[:,1],radius=1.25,color='yellow')
+			self.gui.plot.canvas.draw()
 
 	def init_shortcuts(self):
 		self.make_shortcut(Qt.Key_Left,lambda : self.key('left'))
