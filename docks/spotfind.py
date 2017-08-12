@@ -181,8 +181,15 @@ class dock_spotfind(QWidget):
 			if not self.flag_priorsloaded:
 				self.get_priors()
 			self.gmms,self.locs = self.setup_spot_find(self.gui.data.current_frame)
-			for i in range(self.gui.data.ncolors):
-				self.gmms[i].run()
+
+			if self.gui.prefs['ncpu'] > 1:
+				pool = mp.Pool(self.gui.prefs['ncpu'])
+				self.gmms = pool.map(_run,self.gmms)
+				pool.close()
+			else:
+				self.gmms = map(_run,self.gmms)
+			# for i in range(self.gui.data.ncolors):
+			# 	self.gmms[i].run()
 			self.update_spots()
 			self.gui.plot.clear_collections()
 			self.plot_spots()
@@ -390,9 +397,9 @@ class dock_spotfind(QWidget):
 
 		## Classify local maxes
 		if not prior is None:
-			gmm = vb.vbem_gmm(image[mmax], p['nstates'], bg=background, prior=prior, init_kmeans=False)
+			gmm = vb.vbem_gmm(image[mmax], p['nstates'], bg=background, prior=prior)
 		else:
-			gmm = vb.vbem_gmm(image[mmax], p['nstates'], bg=background, init_kmeans=True)
+			gmm = vb.vbem_gmm(image[mmax], p['nstates'], bg=background)
 		gmm.threshold = p['threshold']
 		gmm.maxiters = p['maxiterations']
 		gmm._debug = False

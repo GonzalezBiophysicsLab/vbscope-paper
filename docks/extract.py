@@ -81,7 +81,7 @@ class dock_extract(QWidget):
 	def get_sigma(self,j):
 		''' j is the color index to pick the wavelenght of light '''
 
-		c = 0.45 # .45 or .42, airy disk to gaussian
+		c = 0.42 # .45 or .42, airy disk to gaussian
 		psf_sig = c*self.gui.prefs['wavelengths_nm'][j]*self.gui.prefs['numerical_aperture']
 		sigma = psf_sig/self.gui.prefs['pixel_size']*self.gui.prefs['magnification']/self.gui.prefs['binning']
 		return sigma
@@ -180,10 +180,12 @@ class dock_extract(QWidget):
 					n = self.gui.data.movie[:,np.round(xyi[0]).astype('i'),np.round(xyi[1]).astype('i')]
 					# n = ((m-b[:,None,None])*psi[None,:,:]).sum((1,2))/np.sum(psi**2.)
 
-					it = 0
 					n0 = n.sum()
-					for it in xrange(1000):
+					psum = np.sum(psi**2.)
+					for it in xrange(100):
 						b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
+						# b = b.mean()
+						# n = np.sum((m - b)*psi[None,:,:] ,axis=(1,2)) / psum
 						n = np.sum((m - b[:,None,None])*psi[None,:,:] ,axis=(1,2))/np.sum(psi**2.)
 						n1 = n.sum()
 						if np.isclose(n1,n0):

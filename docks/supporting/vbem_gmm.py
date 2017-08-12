@@ -1,6 +1,5 @@
 import numpy as np
 np.seterr(all="ignore")
-from kmeans import kmeans
 from scipy.special import psi,gammaln
 import normal_minmax_dist as nmd
 
@@ -31,49 +30,20 @@ class theta():
 		t.update_expectations()
 		return t
 
-def initialize_priors(x,k,init_kmeans=True):
+def initialize_priors(x,k):
 	prior  = theta(k)
 
-	if init_kmeans:
-		km = kmeans(x,k,nrestarts=5)
-		xsort = np.argsort(km.mu[:,0])
-		mu = km.mu[:,0][xsort]
-		var = km.var[:,0,0][xsort] + 1e-300
-		# var = var.max()
-		var = np.var(x)
-		# if np.any(~np.isfinite(var)): var = (np.abs(x.max()-x.min()))
-		# var = (np.abs(x.max()-x.min()))**1.
+	xmin = np.percentile(x,.01)
+	xmax = np.percentile(x,99.99)
+	np.random.seed()
+	mu = np.random.uniform(xmin,xmax,size=k)
+	mu.sort()
 
-	else:
-		xmin = x.min()
-		xmax = x.max()
-		# mu = np.random.rand(k)*(xmax-xmin) + xmin
-		# mu.sort() # keep states ordered by mu
-		dx = (xmax-xmin)/k
-		np.random.seed()
-		mu = np.linspace(xmin,xmax,k) + np.random.randn(k)*dx**.5
-
-		if mu.size == 1:
-			var = np.var(x)
-		else:
-			var = np.var(mu)
-			# var = (dx)**2.
-
-	# var = (np.abs(x.max()-x.min()))#np.var(x)
-
-	# Setup priors
+	# vbFRET priors are alpha = 1, a = 2.5, b = 0.01, beta = 0.25
 	prior.m = mu
-
-	# prior.beta *= 1./np.abs(prior.m).max()#**.5
-	prior.beta *= 1./var**.5
-	# prior.beta *= 1./var
-
-	prior.a *= 1.
-
-	prior.b *= var**.5
-	# prior.b *= var**.75
-	# prior.b *= np.var(x)
-	# prior.b *= (np.abs(x.max()-x.min()))
+	prior.a = np.zeros_like(mu)+.1
+	prior.b = np.zeros_like(mu)+.005
+	prior.beta = np.zeros_like(mu)+.25
 
 	return prior
 
@@ -89,25 +59,25 @@ class background():
 	def lnprob(self,x):
 		return nmd.lnp_normal_max(x,self.n,self.mu,self.var)
 
-def initialize_priors_bg(x,k,bg,init_kmeans=True):
+def initialize_priors_bg(x,k,bg):
 	# Only use points that are above background
 	p_bg = np.exp(bg.lnprob(x)) # prob of being max-val background
 	cut = (x > bg.e_max_m)*(p_bg < p_bg.max()*.01) # when drops < 0.1% and greater than mean
 	if cut.sum() < 1:
 		cut = np.isfinite(x)
-	prior = initialize_priors(x[cut],k-1,init_kmeans=init_kmeans)
+	prior = initialize_priors(x[cut],k-1)
 	prior.m = np.append(prior.m[0] - 1e-6,prior.m)
 	prior.beta = np.append(prior.beta[0] - 1e-6,prior.beta)
 	prior.a = np.append(prior.a[0] - 1e-6,prior.a)
 	prior.b = np.append(prior.b[0] - 1e-6,prior.b)
 	prior.u = np.append(prior.u[0] - 1e-6,prior.u)
 
-	# prior = initialize_priors(x,k,init_kmeans=init_kmeans)
+	# prior = initialize_priors(x,k)
 
 	return prior
 
 class vbem_gmm():
-	def __init__(self,x,nstates,bg=None,prior=None,init_kmeans=True):
+	def __init__(self,x,nstates,bg=None,prior=None):
 		'''
 		Make bg a background class object to make the 0^th class a max-value normal distribution set by bg
 		Keeping bg as None is just a regular VBEM GMM
@@ -123,10 +93,10 @@ class vbem_gmm():
 		# Initialize Priors
 		if prior is None and self._bg_flag:
 			self.k += 1
-			self.prior = initialize_priors_bg(self.x,self.k,self.background,init_kmeans=init_kmeans)
+			self.prior = initialize_priors_bg(self.x,self.k,self.background)
 
 		elif prior is None and not self._bg_flag:
-			self.prior = initialize_priors(self.x,self.k,init_kmeans=init_kmeans)
+			self.prior = initialize_priors(self.x,self.k)
 		else:
 			self.prior = prior
 
@@ -254,11 +224,11 @@ def _run(a):
 def robust_vbem(x,nstates,bg=None,nrestarts=7,nthreads=None,maxiters=1000):
 	import multiprocessing as mp
 
-	vbems = [vbem_gmm(x,nstates,bg,init_kmeans=1)]
+	vbems = [vbem_gmm(x,nstates,bg)]
 
 	if nrestarts > 1:
 		for i in range(nrestarts - 1):
-			vbems.append(vbem_gmm(x,nstates,bg,init_kmeans=False))
+			vbems.append(vbem_gmm(x,nstates,bg))
 
 	for i in range(len(vbems)):
 		vbems[i].maxiters = maxiters

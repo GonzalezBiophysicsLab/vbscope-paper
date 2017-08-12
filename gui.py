@@ -80,8 +80,8 @@ class gui(QMainWindow):
 		self.tabifyDockWidget(self.docks['transform'][0],self.docks['extract'][0])
 		self.tabifyDockWidget(self.docks['extract'][0],self.docks['prefs'][0])
 
-		self.docks['background'][0].close()
-		self.docks['prefs'][0].close()
+		# self.docks['background'][0].close()
+		# self.docks['prefs'][0].close()
 		self.docks['spotfind'][0].raise_()
 
 

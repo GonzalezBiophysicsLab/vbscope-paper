@@ -20,17 +20,21 @@ default = {
 'color map':'Greys_r',#'viridis',
 
 'tau':0.1,
-'bleedthrough':0.00,
+'bleedthrough':0.05,
 'same_cutoff':1.,
 
 'playback_fps':100,
 
-'alignment_order':2,
+'alignment_order':4,
 'contrast_scale':10.,
 
 'maxiterations':1000,
 'threshold':1e-10,
 'ncpu':mp.cpu_count(),
-'nstates':10
+'nstates':4,
+
+'downsample':1,
+'snr_threshold':.5,
+'pb_length':10
 
 }
