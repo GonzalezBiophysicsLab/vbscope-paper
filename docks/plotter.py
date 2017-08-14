@@ -2,24 +2,32 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QSho
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator
 
-import numpy as np
-from supporting.photobleaching import get_point_pbtime, calc_pb_time, pb_ensemble, pb_snr
-
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt
 
+import numpy as np
+from supporting.photobleaching import get_point_pbtime, calc_pb_time, pb_ensemble, pb_snr
+
+
+
 class fake(object):
 	pass
 
+
+## GUI for plotting 2D smFRET trajectories
 class ui_plotter(QMainWindow):
 	def __init__(self,data,spots,bg=None,parent=None,):
 		super(QMainWindow,self).__init__(parent)
+
+		## If there's no vbscope movie GUI, then still need to have access to the preferences
 		if not parent is None:
 			self.gui = parent.gui
 		else:
 			self.gui = fake()
-			self.gui.prefs = {'bleedthrough':.03,'tau':.1,'downsample':1,'pb_length':10,'snr_threshold':1.}
+			self.gui.prefs = {'bleedthrough':.04,'tau':.1,'downsample':1,'pb_length':10,'snr_threshold':1.}
+
+		## Make the plotter widget
 		self.ui = plotter(data,self)
 		self.setCentralWidget(self.ui)
 		self.show()
@@ -33,6 +41,7 @@ class ui_plotter(QMainWindow):
 			pass
 		print 'goodbye'
 
+## The QWidget that is embedded in the main window class `ui_plotter`
 class plotter(QWidget):
 	def __init__(self,data,parent=None):
 		super(QWidget,self).__init__(parent=parent)
@@ -40,14 +49,19 @@ class plotter(QWidget):
 		self.gui = parent.gui
 		layout = QVBoxLayout()
 
+		## Initialize Plots
 		self.f,self.a = plt.subplots(2,2,gridspec_kw={'width_ratios':[6,1]},figsize=(6.5,4))
 		self.canvas = FigureCanvas(self.f)
+		sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+		self.canvas.setSizePolicy(sizePolicy)
 		self.toolbar = NavigationToolbar(self.canvas,None)
 
+		## Initialize trajectory slider
 		self.slider_select = QSlider(Qt.Horizontal)
 		sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 		self.slider_select.setSizePolicy(sizePolicy)
 
+		### Initialize line edit boxes for y-min and y-max intensity values
 		scalewidget = QWidget()
 		g = QGridLayout()
 		g.addWidget(QLabel('Min'),0,0)
@@ -63,24 +77,21 @@ class plotter(QWidget):
 			ll.setText(str(0.))
 		scalewidget.setLayout(g)
 
-		sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-		self.canvas.setSizePolicy(sizePolicy)
-
+		## Put all of the widgets together
 		twidg = QWidget()
 		hbox = QHBoxLayout()
 		hbox.addWidget(self.slider_select)
-		# hbox.addWidget(self.checkbox_spot)
-		# hbox.addWidget(self.button_export)
 		twidg.setLayout(hbox)
-
 		layout.addWidget(self.canvas)
 		layout.addWidget(self.toolbar)
 		layout.addWidget(twidg)
 		layout.addWidget(scalewidget)
 		self.setLayout(layout)
 
+		## Initialize Menu options
 		self.setup_menubar()
 
+		## Initialize beginnning data (or lack thereof)
 		self.index = 0
 		self.d = data
 		if not self.d is None:
@@ -88,17 +99,25 @@ class plotter(QWidget):
 			self.initialize_plots()
 			self.update()
 
+		## Connect everything for interaction
 		self.init_shortcuts()
-		self.update_sliders()
+		self.initialize_sliders()
 		self.slider_select.valueChanged.connect(self.slide_switch)
 		self.f.canvas.mpl_connect('button_press_event', self.mouse_click)
 		plt.close(self.f)
 
+	## Read in y-min and y-max values, then update the plot
 	def update_minmax(self):
 		self.yminmax = np.array((float(self.le_min.text()),float(self.le_max.text())))
 		self.update()
+		for le in [self.le_min,self.le_max]:
+			try:
+				le.clearFocus()
+			except:
+				pass
 
-	def update_sliders(self):
+	## Set the trajectory selection limits
+	def initialize_sliders(self):
 		self.slider_select.setMinimum(0)
 		mm = 0
 		if not self.d is None:
@@ -106,32 +125,39 @@ class plotter(QWidget):
 		self.slider_select.setMaximum(mm)
 		self.slider_select.setValue(self.index)
 
+	## Plot initial data to set aesthetics
 	def initialize_plots(self):
+		## clear everything
 		[[aaa.cla() for aaa in aa] for aa in self.a]
 
 		lw=.75
 		pb=.2
-		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='g',ls=':',alpha=pb,lw=.75)
-		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='g',alpha=.8,lw=.75)
-		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='g',ls=':',alpha=pb,lw=.75)
-		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='r',ls=':',alpha=pb,lw=.75)
-		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='r',alpha=.8,lw=.75)
-		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='r',ls=':',alpha=pb,lw=.75)
 
-		self.a[1][0].plot(np.random.rand(self.d.shape[0]),color='b',ls=':',alpha=pb,lw=.75)
-		self.a[1][0].plot(np.random.rand(self.d.shape[0]),color='b',alpha=.8,lw=.75)
-		self.a[1][0].plot(np.random.rand(self.d.shape[0]),color='b',ls=':',alpha=pb,lw=.75)
+		## plot pre-truncated, kept, and post-truncated trajectory (Intensities)
+		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='g',ls=':',alpha=pb,lw=lw)
+		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='g',alpha=.8,lw=lw)
+		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='g',ls=':',alpha=pb,lw=lw)
+		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='r',ls=':',alpha=pb,lw=lw)
+		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='r',alpha=.8,lw=lw)
+		self.a[0][0].plot(np.random.rand(self.d.shape[0]),color='r',ls=':',alpha=pb,lw=lw)
 
+		## plot pre-truncated, kept, and post-truncated trajectory (E_{FRET})
+		self.a[1][0].plot(np.random.rand(self.d.shape[0]),color='b',ls=':',alpha=pb,lw=lw)
+		self.a[1][0].plot(np.random.rand(self.d.shape[0]),color='b',alpha=.8,lw=lw)
+		self.a[1][0].plot(np.random.rand(self.d.shape[0]),color='b',ls=':',alpha=pb,lw=lw)
+
+		## Plot histograms of donor, acceptor, E_{FRET}
 		self.a[0][1].plot(np.random.rand(100),color='g',alpha=.8)
 		self.a[0][1].plot(np.random.rand(100),color='r',alpha=.8)
 		self.a[1][1].plot(np.random.rand(100),color='b',alpha=.8)
 
+		## Make it so that certain plots zoom together
 		self.a[0][0].get_shared_y_axes().join(self.a[0][0],self.a[0][1])
 		self.a[1][0].get_shared_y_axes().join(self.a[1][0],self.a[1][1])
-
 		self.a[0][0].get_shared_x_axes().join(self.a[0][0],self.a[1][0])
 		self.a[0][1].get_shared_x_axes().join(self.a[0][1],self.a[1][1])
 
+		## Set the ticks/labels so that they look nice
 		plt.setp(self.a[0][0].get_xticklabels(), visible=False)
 		for aa in [self.a[0][1],self.a[1][1]]:
 			aa.yaxis.tick_right()
@@ -143,23 +169,27 @@ class plotter(QWidget):
 		self.a[0][1].tick_params(axis='y',which='both',direction='in')
 		self.a[1][1].tick_params(axis='y',which='both',direction='in')
 
-
+		## Redraw everything
 		self.update()
 		self.label_axes()
 		self.f.tight_layout()
 		self.f.subplots_adjust(hspace=.03,wspace=0.015)
 		self.f.canvas.draw()
 
+	## Reset everything with the new trajectories loaded in with this function
 	def initialize_data(self,data):
 		self.d = data
 
-		self.yminmax = np.percentile(self.d.flatten(),[1.,99.])
+		## Guess at good y-limits for the plot
+		self.yminmax = np.percentile(self.d.flatten(),[.1,99.9])
 		self.le_min.setText(str(self.yminmax[0]))
 		self.le_max.setText(str(self.yminmax[1]))
 
+		## Sort trajectories based on anti-correlation (most is first, least is last)
 		order = self.cross_corr_order()
 		self.d = self.d[order]
 
+		## Calculate/set photobleaching, initialize class list
 		q = np.copy(self.d)
 		q[:,1] -= self.gui.prefs['bleedthrough']*q[:,0]
 		self.fret = q[:,1]/(q[:,0] + q[:,1])
@@ -174,6 +204,7 @@ class plotter(QWidget):
 		self.pb_list = l2
 		self.class_list = np.zeros(self.d.shape[0])
 
+	## Setup the menu items at the top
 	def setup_menubar(self):
 		self.menubar = self.parent().menuBar()
 		self.menubar.setNativeMenuBar(False)
@@ -216,6 +247,20 @@ class plotter(QWidget):
 		for f in [tools_cull,tools_cullpb]:
 			menu_tools.addAction(f)
 
+		### plots
+		menu_plots = self.menubar.addMenu('Plots')
+
+		plots_1d = QAction('1D Histogram', self)
+		plots_1d.triggered.connect(self.hist1d)
+		plots_2d = QAction('2D Histogram', self)
+		plots_2d.triggered.connect(self.hist2d)
+		plots_tdp = QAction('Transition Density Plot', self)
+		plots_tdp.triggered.connect(self.tdplot)
+
+		for f in [plots_1d,plots_2d,plots_tdp]:
+			menu_plots.addAction(f)
+
+	## Remove trajectories with SNR less than threshold
 	def cull_snr(self):
 		snr_threshold = self.gui.prefs['snr_threshold']
 
@@ -241,8 +286,9 @@ class plotter(QWidget):
 		self.index = 0
 		self.initialize_data(d)
 		self.initialize_plots()
-		self.update_sliders()
+		self.initialize_sliders()
 
+	## Remove trajectories with number of kept-frames < threshold
 	def cull_pb(self):
 		pbt = self.pb_list
 		pret = self.pre_list
@@ -253,9 +299,9 @@ class plotter(QWidget):
 		self.index = 0
 		self.initialize_data(d)
 		self.initialize_plots()
-		self.update_sliders()
+		self.initialize_sliders()
 
-
+	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)
 	def export_traces(self):
 		n = 2 #number of colors
 		if not self.d is None:
@@ -274,6 +320,7 @@ class plotter(QWidget):
 				except:
 					QMessageBox.critical(self,'Export Traces','There was a problem trying to export the traces')
 
+	## Save classes/bleach times in the vbscope format (Nx5) (with commas)
 	def export_classes(self):
 		n = 2 #number of colors
 		if not self.d is None:
@@ -290,6 +337,7 @@ class plotter(QWidget):
 				except:
 					QMessageBox.critical(self,'Export Classes','There was a problem trying to export the classes/cuts')
 
+	## Try to load trajectories from a vbscope style file (commas)
 	def load_traces(self):
 		fname = QFileDialog.getOpenFileName(self,'Choose file to load traces','./')#,filter='TIF File (*.tif *.TIF)')
 		if fname[0] != "":
@@ -306,8 +354,9 @@ class plotter(QWidget):
 			if success:
 				self.initialize_data(d)
 				self.initialize_plots()
-				self.update_sliders()
+				self.initialize_sliders()
 
+	## Try to load classes/bleach times from a vbscope style file (commas) (Nx5)
 	def load_classes(self):
 		fname = QFileDialog.getOpenFileName(self,'Choose file to load classes','./')#,filter='TIF File (*.tif *.TIF)')
 		if fname[0] != "":
@@ -325,22 +374,24 @@ class plotter(QWidget):
 				self.pb_list = np.array([d[:,2],d[:,4]]).min(0)
 				self.update()
 
+	## Handler for mouse clicks in main plots
 	def mouse_click(self,event):
 		if (event.inaxes == self.a[0][0] or event.inaxes == self.a[1][0]) and not self.d is None:
+			## Right click - set photobleaching point
 			if event.button == 3 and self.toolbar._active is None:
 				self.pb_list[self.index] = int(np.round(event.xdata/self.gui.prefs['tau']))
 				self.update()
+			## Left click - set pre-truncation point
 			if event.button == 1 and self.toolbar._active is None:
 				self.pre_list[self.index] = int(np.round(event.xdata/self.gui.prefs['tau']))
 				self.update()
+			## Middle click - reset pre and post points to calculated values
 			if event.button == 2 and self.toolbar._active is None:
 				self.pre_list[self.index] = 0
 				self.pb_list[self.index] = get_point_pbtime(self.d[self.index].sum(0))
 				self.update()
-			# x = event.xdata
-			# y = event.ydata
-			# print x,y,event.button
 
+	## Add axis labels to plots
 	def label_axes(self):
 		fs = 12
 		self.a[0][0].set_ylabel(r'Intensity (a.u.)',fontsize=fs,va='top')
@@ -348,10 +399,12 @@ class plotter(QWidget):
 		self.a[1][0].set_xlabel(r'Time (s)',fontsize=fs)
 		self.a[1][1].set_xlabel(r'Probability',fontsize=fs)
 
+	## callback function for changing the trajectory using the slider
 	def slide_switch(self,v):
 		self.index = v
 		self.update()
 
+	## Helper function to setup keyboard shortcuts
 	def init_shortcuts(self):
 		self.make_shortcut(Qt.Key_Left,lambda : self.key('left'))
 		self.make_shortcut(Qt.Key_Right,lambda : self.key('right'))
@@ -367,11 +420,13 @@ class plotter(QWidget):
 		self.make_shortcut(Qt.Key_9,lambda : self.key(9))
 		self.make_shortcut(Qt.Key_0,lambda : self.key(0))
 
+	## Helper function to setup keyboard shortcuts
 	def make_shortcut(self,key,fxn):
 		qs = QShortcut(self)
 		qs.setKey(key)
 		qs.activated.connect(fxn)
 
+	## Callback function for keyboard presses
 	def key(self,kk):
 		if kk == 'right':
 			self.index += 1
@@ -394,20 +449,92 @@ class plotter(QWidget):
 			self.gui.app.processEvents()
 		except:
 			pass
-
 		# self.update()
 
-	def ensemble_hist(self):
+	def get_plot_data(self):
+		# f = self.fret
+		fpb = self.fret.copy()
+		for i in range(fpb.shape[0]):
+			fpb[i,:self.pre_list[i]] = np.nan
+			fpb[i,self.pb_list[i]:] = np.nan
+		return fpb
+
+	## Plot the 1D Histogram of the ensemble
+	def hist1d(self):
+		fpb = self.get_plot_data()
+
 		plt.figure(5)
-		f = self.fret
-		fpb = f.copy()
-		for i in range(f.shape[0]):
-			fpb[:self.pre_list[i]] = np.nan
-			fpb[self.pb_list[i]:] = np.nan
-		plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
+		# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
 		plt.hist(fpb.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
+		plt.xlim(-.4,1.4)
+		plt.xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
+		plt.ylabel('Probability',fontsize=14)
+		plt.tight_layout()
 		plt.show()
 
+	def hist2d(self):
+		fpb = self.get_plot_data()
+
+		plt.figure(6)
+		rx = np.linspace(-.4,1.4,81)
+		ry = np.arange(fpb.shape[0])*self.gui.prefs['tau']
+		x,y = np.meshgrid(rx,ry,indexing='ij')
+		z = np.zeros_like(x)
+		for i in range(ry.shape[0]):
+			hy,hx = np.histogram(fpb[:,i],bins=rx.size,range=(rx.min(),rx.max()))
+			z[:,i] = hy
+
+		from scipy.ndimage import gaussian_filter
+		z = gaussian_filter(z,(1,5))
+		cm = plt.cm.jet
+		cm.set_under('w')
+		vmin = 0
+		pc = plt.pcolor(y.T,x.T,z.T,cmap=cm,vmin=vmin,edgecolors='face')
+		cb = plt.colorbar()
+		cb.solids.set_edgecolor('face')
+
+		plt.xlim(0,ry.max())
+		plt.xlabel('Time (s)',fontsize=14)
+		plt.ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
+		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
+		plt.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
+		plt.tight_layout()
+		plt.show()
+
+	def tdplot(self):
+		fpb = self.get_plot_data()
+		d = np.array([[fpb[i,:-1],fpb[i,1:]] for i in range(fpb.shape[0])])
+
+		plt.figure(7)
+		rx = np.linspace(-.4,1.4,81)
+		ry = np.linspace(-.4,1.4,81)
+		x,y = np.meshgrid(rx,ry,indexing='ij')
+		dx = d[:,0].flatten()
+		dy = d[:,1].flatten()
+		cut = np.isfinite(dx)*np.isfinite(dy)
+		z,hx,hy = np.histogram2d(dx[cut],dy[cut],bins=[rx.size,ry.size],range=[[rx.min(),rx.max()],[ry.min(),ry.max()]])
+
+		from scipy.ndimage import gaussian_filter
+		z = gaussian_filter(z,(1,1.))
+		cm = plt.cm.jet
+		cm.set_under('w')
+		vmin = 0
+		pc = plt.pcolor(y.T,x.T,np.log(z).T,cmap=cm,vmin=vmin,edgecolors='face',lw=1)
+		cb = plt.colorbar()
+		cb.solids.set_edgecolor('face')
+		cb.solids.set_rasterized(True)
+
+		plt.xlim(rx.min(),rx.max())
+		plt.ylim(ry.min(),ry.max())
+		plt.xlabel(r'Initial E$_{\rm FRET}$',fontsize=14)
+		plt.ylabel(r'Final E$_{\rm FRET}$',fontsize=14)
+		plt.title('ln(counts)')
+		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
+		plt.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
+		plt.tight_layout()
+		plt.show()
+
+	## Plot current trajectory
 	def update(self):
 		pbp = self.gui.prefs['bleedthrough']
 		downsample = 1#int(self.gui.prefs['downsample'])
@@ -492,6 +619,7 @@ class plotter(QWidget):
 		self.a[1][1].xaxis.set_label_coords(0.5, -.2)
 		self.canvas.draw()
 
+	## Calculate the anti-correlation for sorting traces
 	def cross_corr_order(self):
 		x = self.d[:,0] #- self.d[:,0].mean(1)[:,None]
 		y = self.d[:,1] #- self.d[:,1].mean(1)[:,None]
@@ -504,7 +632,7 @@ class plotter(QWidget):
 		order = order[:,0].real.argsort()
 		return order
 
-
+## Launch the main window as a standalone GUI (ie without vbscope analyze movies)
 def launch():
 	import sys
 	app = QApplication([])
@@ -514,5 +642,6 @@ def launch():
 	app.setWindowIcon(g.windowIcon())
 	sys.exit(app.exec_())
 
+## Run from the command line with `python plotter.py`
 if __name__ == '__main__':
 	launch()
