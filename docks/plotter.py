@@ -260,6 +260,44 @@ class plotter(QWidget):
 		for f in [plots_1d,plots_2d,plots_tdp]:
 			menu_plots.addAction(f)
 
+		### classes
+		menu_classes = self.menubar.addMenu("Classes")
+
+		self.action_classes = []
+		for i in range(10):
+			m = QAction(str(i),self)
+			m.setCheckable(True)
+			m.setChecked(True)
+			self.action_classes.append(m)
+
+		toggle = QAction("Toggle all",self)
+		toggle.triggered.connect(self.toggle_all_classes)
+
+		counts = QAction("Class Counts",self)
+		counts.triggered.connect(self.show_class_counts)
+
+		separator = QAction(self)
+		separator.setSeparator(True)
+
+		menu_classes.addAction(counts)
+		menu_classes.addAction(toggle)
+		menu_classes.addAction(separator)
+		for m in self.action_classes:
+			menu_classes.addAction(m)
+
+
+	def show_class_counts(self):
+		if not self.d is None:
+			report = "Class\tCounts\n"
+			for i in range(10):
+				c = (self.class_list == i).sum()
+				report += str(i)+'\t%d\n'%(c)
+			print report
+
+	def toggle_all_classes(self):
+		for m in self.action_classes:
+			m.setChecked(not m.isChecked())
+
 	## Remove trajectories with SNR less than threshold
 	def cull_snr(self):
 		snr_threshold = self.gui.prefs['snr_threshold']
@@ -309,6 +347,8 @@ class plotter(QWidget):
 			if n == 2:
 				dd[:,1] -= self.gui.prefs['bleedthrough']*dd[:,0]
 
+			checked = self.get_checked()
+			dd = dd[checked]
 			q = np.zeros((dd.shape[0]*n,dd.shape[2]))
 			for i in range(n):
 				q[i::n] = dd[:,i]
@@ -329,6 +369,8 @@ class plotter(QWidget):
 			for i in range(n):
 				q[:,1+2*i] = self.pre_list
 				q[:,1+2*i+1] = self.pb_list
+			checked = self.get_checked()
+			q = q[checked]
 
 			oname = QFileDialog.getSaveFileName(self, 'Export Classes/Cuts', '_classes.dat','*.dat')
 			if oname[0] != "":
@@ -457,7 +499,16 @@ class plotter(QWidget):
 		for i in range(fpb.shape[0]):
 			fpb[i,:self.pre_list[i]] = np.nan
 			fpb[i,self.pb_list[i]:] = np.nan
+		checked = self.get_checked()
+		fpb = fpb[checked]
 		return fpb
+
+	def get_checked(self):
+		checked = np.zeros(self.d.shape[0],dtype='bool')
+		for i in range(10):
+			if self.action_classes[i].isChecked():
+				checked[np.nonzero(self.class_list == i)] = True
+		return checked
 
 	## Plot the 1D Histogram of the ensemble
 	def hist1d(self):
@@ -477,7 +528,7 @@ class plotter(QWidget):
 
 		plt.figure(6)
 		rx = np.linspace(-.4,1.4,81)
-		ry = np.arange(fpb.shape[0])*self.gui.prefs['tau']
+		ry = np.arange(fpb.shape[1])*self.gui.prefs['tau']
 		x,y = np.meshgrid(rx,ry,indexing='ij')
 		z = np.zeros_like(x)
 		for i in range(ry.shape[0]):
@@ -486,7 +537,8 @@ class plotter(QWidget):
 
 		from scipy.ndimage import gaussian_filter
 		z = gaussian_filter(z,(1,5))
-		cm = plt.cm.jet
+		z/=z.max()
+		cm = plt.cm.rainbow
 		cm.set_under('w')
 		vmin = 0
 		pc = plt.pcolor(y.T,x.T,z.T,cmap=cm,vmin=vmin,edgecolors='face')
@@ -515,11 +567,12 @@ class plotter(QWidget):
 		z,hx,hy = np.histogram2d(dx[cut],dy[cut],bins=[rx.size,ry.size],range=[[rx.min(),rx.max()],[ry.min(),ry.max()]])
 
 		from scipy.ndimage import gaussian_filter
-		z = gaussian_filter(z,(1,1.))
-		cm = plt.cm.jet
+		z = gaussian_filter(z,(.1,.1))
+		cm = plt.cm.rainbow
 		cm.set_under('w')
-		vmin = 0
-		pc = plt.pcolor(y.T,x.T,np.log(z).T,cmap=cm,vmin=vmin,edgecolors='face',lw=1)
+		vmin = 1
+		from matplotlib.colors import LogNorm
+		pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
 		cb = plt.colorbar()
 		cb.solids.set_edgecolor('face')
 		cb.solids.set_rasterized(True)
@@ -528,7 +581,7 @@ class plotter(QWidget):
 		plt.ylim(ry.min(),ry.max())
 		plt.xlabel(r'Initial E$_{\rm FRET}$',fontsize=14)
 		plt.ylabel(r'Final E$_{\rm FRET}$',fontsize=14)
-		plt.title('ln(counts)')
+		plt.title('Transition Density (Counts)')
 		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
 		plt.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
 		plt.tight_layout()
