@@ -33,17 +33,20 @@ class theta():
 def initialize_priors(x,k):
 	prior  = theta(k)
 
-	xmin = np.percentile(x,.01)
-	xmax = np.percentile(x,99.99)
+	xmin = np.percentile(x,.00001)
+	xmax = np.percentile(x,99.99999)
 	np.random.seed()
 	mu = np.random.uniform(xmin,xmax,size=k)
 	mu.sort()
 
 	# vbFRET priors are alpha = 1, a = 2.5, b = 0.01, beta = 0.25
+	# mu, .1, .005,.25
+	delta = 2.**16. # 16-bit camera
+
 	prior.m = mu
-	prior.a = np.zeros_like(mu)+.1
-	prior.b = np.zeros_like(mu)+.005
-	prior.beta = np.zeros_like(mu)+.25
+	prior.a = np.zeros_like(mu)+1.
+	prior.b = np.zeros_like(mu)+1./(36./(delta**2.))
+	prior.beta = np.zeros_like(mu)+(36./(delta**2.))*100.
 
 	return prior
 
