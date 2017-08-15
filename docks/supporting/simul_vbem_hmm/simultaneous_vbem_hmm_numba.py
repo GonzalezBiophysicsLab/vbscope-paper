@@ -36,11 +36,11 @@ def initialize_priors(data,nstates):
 	rho += 1.
 
 	# vbFRET priors are alpha = 1, a = 2.5, b = 0.01, beta = 0.25
-	alpha = np.zeros((nstates,nstates)) + .01 + np.identity(nstates)*10.
+	alpha = np.zeros((nstates,nstates)) + .01 + np.identity(nstates)*1.#10.
 	#.1,.005,.25
-	a = np.zeros(nstates) + 1.
-	b = np.zeros(nstates) + (xmax-xmin)**2./36.
-	beta = np.zeros(nstates) + nstates**2. * 36. / (xmax-xmin)**2.
+	a = np.zeros(nstates) + 2.5#1.
+	b = np.zeros(nstates) + 2.5*(xmax-xmin)**2./36.#(xmax-xmin)**2./36.
+	beta = np.zeros(nstates) + .25*nstates**2. * 36. / (xmax-xmin)**2.#nstates**2. * 36. / (xmax-xmin)**2.
 	return [m,beta,a,b,alpha,rho]
 
 def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
@@ -107,7 +107,7 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
 		if iteration == 0:
 			lowerbounds = lowerbounds[1:]
 		else:
-			if iteration > 5 and ((delta_change < threshold)):# or (lowerbounds[-1] == lowerbounds[-3])):
+			if iteration > 10 and ((delta_change < threshold)):# or (lowerbounds[-1] == lowerbounds[-3])):
 				converged = True
 				break
 

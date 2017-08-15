@@ -304,12 +304,12 @@ class plotter(QWidget):
 						if yy.size > 5:
 							y.append(yy)
 							ran.append(i)
-				nrestarts = 4
+				nrestarts = 8
 				priors = [hmm.initialize_priors(y,nstates) for _ in range(nrestarts)]
 
 				result,lbs = hmm.hmm(y,nstates,priors,nrestarts)
-
-				print '\nHMM - k = %d, lowerbound=%f'%(nstates,result.lowerbound)
+				print lbs
+				print '\nHMM - k = %d, iter= %d, lowerbound=%f'%(nstates,result.iterations,result.lowerbound)
 				print '  m:',result.m
 				print 'sig:',(result.b/result.a)**.5
 				rates = -np.log(1.-result.Astar)/self.gui.prefs['tau']
