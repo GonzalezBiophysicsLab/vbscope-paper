@@ -1,0 +1,3 @@
+from simultaneous_vbem_hmm_numba import hmm_with_restarts as hmm
+from simultaneous_vbem_hmm_numba import initialize_priors
+# from check_simulation import plot_results

@@ -157,41 +157,45 @@ class dock_extract(QWidget):
 				ns = []
 				bs = []
 				for i in xrange(xy.shape[1]):
-					xyi = np.round(xy[:,i]).astype('i')
-					xmin = np.max((0,xyi[0]-l))
-					xmax = np.min((self.gui.data.movie.shape[1]-1,xyi[0]+l))
-					ymin = np.max((0,xyi[1]-l))
-					ymax = np.min((self.gui.data.movie.shape[2]-1,xyi[1]+l))
+					try:
+						xyi = np.round(xy[:,i]).astype('i')
+						xmin = np.max((0,xyi[0]-l))
+						xmax = np.min((self.gui.data.movie.shape[1]-1,xyi[0]+l))
+						ymin = np.max((0,xyi[1]-l))
+						ymax = np.min((self.gui.data.movie.shape[2]-1,xyi[1]+l))
 
-					gx,gy = np.mgrid[xmin:xmax+1,ymin:ymax+1]
-					gx = gx.astype('f')
-					gy = gy.astype('f')
-					m = self.gui.data.movie[:,xmin:xmax+1,ymin:ymax+1].astype('f')
-					xyi = com(m.max(0)) + xy[:,i] - l
+						gx,gy = np.mgrid[xmin:xmax+1,ymin:ymax+1]
+						gx = gx.astype('f')
+						gy = gy.astype('f')
+						m = self.gui.data.movie[:,xmin:xmax+1,ymin:ymax+1].astype('f')
+						xyi = com(m.max(0)) + xy[:,i] - l
 
-					dex = .5 * (erf((xy[0,i]-gx+.5)/(np.sqrt(2.*sigma**2.)))
-						- erf((xy[0,i]-gx -.5)/(np.sqrt(2.*sigma**2.))))
-					dey = .5 * (erf((xy[1,i]-gy+.5)/(np.sqrt(2.*sigma**2.)))
-						- erf((xy[1,i]-gy -.5)/(np.sqrt(2.*sigma**2.))))
-					psi = dex*dey
+						dex = .5 * (erf((xy[0,i]-gx+.5)/(np.sqrt(2.*sigma**2.)))
+							- erf((xy[0,i]-gx -.5)/(np.sqrt(2.*sigma**2.))))
+						dey = .5 * (erf((xy[1,i]-gy+.5)/(np.sqrt(2.*sigma**2.)))
+							- erf((xy[1,i]-gy -.5)/(np.sqrt(2.*sigma**2.))))
+						psi = dex*dey
 
-					# b = np.mean(m*(1.-psi[None,:,:]),axis=(1,2))
-					b = np.mean(m,axis=(1,2))
-					n = self.gui.data.movie[:,np.round(xyi[0]).astype('i'),np.round(xyi[1]).astype('i')]
-					# n = ((m-b[:,None,None])*psi[None,:,:]).sum((1,2))/np.sum(psi**2.)
+						# b = np.mean(m*(1.-psi[None,:,:]),axis=(1,2))
+						b = np.mean(m,axis=(1,2))
+						n = self.gui.data.movie[:,np.round(xyi[0]).astype('i'),np.round(xyi[1]).astype('i')]
+						# n = ((m-b[:,None,None])*psi[None,:,:]).sum((1,2))/np.sum(psi**2.)
 
-					n0 = n.sum()
-					psum = np.sum(psi**2.)
-					for it in xrange(100):
-						b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
-						# b = b.mean()
-						# n = np.sum((m - b)*psi[None,:,:] ,axis=(1,2)) / psum
-						n = np.sum((m - b[:,None,None])*psi[None,:,:] ,axis=(1,2))/np.sum(psi**2.)
-						n1 = n.sum()
-						if np.isclose(n1,n0):
-							break
-						else:
-							n0 = n1
+						n0 = n.sum()
+						psum = np.sum(psi**2.)
+						for it in xrange(100):
+							b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
+							# b = b.mean()
+							# n = np.sum((m - b)*psi[None,:,:] ,axis=(1,2)) / psum
+							n = np.sum((m - b[:,None,None])*psi[None,:,:] ,axis=(1,2))/np.sum(psi**2.)
+							n1 = n.sum()
+							if np.isclose(n1,n0):
+								break
+							else:
+								n0 = n1
+					except:
+						n = np.zeros(self.gui.data.movie.shape[0])
+						b = np.zeros(self.gui.data.movie.shape[0])
 					ns.append(n)
 					bs.append(b)
 				ns = np.array(ns).T

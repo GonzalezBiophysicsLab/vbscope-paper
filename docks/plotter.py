@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout
+from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator
 
@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 from supporting.photobleaching import get_point_pbtime, calc_pb_time, pb_ensemble, pb_snr
-
+from supporting import simul_vbem_hmm as hmm
 
 
 class fake(object):
@@ -94,6 +94,7 @@ class plotter(QWidget):
 		## Initialize beginnning data (or lack thereof)
 		self.index = 0
 		self.d = data
+		self.hmm_result = None
 		if not self.d is None:
 			self.initialize_data(data.astype('double'))
 			self.initialize_plots()
@@ -243,8 +244,10 @@ class plotter(QWidget):
 		tools_cull.triggered.connect(self.cull_snr)
 		tools_cullpb = QAction('Cull PB', self)
 		tools_cullpb.triggered.connect(self.cull_pb)
+		tools_hmm = QAction('HMM',self)
+		tools_hmm.triggered.connect(self.run_hmm)
 
-		for f in [tools_cull,tools_cullpb]:
+		for f in [tools_cull,tools_cullpb,tools_hmm]:
 			menu_tools.addAction(f)
 
 		### plots
@@ -285,6 +288,40 @@ class plotter(QWidget):
 		for m in self.action_classes:
 			menu_classes.addAction(m)
 
+	def run_hmm(self):
+		if not self.d is None:
+			nstates,success = QInputDialog.getInt(self,"Number of HMM States","Number of HMM States")
+			if success and nstates > 1:
+				y = []
+				checked = self.get_checked()
+				ran = []
+				for i in range(self.fret.shape[0]):
+					if checked[i]:
+						yy = self.fret[i,self.pre_list[i]:self.pb_list[i]]
+						yy[np.isnan(yy)] = -1.
+						yy[yy < -1.] = -1.
+						yy[yy > 2] = 2.
+						if yy.size > 5:
+							y.append(yy)
+							ran.append(i)
+				nrestarts = 4
+				priors = [hmm.initialize_priors(y,nstates) for _ in range(nrestarts)]
+
+				result,lbs = hmm.hmm(y,nstates,priors,nrestarts)
+
+				print '\nHMM - k = %d, lowerbound=%f'%(nstates,result.lowerbound)
+				print '  m:',result.m
+				print 'sig:',(result.b/result.a)**.5
+				rates = -np.log(1.-result.Astar)/self.gui.prefs['tau']
+				for i in range(rates.shape[0]):
+					rates[i,i] = 0.
+				print '  k:'
+				print rates
+				self.hmm_result = result
+				self.hmm_result.ran = ran
+				if len(self.a[1,0].lines) < 4:
+					self.a[1,0].plot(np.random.rand(100),np.random.rand(100),color='k',lw=1.,alpha=.8)
+				self.update()
 
 	def show_class_counts(self):
 		if not self.d is None:
@@ -621,6 +658,13 @@ class plotter(QWidget):
 		self.a[1][0].lines[0].set_data(t[:pretime],(acceptor/(donor+acceptor+1e-300))[:pretime])
 		self.a[1][0].lines[1].set_data(t[pretime:pbtime],(acceptor/(donor+acceptor+1e-300))[pretime:pbtime])
 		self.a[1][0].lines[2].set_data(t[pbtime:],(acceptor/(donor+acceptor+1e-300))[pbtime:])
+
+		if not self.hmm_result is None:
+			if self.hmm_result.ran.count(self.index)>0:
+				ii = self.hmm_result.ran.index(self.index)
+				self.a[1,0].lines[3].set_data(t[pretime:pbtime],self.hmm_result.m[self.hmm_result.viterbi[ii]])
+			else:
+				self.a[1,0].lines[3].set_data([0,0],[0,0])
 
 
 		# self.a[0][1].cla()
