@@ -7,7 +7,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 import matplotlib.pyplot as plt
 
 import numpy as np
-from supporting.photobleaching import get_point_pbtime, calc_pb_time, pb_ensemble, pb_snr
+from supporting.photobleaching import get_point_pbtime, pb_ensemble, pb_snr, remove_pb_all
 from supporting import simul_vbem_hmm as hmm
 
 
@@ -198,11 +198,9 @@ class plotter(QWidget):
 		# cut = np.isnan(self.fret)
 		# self.d[:,0][cut] = np.nan
 		# self.d[:,0][cut] = np.nan
+		print self.d.shape
 		self.pre_list = np.zeros(self.d.shape[0],dtype='i')
-		l1 = calc_pb_time(self.fret,self.gui.prefs['pb_length'])
-		l2 = pb_ensemble(q[:,0] + q[:,1])[1]
-		# self.pb_list = np.array([np.min((l1[i],l2[i])) for i in range(l1.size)])
-		self.pb_list = l2
+		self.pb_list = self.pre_list.copy() + self.d.shape[2]
 		self.class_list = np.zeros(self.d.shape[0])
 
 	## Setup the menu items at the top
@@ -244,10 +242,16 @@ class plotter(QWidget):
 		tools_cull.triggered.connect(self.cull_snr)
 		tools_cullpb = QAction('Cull PB', self)
 		tools_cullpb.triggered.connect(self.cull_pb)
+		tools_step = QAction('Photobleach - Step',self)
+		tools_step.triggered.connect(self.photobleach_step)
+		tools_var = QAction('Remove all PB - Var',self)
+		tools_var.setCheckable(True)
+		tools_var.setChecked(False)
+		self.pb_remove_check = tools_var
 		tools_hmm = QAction('HMM',self)
 		tools_hmm.triggered.connect(self.run_hmm)
 
-		for f in [tools_cull,tools_cullpb,tools_hmm]:
+		for f in [tools_cull,tools_cullpb,tools_step,tools_var,tools_hmm]:
 			menu_tools.addAction(f)
 
 		### plots
@@ -287,6 +291,16 @@ class plotter(QWidget):
 		menu_classes.addAction(separator)
 		for m in self.action_classes:
 			menu_classes.addAction(m)
+
+	def photobleach_step(self):
+		if not self.d is None:
+			q = np.copy(self.d)
+			q[:,1] -= self.gui.prefs['bleedthrough']*q[:,0]
+			# l1 = calc_pb_time(self.fret,self.gui.prefs['pb_length'])
+			l2 = pb_ensemble(q[:,0] + q[:,1])[1]
+			# self.pb_list = np.array([np.min((l1[i],l2[i])) for i in range(l1.size)])
+			self.pb_list = l2
+			self.update()
 
 	def run_hmm(self):
 		if not self.d is None:
@@ -533,11 +547,15 @@ class plotter(QWidget):
 	def get_plot_data(self):
 		# f = self.fret
 		fpb = self.fret.copy()
+
 		for i in range(fpb.shape[0]):
 			fpb[i,:self.pre_list[i]] = np.nan
 			fpb[i,self.pb_list[i]:] = np.nan
 		checked = self.get_checked()
 		fpb = fpb[checked]
+		if self.pb_remove_check.isChecked():
+			fpb = remove_pb_all(fpb)
+
 		return fpb
 
 	def get_checked(self):
