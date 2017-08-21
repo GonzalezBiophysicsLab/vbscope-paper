@@ -2,6 +2,12 @@ import numpy as np
 import numba as nb
 from math import lgamma as gammaln
 
+import os
+
+_windows = False
+if os.name == 'nt':
+	_windows = True
+
 @nb.jit(nb.double(nb.double[:]),nopython=True)
 def sufficient_xbar(x):
 	n = x.size
@@ -135,23 +141,41 @@ def get_expectation_pbtime(d):
 	pbt = np.sum(p*t)/psum
 	return pbt
 
+if _windows:
+	@nb.jit(nb.types.Tuple((nb.double,nb.int64[:]))(nb.double[:,:]),nopython=True)
+	def pb_ensemble(d):
+		'''
+		Input:
+			* `d` is a np.ndarray of shape (N,T) of the input data
+		Output:
+			* `e_k` is the expectation of the photobleaching time rate constant
+			* `pbt` is a np.ndarray of shape (N) with the photobleaching time
+		'''
+		pbt = np.zeros(d.shape[0],dtype=nb.int64)
+		for i in range(d.shape[0]):
+			pbt[i] = get_expectation_pbtime(d[i])
+		e_k = (1.+pbt.size)/(1.+np.sum(pbt))
+		for i in range(d.shape[0]):
+			pbt[i] = np.argmax(posterior(d[i],e_k))
+		return e_k,pbt
 
-@nb.jit(nb.types.Tuple((nb.double,nb.int64[:]))(nb.double[:,:]),nopython=True,parallel=True)
-def pb_ensemble(d):
-	'''
-	Input:
-		* `d` is a np.ndarray of shape (N,T) of the input data
-	Output:
-		* `e_k` is the expectation of the photobleaching time rate constant
-		* `pbt` is a np.ndarray of shape (N) with the photobleaching time
-	'''
-	pbt = np.zeros(d.shape[0],dtype=nb.int64)
-	for i in nb.prange(d.shape[0]):
-		pbt[i] = get_expectation_pbtime(d[i])
-	e_k = (1.+pbt.size)/(1.+np.sum(pbt))
-	for i in nb.prange(d.shape[0]):
-		pbt[i] = np.argmax(posterior(d[i],e_k))
-	return e_k,pbt
+else:
+	@nb.jit(nb.types.Tuple((nb.double,nb.int64[:]))(nb.double[:,:]),nopython=True,parallel=True)
+	def pb_ensemble(d):
+		'''
+		Input:
+			* `d` is a np.ndarray of shape (N,T) of the input data
+		Output:
+			* `e_k` is the expectation of the photobleaching time rate constant
+			* `pbt` is a np.ndarray of shape (N) with the photobleaching time
+		'''
+		pbt = np.zeros(d.shape[0],dtype=nb.int64)
+		for i in nb.prange(d.shape[0]):
+			pbt[i] = get_expectation_pbtime(d[i])
+		e_k = (1.+pbt.size)/(1.+np.sum(pbt))
+		for i in nb.prange(d.shape[0]):
+			pbt[i] = np.argmax(posterior(d[i],e_k))
+		return e_k,pbt
 
 @nb.jit(nb.double[:](nb.double[:,:]),nopython=True)
 def pb_snr(d):
@@ -208,14 +232,24 @@ def first_var_greater(d,l):
 	## If it's never > 1.0
 	return d.size
 
+
+if _windows:
+	@nb.jit(nb.int64[:](nb.double[:,:],nb.int64),nopython=True)
+	def calc_pb_time(d,l):
+		## Find the first point where the variance is greater than 1.0 for all traces
+		t = np.zeros((d.shape[0]),dtype=nb.int64)
+		for i in range(t.size):
+			t[i] = first_var_greater(d[i],l)
+		return t
 ### This problem is embarassingly parallel. Process each trace individual, in parallel
-@nb.jit(nb.int64[:](nb.double[:,:],nb.int64),nopython=True,parallel=True)
-def calc_pb_time(d,l):
-	## Find the first point where the variance is greater than 1.0 for all traces
-	t = np.zeros((d.shape[0]),dtype=nb.int64)
-	for i in nb.prange(t.size):
-		t[i] = first_var_greater(d[i],l)
-	return t
+else:
+	@nb.jit(nb.int64[:](nb.double[:,:],nb.int64),nopython=True,parallel=True)
+	def calc_pb_time(d,l):
+		## Find the first point where the variance is greater than 1.0 for all traces
+		t = np.zeros((d.shape[0]),dtype=nb.int64)
+		for i in nb.prange(t.size):
+			t[i] = first_var_greater(d[i],l)
+		return t
 
 @nb.jit(nb.double[:,:](nb.double[:,:]),nopython=True)
 def remove_pb_first(d):
