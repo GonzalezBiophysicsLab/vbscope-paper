@@ -21,26 +21,32 @@ def initialize_priors(data,nstates):
 
 	xmin = np.percentile(y,.01)
 	xmax = np.percentile(y,99.99)
-	np.random.seed()
-	m = np.random.uniform(xmin,xmax,size=nstates)
-	# m = np.linspace(xmin,xmax,nstates)+np.random.normal(size=nstates)*(xmax-xmin)/(100.)
-	## Pick randomly in region defined by min and max
-	# m = np.array([np.random.uniform(xmin[i],xmax[i],nstates) for i in range(ndim)]).T
+	# np.random.seed()
+	# # m = np.random.uniform(xmin,xmax,size=nstates)
+	# m = np.linspace(xmin,xmax,nstates)
+	# m+=np.random.normal(size=nstates)*(xmax-xmin)/6
+	# ## Pick randomly in region defined by min and max
+	# # m = np.array([np.random.uniform(xmin[i],xmax[i],nstates) for i in range(ndim)]).T
+	# m.sort()
+	# print m
+	from sklearn.cluster import k_means
+	m = k_means(y.reshape((y.size,1)),nstates)[0].flatten()
 	m.sort()
 
 	dist = np.sqrt(np.square(y[:,None] - m[None,:]))
 	gamma = (dist == dist.min(1)[:,None]).astype('double') + 0.1
 	gamma /= gamma.sum(1)[:,None]
-	rho = gamma.sum(0)
-	rho /= rho.sum()
-	rho += 1.
+	# rho = gamma.sum(0)
+	# rho /= rho.sum()
+	# rho += 1.
+	rho = np.ones(nstates)
 
 	# vbFRET priors are alpha = 1, a = 2.5, b = 0.01, beta = 0.25
-	alpha = np.zeros((nstates,nstates)) + .01 + np.identity(nstates)*1.#10.
+	alpha = np.zeros((nstates,nstates)) + .1 + np.identity(nstates)*1.#1.#10.
 	#.1,.005,.25
-	a = np.zeros(nstates) + 2.5#1.
-	b = np.zeros(nstates) + 2.5*(xmax-xmin)**2./36.#(xmax-xmin)**2./36.
-	beta = np.zeros(nstates) + .25*nstates**2. * 36. / (xmax-xmin)**2.#nstates**2. * 36. / (xmax-xmin)**2.
+	a = np.zeros(nstates) + 1#2.5#1.
+	b = np.zeros(nstates) + (xmax-xmin)**2./36.#(xmax-xmin)**2./36.
+	beta = np.zeros(nstates) + nstates**2. * 36. / (xmax-xmin)**2.#nstates**2. * 36. / (xmax-xmin)**2.
 	return [m,beta,a,b,alpha,rho]
 
 def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
@@ -49,7 +55,7 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
 	Data should be a list of nmol np.ndarray(npoints) trjectories. If only one trace, try [y]
 	'''
 	maxiterations = 1000
-	threshold = 1e-10
+	threshold = 1e-16
 
 	# Check Data
 	# if y.ndim != 3:
@@ -107,7 +113,7 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
 		if iteration == 0:
 			lowerbounds = lowerbounds[1:]
 		else:
-			if iteration > 10 and ((delta_change < threshold)):# or (lowerbounds[-1] == lowerbounds[-3])):
+			if iteration > 2 and ((delta_change < threshold)):# or (lowerbounds[-1] == lowerbounds[-3])):
 				converged = True
 				break
 
@@ -132,6 +138,13 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
 	result.b = b_n
 	result.alpha = alpha_n
 	result.rho = rho_n
+
+	# result._m = m_0
+	# result._beta = beta_0
+	# result._a = a_0
+	# result._b = b_0
+	# result._alpha = alpha_0
+	# result._rho = rho_0
 
 	# Get Dirichlet Means
 	result.Astar = alpha_n / alpha_n.sum(1)[:,None]

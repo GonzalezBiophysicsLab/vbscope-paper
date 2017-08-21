@@ -35,6 +35,15 @@ default = {
 
 'downsample':1,
 'snr_threshold':.5,
-'pb_length':10
+'pb_length':10,
+
+'plotter_xmin':0,
+'plotter_xmax':-1,
+'plotter_n_xbins':41,
+'plotter_n_ybins':41,
+'plotter_floor':1.0,
+'plotter_n_levels':50,
+'plotter_smoothx':5.,
+'plotter_smoothy':1.
 
 }

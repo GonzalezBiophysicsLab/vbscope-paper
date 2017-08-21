@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog
+from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog, QDockWidget
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator
 
@@ -9,7 +9,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 from supporting.photobleaching import get_point_pbtime, pb_ensemble, pb_snr, remove_pb_all
 from supporting import simul_vbem_hmm as hmm
-
+try:
+	from docks.prefs import dock_prefs
+except:
+	pass
+try:
+	from prefs import dock_prefs
+except:
+	pass
 
 class fake(object):
 	pass
@@ -25,7 +32,20 @@ class ui_plotter(QMainWindow):
 			self.gui = parent.gui
 		else:
 			self.gui = fake()
-			self.gui.prefs = {'bleedthrough':.04,'tau':.1,'downsample':1,'pb_length':10,'snr_threshold':1.}
+			self.gui.prefs = {
+				'bleedthrough':.04,
+				'tau':.1,
+				'pb_length_cutoff':10,
+				'snr_threshold':1.,
+				'plotter_xmin':0,
+				'plotter_xmax':-1,
+				'plotter_n_xbins':41,
+				'plotter_n_ybins':41,
+				'plotter_floor':1.0,
+				'plotter_n_levels':50,
+				'plotter_smoothx':5.,
+				'plotter_smoothy':1.
+			}
 
 		## Make the plotter widget
 		self.ui = plotter(data,self)
@@ -48,6 +68,15 @@ class plotter(QWidget):
 
 		self.gui = parent.gui
 		layout = QVBoxLayout()
+
+		## Docks
+		self.docks = {}
+		self.docks['prefs'] = [QDockWidget('Preferences',parent),dock_prefs(self.gui)]
+		self.docks['prefs'][0].setWidget(self.docks['prefs'][1])
+		self.docks['prefs'][0].setAllowedAreas(Qt.NoDockWidgetArea)
+		parent.addDockWidget(Qt.BottomDockWidgetArea, self.docks['prefs'][0])
+		self.docks['prefs'][0].setFloating(True)
+		self.docks['prefs'][0].close()
 
 		## Initialize Plots
 		self.f,self.a = plt.subplots(2,2,gridspec_kw={'width_ratios':[6,1]},figsize=(6.5,4))
@@ -178,7 +207,7 @@ class plotter(QWidget):
 		self.f.canvas.draw()
 
 	## Reset everything with the new trajectories loaded in with this function
-	def initialize_data(self,data):
+	def initialize_data(self,data,sort=True):
 		self.d = data
 
 		## Guess at good y-limits for the plot
@@ -187,8 +216,9 @@ class plotter(QWidget):
 		self.le_max.setText(str(self.yminmax[1]))
 
 		## Sort trajectories based on anti-correlation (most is first, least is last)
-		order = self.cross_corr_order()
-		self.d = self.d[order]
+		if sort:
+			order = self.cross_corr_order()
+			self.d = self.d[order]
 
 		## Calculate/set photobleaching, initialize class list
 		q = np.copy(self.d)
@@ -198,7 +228,6 @@ class plotter(QWidget):
 		# cut = np.isnan(self.fret)
 		# self.d[:,0][cut] = np.nan
 		# self.d[:,0][cut] = np.nan
-		print self.d.shape
 		self.pre_list = np.zeros(self.d.shape[0],dtype='i')
 		self.pb_list = self.pre_list.copy() + self.d.shape[2]
 		self.class_list = np.zeros(self.d.shape[0])
@@ -220,7 +249,7 @@ class plotter(QWidget):
 		file_exit = QAction('Exit', self, shortcut='Ctrl+Q')
 		file_exit.triggered.connect(self.parent().close)
 
-		for f in [file_load_traces,file_load_classes,file_exit]:
+		for f in [file_load_traces,file_load_classes,self.docks['prefs'][0].toggleViewAction(),file_exit]:
 			menu_file.addAction(f)
 
 		### save
@@ -248,10 +277,13 @@ class plotter(QWidget):
 		tools_var.setCheckable(True)
 		tools_var.setChecked(False)
 		self.pb_remove_check = tools_var
+		tools_remove = QAction('Remove From Beginning',self)
+		tools_remove.triggered.connect(self.remove_beginning)
 		tools_hmm = QAction('HMM',self)
 		tools_hmm.triggered.connect(self.run_hmm)
 
-		for f in [tools_cull,tools_cullpb,tools_step,tools_var,tools_hmm]:
+
+		for f in [tools_cull,tools_cullpb,tools_step,tools_var,tools_remove,tools_hmm]:
 			menu_tools.addAction(f)
 
 		### plots
@@ -292,11 +324,21 @@ class plotter(QWidget):
 		for m in self.action_classes:
 			menu_classes.addAction(m)
 
+	def remove_beginning(self):
+		if not self.d is None:
+			self.safe_hmm()
+			nd,success = QInputDialog.getInt(self,"Remove Datapoints","Number of datapoints to remove starting from the beginning of the movie")
+			if success and nd > 1 and nd < self.d.shape[2]:
+				self.index = 0
+				self.initialize_data(self.d[:,:,nd:])
+				self.initialize_plots()
+				self.initialize_sliders()
+
 	def photobleach_step(self):
 		if not self.d is None:
 			q = np.copy(self.d)
 			q[:,1] -= self.gui.prefs['bleedthrough']*q[:,0]
-			# l1 = calc_pb_time(self.fret,self.gui.prefs['pb_length'])
+			# l1 = calc_pb_time(self.fret,self.gui.prefs['pb_length_cutoff'])
 			l2 = pb_ensemble(q[:,0] + q[:,1])[1]
 			# self.pb_list = np.array([np.min((l1[i],l2[i])) for i in range(l1.size)])
 			self.pb_list = l2
@@ -349,10 +391,15 @@ class plotter(QWidget):
 		for m in self.action_classes:
 			m.setChecked(not m.isChecked())
 
+	def safe_hmm(self):
+		if not self.hmm_result is None:
+			self.hmm_result = None
+			self.safe_hmm()
+
 	## Remove trajectories with SNR less than threshold
 	def cull_snr(self):
 		snr_threshold = self.gui.prefs['snr_threshold']
-
+		self.safe_hmm()
 		# snr = np.zeros(self.d.shape[0])
 		# for i in range(snr.size):
 		# 	q = self.d[i].sum(0)
@@ -379,10 +426,11 @@ class plotter(QWidget):
 
 	## Remove trajectories with number of kept-frames < threshold
 	def cull_pb(self):
+		self.safe_hmm()
 		pbt = self.pb_list
 		pret = self.pre_list
 		dt = pbt-pret
-		cut = dt > self.gui.prefs['pb_length']
+		cut = dt > self.gui.prefs['pb_length_cutoff']
 		print "kept %d out of %d = %f"%(cut.sum(),pbt.size,cut.sum()/float(pbt.size))
 		d = self.d[cut]
 		self.index = 0
@@ -445,7 +493,8 @@ class plotter(QWidget):
 				print "could not load %s"%(fname[0])
 
 			if success:
-				self.initialize_data(d)
+				self.initialize_data(d,sort=False)
+				self.index = 0
 				self.initialize_plots()
 				self.initialize_sliders()
 
@@ -473,15 +522,18 @@ class plotter(QWidget):
 			## Right click - set photobleaching point
 			if event.button == 3 and self.toolbar._active is None:
 				self.pb_list[self.index] = int(np.round(event.xdata/self.gui.prefs['tau']))
+				self.safe_hmm()
 				self.update()
 			## Left click - set pre-truncation point
 			if event.button == 1 and self.toolbar._active is None:
 				self.pre_list[self.index] = int(np.round(event.xdata/self.gui.prefs['tau']))
+				self.safe_hmm()
 				self.update()
 			## Middle click - reset pre and post points to calculated values
 			if event.button == 2 and self.toolbar._active is None:
 				self.pre_list[self.index] = 0
 				self.pb_list[self.index] = get_point_pbtime(self.d[self.index].sum(0))
+				self.safe_hmm()
 				self.update()
 
 	## Add axis labels to plots
@@ -531,12 +583,12 @@ class plotter(QWidget):
 			self.index = self.d.shape[0]-1
 		self.slider_select.setValue(self.index)
 
-		if kk == 'h':
-			self.ensemble_hist()
-
-		if np.any(np.arange(10)==kk):
-			self.class_list[self.index] = kk
-			self.update()
+		# if kk == 'h':
+		# 	self.ensemble_hist()
+		for i in range(10):
+			if i == kk:
+				self.class_list[self.index] = kk
+				self.update()
 
 		try:
 			self.gui.app.processEvents()
@@ -551,6 +603,9 @@ class plotter(QWidget):
 		for i in range(fpb.shape[0]):
 			fpb[i,:self.pre_list[i]] = np.nan
 			fpb[i,self.pb_list[i]:] = np.nan
+			fpb[i,:self.gui.prefs['plotter_xmin']] = np.nan
+			fpb[i,self.gui.prefs['plotter_xmax']:] = np.nan
+
 		checked = self.get_checked()
 		fpb = fpb[checked]
 		if self.pb_remove_check.isChecked():
@@ -571,36 +626,79 @@ class plotter(QWidget):
 
 		plt.figure(5)
 		# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
-		plt.hist(fpb.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
+		plt.hist(fpb.flatten(),bins=self.gui.prefs['plotter_n_xbins'],range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
+
+		if not self.hmm_result is None:
+			r = self.hmm_result
+			def norm(x,m,v):
+				return 1./np.sqrt(2.*np.pi*v)*np.exp(-.5/v*(x-m)**2.)
+			x = np.linspace(-.4,1.4,1001)
+			ppi = np.sum([r.gamma[i].sum(0) for i in range(len(r.gamma))],axis=0)
+			ppi /=ppi.sum()
+			v = r.b/r.a
+			tot = np.zeros_like(x)
+			for i in range(r.m.size):
+				y = ppi[i]*norm(x,r.m[i],v[i])
+				tot += y
+				plt.plot(x,y,color='k',lw=1,alpha=.8,ls='--')
+			plt.plot(x,tot,color='k',lw=2,alpha=.8)
+
 		plt.xlim(-.4,1.4)
 		plt.xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
 		plt.ylabel('Probability',fontsize=14)
 		plt.tight_layout()
+
 		plt.show()
 
 	def hist2d(self):
 		fpb = self.get_plot_data()
 
-		plt.figure(6)
-		rx = np.linspace(-.4,1.4,81)
-		ry = np.arange(fpb.shape[1])*self.gui.prefs['tau']
+		dtmin = self.gui.prefs['plotter_xmin']
+		dtmax = self.gui.prefs['plotter_xmax']
+		if dtmax == -1:
+			dtmax = fpb.shape[1]
+		dt = np.arange(dtmin,dtmax)*self.gui.prefs['tau']
+		ts = np.array([dt for _ in range(fpb.shape[0])])
+		fpb = fpb[:,dtmin:dtmax]
+		xcut = np.isfinite(fpb)
+		z,hx,hy = np.histogram2d(ts[xcut],fpb[xcut],bins = [self.gui.prefs['plotter_n_xbins'],self.gui.prefs['plotter_n_ybins']],range=[[dt[0],dt[-1]],[-.4,1.4]])
+		rx = hx[:-1]
+		ry = .5*(hy[1:]+hy[:-1])
 		x,y = np.meshgrid(rx,ry,indexing='ij')
-		z = np.zeros_like(x)
-		for i in range(ry.shape[0]):
-			hy,hx = np.histogram(fpb[:,i],bins=rx.size,range=(rx.min(),rx.max()))
-			z[:,i] = hy
+
+		x.shape,y.shape,z.shape
+
+		plt.figure(6)
 
 		from scipy.ndimage import gaussian_filter
-		z = gaussian_filter(z,(1,5))
-		z/=z.max()
+		z = gaussian_filter(z,(self.gui.prefs['plotter_smoothx'],self.gui.prefs['plotter_smoothy']))
+
+		# cm = plt.cm.rainbow
+		# vmin = self.gui.prefs['plotter_floor']
+		# cm.set_under('w')
+		# if vmin <= 1e-300:
+		# 	vmin = z.min()
+		# pc = plt.pcolor(y.T,x.T,z.T,cmap=cm,vmin=vmin,edgecolors='face')
 		cm = plt.cm.rainbow
 		cm.set_under('w')
-		vmin = 0
-		pc = plt.pcolor(y.T,x.T,z.T,cmap=cm,vmin=vmin,edgecolors='face')
-		cb = plt.colorbar()
-		cb.solids.set_edgecolor('face')
+		vmin = self.gui.prefs['plotter_floor']
+		z/=np.nanmax(z)
+		from matplotlib.colors import LogNorm
+		if vmin <= 0 or vmin >=z.max():
+			pc = plt.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_n_levels'],cmap=cm)
+		else:
+			# pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
+			pc = plt.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_n_levels'],vmin =vmin,cmap=cm)
+		for pcc in pc.collections:
+			pcc.set_edgecolor("face")
 
-		plt.xlim(0,ry.max())
+		cb = plt.colorbar()
+		cb.set_ticks(np.array((0.,.2,.4,.6,.8,1.)))
+		cb.solids.set_edgecolor('face')
+		cb.solids.set_rasterized(True)
+
+
+		plt.xlim(0,rx.max())
 		plt.xlabel('Time (s)',fontsize=14)
 		plt.ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
 		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
@@ -613,8 +711,8 @@ class plotter(QWidget):
 		d = np.array([[fpb[i,:-1],fpb[i,1:]] for i in range(fpb.shape[0])])
 
 		plt.figure(7)
-		rx = np.linspace(-.4,1.4,81)
-		ry = np.linspace(-.4,1.4,81)
+		rx = np.linspace(-.4,1.4,self.gui.prefs['plotter_n_xbins'])
+		ry = np.linspace(-.4,1.4,self.gui.prefs['plotter_n_ybins'])
 		x,y = np.meshgrid(rx,ry,indexing='ij')
 		dx = d[:,0].flatten()
 		dy = d[:,1].flatten()
@@ -622,13 +720,25 @@ class plotter(QWidget):
 		z,hx,hy = np.histogram2d(dx[cut],dy[cut],bins=[rx.size,ry.size],range=[[rx.min(),rx.max()],[ry.min(),ry.max()]])
 
 		from scipy.ndimage import gaussian_filter
-		z = gaussian_filter(z,(.1,.1))
+		z = gaussian_filter(z,(self.gui.prefs['plotter_smoothx'],self.gui.prefs['plotter_smoothy']))
 		cm = plt.cm.rainbow
 		cm.set_under('w')
-		vmin = 1
+		vmin = self.gui.prefs['plotter_floor']
 		from matplotlib.colors import LogNorm
-		pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
+		if vmin <= 0:
+			z[z==0] = 1.
+			pc = plt.contourf(x,y,z,np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_n_levels']),cmap=cm,norm=LogNorm())
+		else:
+			# pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
+			pc = plt.contourf(x,y,z,np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_n_levels']),vmin =vmin,cmap=cm,norm=LogNorm())
+		for pcc in pc.collections:
+			pcc.set_edgecolor("face")
+
 		cb = plt.colorbar()
+		zm = np.floor(np.log10(z.max()))
+		cz = np.logspace(0,zm,zm+1)
+		cb.set_ticks(cz)
+		# cb.set_ticklabels(cz)
 		cb.solids.set_edgecolor('face')
 		cb.solids.set_rasterized(True)
 

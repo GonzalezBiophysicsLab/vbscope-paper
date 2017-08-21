@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class dock_prefs(QWidget):
 	def __init__(self,parent=None):
-		super(dock_prefs, self).__init__(parent)
+		super(dock_prefs, self).__init__()
 
 		self.gui = parent
 
@@ -17,6 +17,8 @@ class dock_prefs(QWidget):
 		hbox.addWidget(self.viewer)
 		self.setLayout(hbox)
 		self.adjustSize()
+
+		# self.viewer.viewportEntered.connect(self.update_table)
 
 		self.init_table()
 
