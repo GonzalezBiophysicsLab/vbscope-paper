@@ -118,6 +118,7 @@ class dock_transform(QWidget):
 				self.gui.statusbar.showMessage('Loaded Alignment: %s'%(fname[0]))
 
 				#### ASSSUME VBSCOPE (MATLAB) FORMAT
+				ncolor = self.gui.data.ncolors
 				dd = [d[:,2*i:2*i+2][:,::-1].T - 1. for i in range(d.shape[1]/2)]
 				self.estimate(dd)
 				self.plot_overlapped(dd)
@@ -127,13 +128,13 @@ class dock_transform(QWidget):
 
 	def update_colors(self,v):
 		self.gui.data.ncolors = v
-		if self.gui.data.ncolors == 2:
-			self.gui.plot.colorlist = ['lime','red']
-		else:
-			self.gui.plot.colorlist = self.gui.plot.colorlist_ordered
+		# if self.gui.data.ncolors == 2:
+		# 	self.gui.plot.colorlist = ['lime','red']
+		# else:
+		# 	self.gui.plot.colorlist = self.gui.plot.colorlist_ordered
 
 		if self.gui.data.flag_movie:
-			c = self.gui.plot.colorlist
+			c = self.gui.prefs['channel_colors']#self.gui.plot.colorlist
 			alpha = .4
 
 			self.flag_sectors = True
@@ -186,7 +187,7 @@ class dock_transform(QWidget):
 		self.gui.statusbar.showMessage('Finished Finding Transforms')
 
 	def plot_overlapped(self,cs = None):
-		colors = self.gui.plot.colorlist
+		colors = self.gui.prefs['channel_colors']#self.gui.plot.colorlist
 		self.gui.plot.clear_collections()
 		regions,shifts = self.gui.data.regions_shifts()
 

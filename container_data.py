@@ -22,7 +22,7 @@ class data_container():
 		self.spots = None
 		self.crop = np.array(((0,-1),(0,-1)),dtype='i')
 
-		self.ncolors = self.parent.prefs['ncolors']
+		self.ncolors = 2
 		self.transforms = [None]
 
 		self.background = None

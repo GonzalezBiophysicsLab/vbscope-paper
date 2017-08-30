@@ -2,7 +2,11 @@ from PyQt5.QtWidgets import QWidget, QSizePolicy, QTableWidget, QHBoxLayout, QTa
 from PyQt5.QtCore import Qt
 
 import numpy as np
+import multiprocessing as mp
+
 import matplotlib.pyplot as plt
+
+last_update_date = '2017/08/30'
 
 class dock_prefs(QWidget):
 	def __init__(self,parent=None):
@@ -13,7 +17,7 @@ class dock_prefs(QWidget):
 		hbox = QHBoxLayout()
 		self.viewer = QTableWidget()
 		self.viewer.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
-		hbox.addStretch(1)
+		# hbox.addStretch(1)
 		hbox.addWidget(self.viewer)
 		self.setLayout(hbox)
 		self.adjustSize()
@@ -90,3 +94,49 @@ class dock_prefs(QWidget):
 		self.viewer.resizeColumnsToContents()
 		self.viewer.resizeRowsToContents()
 		self.viewer.blockSignals(False)
+
+
+default = {
+
+'channel_wavelengths':np.array((570.,680.,488.,800.)),
+'channel_colors':['green','red','blue','purple'],
+
+'pixel_size':13300,
+'magnification':60,
+'binning':2,
+'numerical_aperture':1.2,
+
+'nsearch':3,
+'nintegrate':5,
+'clip border':5,
+
+'color map':'Greys_r',#'viridis',
+
+'tau':0.1,
+'bleedthrough':np.array(((0.,0.05,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.))).flatten(),
+'same_cutoff':1.,
+
+'playback_fps':100,
+
+'alignment_order':4,
+'contrast_scale':10.,
+
+'maxiterations':1000,
+'threshold':1e-10,
+'ncpu':mp.cpu_count(),
+'nstates':4,
+
+'downsample':1,
+'snr_threshold':.5,
+'pb_length':10,
+
+'plotter_xmin':0,
+'plotter_xmax':-1,
+'plotter_n_xbins':101,
+'plotter_n_ybins':101,
+'plotter_floor':1.0,
+'plotter_n_levels':50,
+'plotter_smoothx':1.,
+'plotter_smoothy':1.
+
+}

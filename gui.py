@@ -7,7 +7,7 @@ from container_data import data_container
 from container_plot import plot_container
 import docks
 
-from prefs import default as prefs_default
+from docks.prefs import default as prefs_default
 
 class gui(QMainWindow):
 	def __init__(self,app=None):
@@ -95,10 +95,13 @@ class gui(QMainWindow):
 		file_load = QAction('Load', self, shortcut='Ctrl+O')
 		file_load.triggered.connect(self.load_tif)
 
+		file_about = QAction('About',self)
+		file_about.triggered.connect(self.about)
+
 		file_exit = QAction('Exit', self, shortcut='Ctrl+Q')
 		file_exit.triggered.connect(self.app.quit)
 
-		for f in [file_load,file_exit]:
+		for f in [file_load,file_about,file_exit]:
 			menu_file.addAction(f)
 
 		### Movie
@@ -112,8 +115,9 @@ class gui(QMainWindow):
 		for mm in m:
 			menu_analysis.addAction(self.docks[mm][0].toggleViewAction())
 
-		### Other
-		menu_other = self.menubar.addMenu('Other')
+	def about(self):
+		from docks.prefs import last_update_date
+		QMessageBox.about(None,'About vbscope','Version: %s\n\nFrom the Gonzalez Lab (Columbia University).\n\nPrinciple authors: JH,CKT,RLG.\nMany thanks to the entire lab for their input.'%(last_update_date))
 
 
 	def load_tif(self):

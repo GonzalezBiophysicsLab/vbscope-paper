@@ -19,10 +19,6 @@ class plot_container():
 	'''
 	def __init__(self):
 
-		# self.colorlist = ['lime','red','cyan','yellow','purple','k']
-		self.colorlist_ordered = ['red','green','cyan','purple','k']
-		self.colorlist = self.colorlist_ordered
-
 		self.f,self.ax = plt.subplots(1)
 		self.canvas = FigureCanvas(self.f)
 		self.toolbar = NavigationToolbar(self.canvas,None)

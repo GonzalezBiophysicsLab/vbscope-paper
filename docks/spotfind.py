@@ -340,7 +340,7 @@ class dock_spotfind(QWidget):
 		if not color is None:
 			colors = [color for _ in range(self.gui.data.ncolors)]
 		else:
-			colors = self.gui.plot.colorlist
+			colors = self.gui.prefs['channel_colors']
 		if not self.gmms is None:
 			for i in range(self.gui.data.ncolors):
 				self.gui.plot.scatter(self.xys[i][0],self.xys[i][1],color=colors[i])
