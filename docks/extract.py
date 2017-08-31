@@ -64,13 +64,11 @@ class dock_extract(QWidget):
 						try:
 							cutoff = self.gui.prefs['same_cutoff']
 							ss[j] = ts[j][0](ss[j].T).T
-							ss[j] = cull(ss[0],ss[j],cutoff)
-
-							# 	r = np.sqrt((ss[0][0,:,None]-ss[j][0,None,:])**2. + (ss[0][1,:,None]-ss[j][1,None,:])**2.)
-							# 	rr = r.min(0)
-							# 	cutoff = self.gui.prefs['same_cutoff']
-							# 	cut = np.nonzero(np.sum((r < cutoff),axis=0) == 0)[0]
-							# 	ss[j] = ss[j][:,cut]
+							r = np.sqrt((ss[0][0,:,None]-ss[j][0,None,:])**2. + (ss[0][1,:,None]-ss[j][1,None,:])**2.)
+							rr = r.min(0)
+							cutoff = self.gui.prefs['same_cutoff']
+							cut = np.nonzero(np.sum((r < cutoff),axis=0) == 0)[0]
+							ss[j] = ss[j][:,cut]
 						except:
 							pass
 			spots = np.concatenate(ss,axis=1)
@@ -219,26 +217,3 @@ class dock_extract(QWidget):
 			self.bgs = None
 
 		self.gui.statusbar.showMessage('Traces Extracted')
-
-import numba as nb
-from math import sqrt
-@nb.jit(nb.double[:,:](nb.double[:,:],nb.double[:,:],nb.double),nopython=True)
-def cull(s0,sj,cutoff):
-	n0 = s0.shape[1]
-	nj = sj.shape[1]
-	r = np.zeros((n0,nj))
-	keep = np.ones(nj)
-	for i in range(n0):
-		for j in range(nj):
-			if j > i:
-				r[i,j] = sqrt((s0[0,i] - sj[0,j])**2. + (s0[1,i]-sj[1,j])**2.)
-				if r[i,j] < cutoff:
-					keep[j] = 0
-	nkeep = np.sum(keep)
-	out = np.zeros((2,int(nkeep)))
-	cur = 0
-	for j in range(nj):
-		if keep[j] == 1:
-			out[:,cur] = sj[:,j]
-			cur += 1
-	return out

@@ -55,7 +55,7 @@ class plotter(QWidget):
 
 		## Docks
 		self.docks = {}
-		self.docks['prefs'] = [QDockWidget('Preferences',parent),dock_prefs(self.gui)]
+		self.docks['prefs'] = [QDockWidget('Preferences',parent),dock_prefs(self)]
 		self.docks['prefs'][0].setWidget(self.docks['prefs'][1])
 		self.docks['prefs'][0].setAllowedAreas(Qt.NoDockWidgetArea)
 		parent.addDockWidget(Qt.BottomDockWidgetArea, self.docks['prefs'][0])
@@ -773,6 +773,21 @@ class plotter(QWidget):
 			plt.tight_layout()
 			plt.show()
 
+	def update_colors(self):
+		for i in range(self.ncolors):
+			color = self.gui.prefs['channel_colors'][i]
+			for j in range(3):
+				self.a[0][0].lines[3*i+j].set_color(color)
+			self.a[0][1].lines[i].set_color(color)
+		for i in range(self.ncolors-1):
+			if self.ncolors == 2:
+				color = 'blue'
+			else:
+				color = self.gui.prefs['channel_colors'][i+1]
+			for j in range(3):
+				self.a[1][0].lines[3*i+j].set_color(color)
+			self.a[1][1].lines[i].set_color(color)
+
 	## Plot current trajectory
 	def update(self):
 		intensities = self.d[self.index].copy()
@@ -831,6 +846,8 @@ class plotter(QWidget):
 			hx = np.append(np.append(hx[0],.5*(hx[1:]+hx[:-1])),hx[-1])
 			self.a[1][1].lines[i].set_data(hy,hx)
 			hymaxes.append(hy.max())
+
+		self.update_colors()
 
 		self.a[0][0].set_xlim(0,t[-1])
 		self.a[1][0].set_ylim(-.4,1.4)

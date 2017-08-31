@@ -12,7 +12,11 @@ class dock_prefs(QWidget):
 	def __init__(self,parent=None):
 		super(dock_prefs, self).__init__()
 
-		self.gui = parent
+		try:
+			self.parent = parent
+			self.gui = parent.gui
+		except:
+			self.gui = parent
 
 		hbox = QHBoxLayout()
 		self.viewer = QTableWidget()
@@ -43,6 +47,8 @@ class dock_prefs(QWidget):
 			elif type(old) is np.ndarray:
 				# print 5
 				self.gui.prefs[pref][a.column()] = float(a.text())
+			elif type(old) is list:
+				self.gui.prefs[pref][a.column()] = a.text()
 			else:
 				# print 4
 				self.gui.prefs[pref] = a.text()
@@ -95,6 +101,11 @@ class dock_prefs(QWidget):
 		self.viewer.resizeRowsToContents()
 		self.viewer.blockSignals(False)
 
+		try:
+			self.parent.update()
+		except:
+			pass
+
 
 default = {
 
@@ -107,7 +118,7 @@ default = {
 'numerical_aperture':1.2,
 
 'nsearch':3,
-'nintegrate':5,
+'nintegrate':7,
 'clip border':5,
 
 'color map':'Greys_r',#'viridis',
