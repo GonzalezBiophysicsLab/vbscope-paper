@@ -33,11 +33,15 @@ class theta():
 def initialize_priors(x,k):
 	prior  = theta(k)
 
-	xmin = np.percentile(x,.00001)
-	xmax = np.percentile(x,99.99999)
-	np.random.seed()
-	mu = np.random.uniform(xmin,xmax,size=k)
+	from sklearn.cluster import k_means
+	mu = k_means(x.reshape((x.size,1)),k)[0].flatten()
 	mu.sort()
+
+	# xmin = np.percentile(x,.00001)
+	# xmax = np.percentile(x,99.99999)
+	# np.random.seed()
+	# mu = np.random.uniform(xmin,xmax,size=k)
+	# mu.sort()
 
 	# vbFRET priors are alpha = 1, a = 2.5, b = 0.01, beta = 0.25
 	# mu, .1, .005,.25

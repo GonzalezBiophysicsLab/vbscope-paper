@@ -130,7 +130,7 @@ default = {
 'playback_fps':100,
 
 'alignment_order':4,
-'contrast_scale':10.,
+'contrast_scale':20.,
 
 'maxiterations':1000,
 'threshold':1e-10,
@@ -147,7 +147,7 @@ default = {
 'plotter_n_ybins':101,
 'plotter_floor':1.0,
 'plotter_n_levels':50,
-'plotter_smoothx':1.,
-'plotter_smoothy':1.
+'plotter_smoothx':0.5,
+'plotter_smoothy':0.5
 
 }
