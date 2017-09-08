@@ -4,7 +4,7 @@ from PyQt5.QtGui import QDoubleValidator
 
 import numpy as np
 
-from scipy.ndimage import median_filter,gaussian_filter,minimum_filter
+from scipy.ndimage import median_filter,gaussian_filter,minimum_filter,uniform_filter
 
 class dock_background(QWidget):
 	def __init__(self,parent=None):
@@ -45,7 +45,7 @@ class dock_background(QWidget):
 		self.combo_method.setCurrentIndex(self.method)
 		self.combo_method.currentIndexChanged.connect(self.update_method)
 
-		self.combo_method.addItems(['None','Minimum','Median'])
+		self.combo_method.addItems(['None','Minimum','Median','Uniform'])
 		self.combo_method.setCurrentIndex(0)
 
 	def update_radius1(self):
@@ -63,9 +63,13 @@ class dock_background(QWidget):
 
 	def calc_background(self,image):
 		if self.method == 1:#'Minimum':
-			return gaussian_filter(minimum_filter(image,self.radius1),self.radius2)
+			# return gaussian_filter(minimum_filter(image,self.radius1),self.radius2)
+			return minimum_filter(gaussian_filter(image,self.radius2),int(self.radius1))
 		elif self.method == 2:#'Median':
-			return gaussian_filter(median_filter(image,int(self.radius1)),self.radius2)
+			# return gaussian_filter(median_filter(image,int(self.radius1)),self.radius2)
+			return median_filter(gaussian_filter(image,self.radius2),int(self.radius1))
+		elif self.method == 3:#new
+			return uniform_filter(gaussian_filter(image,self.radius2),int(self.radius1))
 		else:
 			return np.zeros(image.shape,dtype='f')
 
