@@ -148,6 +148,10 @@ default = {
 'plotter_floor':1.0,
 'plotter_n_levels':50,
 'plotter_smoothx':0.5,
-'plotter_smoothy':0.5
+'plotter_smoothy':0.5,
+
+'convert_flag':False,
+'convert_c_lambda':[11.64,12.75],
+'convert_em_gain':300
 
 }

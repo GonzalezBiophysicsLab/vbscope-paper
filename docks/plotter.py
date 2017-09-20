@@ -796,6 +796,10 @@ class plotter(QWidget):
 			for j in range(self.ncolors):
 				intensities[j] -= bts[i,j]*intensities[i]
 
+		if self.gui.prefs['convert_flag']:
+			for i in range(self.ncolors):
+				intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*intensities[i]
+
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
 
 		downsample = int(self.gui.prefs['downsample'])
