@@ -348,7 +348,11 @@ class plotter(QWidget):
 			q = np.copy(self.d)
 			q[:,1] -= self.gui.prefs['bleedthrough'][1]*q[:,0]
 			# l1 = calc_pb_time(self.fret,self.gui.prefs['pb_length_cutoff'])
-			l2 = pb_ensemble(q[:,0] + q[:,1])[1]
+			if self.gui.prefs['photobleaching_flag'] == True:
+				qq = q[:,0] + q[:,1]
+			else:
+				qq = q[:,1]
+			l2 = pb_ensemble(qq)[1]
 			# self.pb_list = np.array([np.min((l1[i],l2[i])) for i in range(l1.size)])
 			self.pb_list = l2
 			self.update()
@@ -390,6 +394,23 @@ class plotter(QWidget):
 				if len(self.a[1,0].lines) < 4:
 					self.a[1,0].plot(np.random.rand(100),np.random.rand(100),color='k',lw=1.,alpha=.8)
 				self.update()
+
+				########### EXPORT
+
+				q = np.zeros((self.d.shape[0],self.d.shape[2])) + np.nan
+				j = 0
+				for i in range(self.d.shape[0]):
+					if self.hmm_result.ran.count(i)>0:
+						pbtime = int(self.pb_list[i])
+						pretime = int(self.pre_list[i])
+						q[i,pretime:pbtime] = self.hmm_result.m[self.hmm_result.viterbi[j]]
+						j += 1
+				oname = QFileDialog.getSaveFileName(self, 'Export Viterbi Paths', '_viterbi.dat','*.dat')
+				if oname[0] != "":
+					try:
+						np.savetxt(oname[0],q.T,delimiter=',')
+					except:
+						QMessageBox.critical(self,'Export Traces','There was a problem trying to export the viterbi paths')
 
 	def show_class_counts(self):
 		if not self.d is None:
@@ -500,10 +521,10 @@ class plotter(QWidget):
 			combos = ['%d'%(i) for i in range(self.ncolors)]
 			combos.append('0+1')
 			c,success1 = QInputDialog.getItem(self,"Color","Choose Color channel",combos,editable=False)
-			threshold,success2 = QInputDialog.getInt(self,"Remove Datapoints","Total number of photons required to keep a trajectory")
-			if success1 and success2:
+			if success1:
 				self.safe_hmm()
 				keep = np.zeros(self.d.shape[0],dtype='bool')
+				y = np.zeros(self.d.shape[0])
 				for ind in range(self.d.shape[0]):
 					intensities = self.d[ind].copy()
 					bts = self.gui.prefs['bleedthrough'].reshape((4,4))
@@ -514,16 +535,24 @@ class plotter(QWidget):
 					for i in range(self.ncolors):
 						intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*intensities[i]
 					cc = c.split('+')
-					y = 0
 					for ccc in cc:
-						y += intensities[int(ccc)].sum()
-					if y > threshold:
-						keep[ind] = True
-				d = self.d[keep]
-				self.index = 0
-				self.initialize_data(d)
-				self.initialize_plots()
-				self.initialize_sliders()
+						y[ind] += intensities[int(ccc)].sum()
+				x = np.logspace(0,np.log10(y.max()),1000)
+				surv = np.array([(y > x[i]).sum()/float(y.size) for i in range(x.size)])
+				plt.figure()
+				plt.semilogx(x,surv)
+				plt.ylim(0,1)
+				plt.ylabel('Survival Probability')
+				plt.xlabel('Total Number of Photons')
+				plt.show()
+				threshold,success2 = QInputDialog.getDouble(self,"Photon Cutoff","Total number of photons required to keep a trajectory",value=1000.,min=0.,max=1e10,decimals=10)
+ 				if success2:
+					keep = y > threshold
+					d = self.d[keep]
+					self.index = 0
+					self.initialize_data(d)
+					self.initialize_plots()
+					self.initialize_sliders()
 
 
 	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)

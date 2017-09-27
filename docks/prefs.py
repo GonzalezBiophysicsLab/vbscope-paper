@@ -152,6 +152,8 @@ default = {
 
 'convert_flag':False,
 'convert_c_lambda':[11.64,12.75],
-'convert_em_gain':300
+'convert_em_gain':300,
+
+'photobleaching_flag':True
 
 }
