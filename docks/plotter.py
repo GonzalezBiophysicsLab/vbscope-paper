@@ -269,6 +269,9 @@ class plotter(QWidget):
 		tools_cull.triggered.connect(self.cull_snr)
 		tools_cullpb = QAction('Cull PB', self)
 		tools_cullpb.triggered.connect(self.cull_pb)
+		tools_cullempty = QAction('Cull Empty',self)
+		tools_cullempty.triggered.connect(self.cull_empty)
+
 		tools_cullphotons = QAction('Cull Photons',self)
 		tools_cullphotons.triggered.connect(self.cull_photons)
 		tools_step = QAction('Photobleach - Step',self)
@@ -283,7 +286,7 @@ class plotter(QWidget):
 		tools_hmm.triggered.connect(self.run_hmm)
 
 
-		for f in [tools_cull,tools_cullpb,tools_cullphotons,tools_step,tools_var,tools_remove,tools_hmm]:
+		for f in [tools_cull,tools_cullpb,tools_cullempty,tools_cullphotons,tools_step,tools_var,tools_remove,tools_hmm]:
 			menu_tools.addAction(f)
 
 		### plots
@@ -450,6 +453,36 @@ class plotter(QWidget):
 			self.initialize_data(d)
 			self.initialize_plots()
 			self.initialize_sliders()
+
+	def cull_empty(self):
+		if not self.d is None:
+			combos = ['%d'%(i) for i in range(self.ncolors)]
+			combos.append('0+1')
+			c,success1 = QInputDialog.getItem(self,"Color","Choose Color channel",combos,editable=False)
+			if success1:
+				from supporting.photobleaching import model_comparison_signal
+				self.safe_hmm()
+				keep = np.zeros(self.d.shape[0],dtype='bool')
+				for ind in range(self.d.shape[0]):
+					intensities = self.d[ind].copy()
+					bts = self.gui.prefs['bleedthrough'].reshape((4,4))
+					for i in range(self.ncolors):
+						for j in range(self.ncolors):
+							intensities[j] -= bts[i,j]*intensities[i]
+
+					for i in range(self.ncolors):
+						intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*intensities[i]
+					cc = c.split('+')
+					y = np.zeros(intensities.shape[-1])
+					for ccc in cc:
+						y += intensities[int(ccc)]
+					if model_comparison_signal(y,threshold=0.95):
+						keep[ind] = True
+				d = self.d[keep]
+				self.index = 0
+				self.initialize_data(d)
+				self.initialize_plots()
+				self.initialize_sliders()
 
 	def cull_photons(self):
 		if not self.d is None:

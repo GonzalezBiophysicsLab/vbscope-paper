@@ -191,6 +191,14 @@ def pb_snr(d):
 			snrr[i] = 0.
 	return snrr
 
+################################################################################
+## Check to see if a signal is zero
+################################################################################
+def model_comparison_signal(x,threshold=0.95):
+	lnp_m2 = normal_mu_ln_evidence(x,0.)
+	lnp_m1 = normal_ln_evidence(x)
+	p = 1./(1.+np.exp(lnp_m2-lnp_m1))
+	return p > threshold
 
 ################################################################################
 ######################### Jaewook's variance > 1 model #########################
