@@ -456,7 +456,7 @@ class plotter(QWidget):
 			combos = ['%d'%(i) for i in range(self.ncolors)]
 			combos.append('0+1')
 			c,success1 = QInputDialog.getItem(self,"Color","Choose Color channel",combos,editable=False)
-			treshold,success2 = QInputDialog.getInt(self,"Remove Datapoints","Total number of photons required to keep a trajectory")
+			threshold,success2 = QInputDialog.getInt(self,"Remove Datapoints","Total number of photons required to keep a trajectory")
 			if success1 and success2:
 				self.safe_hmm()
 				keep = np.zeros(self.d.shape[0],dtype='bool')
