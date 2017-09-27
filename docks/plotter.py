@@ -477,12 +477,24 @@ class plotter(QWidget):
 					for ccc in cc:
 						y[ind] += intensities[int(ccc)]
 				keep = model_comparison_signal(y)
-				keep = keep > 0.95
-				d = self.d[keep]
-				self.index = 0
-				self.initialize_data(d)
-				self.initialize_plots()
-				self.initialize_sliders()
+
+				x = np.linspace(0,1,1000)
+				surv = np.array([(keep > x[i]).sum()/float(keep.size) for i in range(x.size)])
+				plt.figure()
+				plt.plot(x,surv)
+				plt.ylabel('Survival Probability')
+				plt.xlabel('Probability Not Empty')
+				plt.xlim(0,1)
+				plt.ylim(0,1)
+				plt.show()
+				cutp,success2 = QInputDialog.getDouble(self,"P Cutoff","Choose probability cutoff (keep above)",value=.95,min=0.,max=1.,decimals=10)
+				if success2:
+					keep = keep > cutp
+					d = self.d[keep]
+					self.index = 0
+					self.initialize_data(d)
+					self.initialize_plots()
+					self.initialize_sliders()
 
 	def cull_photons(self):
 		if not self.d is None:
