@@ -348,10 +348,12 @@ class plotter(QWidget):
 			q = np.copy(self.d)
 			q[:,1] -= self.gui.prefs['bleedthrough'][1]*q[:,0]
 			# l1 = calc_pb_time(self.fret,self.gui.prefs['pb_length_cutoff'])
-			if self.gui.prefs['photobleaching_flag'] == True:
+			if self.gui.prefs['photobleaching_flag'] is True:
 				qq = q[:,0] + q[:,1]
+				print 'hey'
 			else:
 				qq = q[:,1]
+				print 'ho'
 			l2 = pb_ensemble(qq)[1]
 			# self.pb_list = np.array([np.min((l1[i],l2[i])) for i in range(l1.size)])
 			self.pb_list = l2
@@ -653,7 +655,11 @@ class plotter(QWidget):
 				if self.ncolors == 2:
 					from supporting.photobleaching import get_point_pbtime
 					self.pre_list[self.index] = 0
-					self.pb_list[self.index] = get_point_pbtime(self.d[self.index].sum(0))
+					if self.gui.prefs['photobleaching_flag'] is True:
+						qq = self.d[self.index].sum(0)
+					else:
+						qq = self.d[self.index,1]
+					self.pb_list[self.index] = get_point_pbtime(qq)
 					self.safe_hmm()
 					self.update()
 
