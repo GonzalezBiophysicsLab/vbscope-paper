@@ -50,7 +50,7 @@ def normal_update(x,m0,k0,a0,b0):
 def normal_ln_evidence(x):
 	a0 = 1.
 	b0 = 1.
-	k0 = .001
+	k0 = 1.
 	m0 = 1000.
 
 	n = x.size
@@ -194,11 +194,15 @@ def pb_snr(d):
 ################################################################################
 ## Check to see if a signal is zero
 ################################################################################
-def model_comparison_signal(x,threshold=0.95):
-	lnp_m2 = normal_mu_ln_evidence(x,0.)
-	lnp_m1 = normal_ln_evidence(x)
-	p = 1./(1.+np.exp(lnp_m2-lnp_m1))
-	return p > threshold
+@nb.jit(nb.double[:](nb.double[:,:]),nopython=True)
+def model_comparison_signal(x):
+	out = np.zeros(x.shape[0],dtype=nb.double)
+	for i in range(out.size):
+		lnp_m2 = normal_mu_ln_evidence(x[i],0.)
+		lnp_m1 = normal_ln_evidence(x[i])
+		p = 1./(1.+np.exp(lnp_m2-lnp_m1))
+		out[i] = p
+	return out
 
 ################################################################################
 ######################### Jaewook's variance > 1 model #########################

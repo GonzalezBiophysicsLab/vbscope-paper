@@ -462,7 +462,7 @@ class plotter(QWidget):
 			if success1:
 				from supporting.photobleaching import model_comparison_signal
 				self.safe_hmm()
-				keep = np.zeros(self.d.shape[0],dtype='bool')
+				y = np.zeros((self.d.shape[0],self.d.shape[2]))
 				for ind in range(self.d.shape[0]):
 					intensities = self.d[ind].copy()
 					bts = self.gui.prefs['bleedthrough'].reshape((4,4))
@@ -473,11 +473,11 @@ class plotter(QWidget):
 					for i in range(self.ncolors):
 						intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*intensities[i]
 					cc = c.split('+')
-					y = np.zeros(intensities.shape[-1])
+
 					for ccc in cc:
-						y += intensities[int(ccc)]
-					if model_comparison_signal(y,threshold=0.95):
-						keep[ind] = True
+						y[ind] += intensities[int(ccc)]
+				keep = model_comparison_signal(y)
+				keep = keep > 0.95
 				d = self.d[keep]
 				self.index = 0
 				self.initialize_data(d)
