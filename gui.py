@@ -68,6 +68,7 @@ class gui(QMainWindow):
 		self.add_dock('transform', 'Transform', docks.transform.dock_transform(self), 'lr', 'r')
 		self.add_dock('extract', 'Extract', docks.extract.dock_extract(self), 'lr', 'r')
 		self.add_dock('prefs', 'Prefs', docks.prefs.dock_prefs(self), 'lr', 'r')
+		self.add_dock('mesoscopic', 'Mesoscopic', docks.mesoscopic.dock_mesoscopic(self), 'lr', 'r')
 
 		# Display docks in tabs
 		self.tabifyDockWidget(self.docks['tools'][0],self.docks['contrast'][0])
@@ -79,6 +80,7 @@ class gui(QMainWindow):
 		self.tabifyDockWidget(self.docks['background'][0],self.docks['transform'][0])
 		self.tabifyDockWidget(self.docks['transform'][0],self.docks['extract'][0])
 		self.tabifyDockWidget(self.docks['extract'][0],self.docks['prefs'][0])
+		self.tabifyDockWidget(self.docks['prefs'][0],self.docks['mesoscopic'][0])
 
 		# self.docks['background'][0].close()
 		# self.docks['prefs'][0].close()
@@ -111,7 +113,7 @@ class gui(QMainWindow):
 			menu_movie.addAction(self.docks[mm][0].toggleViewAction())
 
 		menu_analysis = self.menubar.addMenu('Analysis')
-		m = ['spotfind','background','transform','extract','prefs']
+		m = ['spotfind','background','transform','extract','prefs','mesoscopic']
 		for mm in m:
 			menu_analysis.addAction(self.docks[mm][0].toggleViewAction())
 
