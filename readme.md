@@ -1,5 +1,3 @@
-# vbscope - 
-
 ## Install
 pyqt 5.6
 numpy 1.13
