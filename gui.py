@@ -97,13 +97,16 @@ class gui(QMainWindow):
 		file_load = QAction('Load', self, shortcut='Ctrl+O')
 		file_load.triggered.connect(self.load_tif)
 
+		file_update = QAction('Update',self)
+		file_update.triggered.connect(self.updategit)
+
 		file_about = QAction('About',self)
 		file_about.triggered.connect(self.about)
 
 		file_exit = QAction('Exit', self, shortcut='Ctrl+Q')
 		file_exit.triggered.connect(self.app.quit)
 
-		for f in [file_load,file_about,file_exit]:
+		for f in [file_load,file_update,file_about,file_exit]:
 			menu_file.addAction(f)
 
 		### Movie
@@ -120,7 +123,6 @@ class gui(QMainWindow):
 	def about(self):
 		from docks.prefs import last_update_date
 		QMessageBox.about(None,'About vbscope','Version: %s\n\nFrom the Gonzalez Lab (Columbia University).\n\nPrinciple authors: JH,CKT,RLG.\nMany thanks to the entire lab for their input.'%(last_update_date))
-
 
 	def load_tif(self):
 		self.docks['play'][1].stop_playing()
@@ -167,10 +169,40 @@ class gui(QMainWindow):
 			else:
 				QMessageBox.critical(None,'Could Not Load File','Could not load file: %s.\nMake sure to use a .TIF format file'%(fname[0]))
 
+	def _restart(self):
+		from os import execl
+		import sys
+		execl(sys.executable, *([sys.executable]+sys.argv))
+
+	def updategit(self):
+		success = self.yesno_question('Update?','Are you sure you want to update?\nThe program will restart if successful.')
+
+		try:
+			import git
+			import os
+			import sys
+			dn = '/'.join(sys.argv[0].split('/')[:-1])
+			g = git.cmd.Git(dn)
+			ret = g.pull()
+			if not ret.startswith('Already up-to-date.'):
+				QMessageBox.critical(None,'Update','Successfully Updated - Restarting now\n\n%s'%(ret))
+				self._restart()
+			else:
+				QMessageBox.critical(None,'Update','%s'%(ret))
+		except:
+			QMessageBox.critical(None,'Update','Could not pull from the git repository.\nTry manually updating from: https://gitlab.com/ckinztho/vbscope')
+
 	def closeEvent(self,event):
 		self.docks['play'][1].timer_playing.stop()
 		# self.main.movie_player.timer_playing.stop()
 		pass
+
+	def yesno_question(self,title,message):
+		reply = QMessageBox.question(self,title,message,QMessageBox.Yes,QMessageBox.No)
+		if reply == QMessageBox.Yes:
+			return True
+		else:
+			return False
 
 def launch():
 	import sys

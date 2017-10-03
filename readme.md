@@ -6,10 +6,11 @@ scipy 0.19
 scikit-image 0.13
 scikit-learn 0.19.0
 numba 0.34
+gitpython 2.1
 
 ### Update Python Packages
 ``` bash
-conda install scikit-image scipy numpy matplotlib pyqt scikit-learn numba
+conda install scikit-image scipy numpy matplotlib pyqt scikit-learn numba gitpython
 ```
 
 ### Compile Tifffile
