@@ -1,4 +1,4 @@
-# vbscope
+# vbscope - 
 
 ## Install
 pyqt 5.6
