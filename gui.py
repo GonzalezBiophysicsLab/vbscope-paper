@@ -83,7 +83,7 @@ class gui(QMainWindow):
 		self.tabifyDockWidget(self.docks['prefs'][0],self.docks['mesoscopic'][0])
 
 		# self.docks['background'][0].close()
-		# self.docks['prefs'][0].close()
+		self.docks['mesoscopic'][0].close()
 		self.docks['spotfind'][0].raise_()
 
 
