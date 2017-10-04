@@ -734,8 +734,9 @@ class plotter(QWidget):
 			for i in range(fpb.shape[1]):
 				fpb[j][i,:self.pre_list[i]] = np.nan
 				fpb[j][i,self.pb_list[i]:] = np.nan
-				fpb[j][i,:self.gui.prefs['plotter_xmin']] = np.nan
-				fpb[j][i,self.gui.prefs['plotter_xmax']:] = np.nan
+				if self.gui.prefs['synchronize_start_flag'] != 'True':
+					fpb[j][i,:self.gui.prefs['plotter_xmin']] = np.nan
+					fpb[j][i,self.gui.prefs['plotter_xmax']:] = np.nan
 
 		checked = self.get_checked()
 		fpb = fpb[:,checked]
@@ -786,6 +787,15 @@ class plotter(QWidget):
 	def hist2d(self):
 		if self.ncolors == 2:
 			fpb = self.get_plot_data()[0]
+			if self.gui.prefs['synchronize_start_flag'] == 'True':
+				print np.nansum(fpb)
+				for i in range(fpb.shape[0]):
+					y = fpb[i].copy()
+					fpb[i] = np.nan
+					pre = self.pre_list[i]
+					post = self.pb_list[i]
+					fpb[i,0:post-pre] = y[pre:post]
+				print np.nansum(fpb)
 
 			dtmin = self.gui.prefs['plotter_xmin']
 			dtmax = self.gui.prefs['plotter_xmax']

@@ -154,6 +154,6 @@ default = {
 'convert_c_lambda':[11.64,12.75],
 'convert_em_gain':300,
 
-'photobleaching_flag':True
-
+'photobleaching_flag':True,
+'synchronize_start_flag':False
 }
