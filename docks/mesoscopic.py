@@ -115,5 +115,5 @@ def e_t_powerlaw(k,n):
 	return gamma((2.+n)/n)/gamma(1.+1./n)/2./k
 def fit(t,y):
 	from scipy.optimize import curve_fit
-	p,c = curve_fit(powerlaw,t,y,p0=(y[0]-y[-1],y[-1],1./(t.size/2.),1.))
+	p,c = curve_fit(powerlaw,t,y,p0=(y[0]-y[-1],y[-1],1./(t.size/2.),1.),maxfev=1000000)
 	return p,c
