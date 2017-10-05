@@ -2,6 +2,8 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QSho
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator
 
+import matplotlib
+matplotlib.use('Qt5Agg')
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 import matplotlib.pyplot as plt

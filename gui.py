@@ -3,6 +3,9 @@ from PyQt5.QtCore import Qt
 
 import numpy as np
 
+import matplotlib
+matplotlib.use('Qt5Agg')
+
 from container_data import data_container
 from container_plot import plot_container
 import docks
