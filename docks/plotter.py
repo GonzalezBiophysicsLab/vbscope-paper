@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog, QDockWidget, QMessageBox
+from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog, QDockWidget, QMessageBox, QTabWidget
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator
 
@@ -9,9 +9,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from prefs import dock_prefs
-
-class fake(object):
-	pass
 
 ## GUI for plotting 2D smFRET trajectories
 class ui_plotter(QMainWindow):
@@ -62,10 +59,30 @@ class plotter(QWidget):
 		self.docks['prefs'][0].setFloating(True)
 		self.docks['prefs'][0].close()
 
+		self.docks['plots_1D'] = [QDockWidget('1D Histogram',parent),mpl_plot()]
+		self.docks['plots_1D'][0].setWidget(self.docks['plots_1D'][1])
+		self.docks['plots_1D'][0].setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		parent.addDockWidget(Qt.RightDockWidgetArea, self.docks['plots_1D'][0])
+		self.docks['plots_1D'][0].close()
+		self.docks['plots_2D'] = [QDockWidget('2D Histogram',parent),mpl_plot()]
+		self.docks['plots_2D'][0].setWidget(self.docks['plots_2D'][1])
+		self.docks['plots_2D'][0].setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		parent.addDockWidget(Qt.RightDockWidgetArea, self.docks['plots_2D'][0])
+		self.docks['plots_2D'][0].close()
+		self.docks['plots_TDP'] = [QDockWidget('Transition Density',parent),mpl_plot()]
+		self.docks['plots_TDP'][0].setWidget(self.docks['plots_TDP'][1])
+		self.docks['plots_TDP'][0].setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		parent.addDockWidget(Qt.RightDockWidgetArea, self.docks['plots_TDP'][0])
+		self.docks['plots_TDP'][0].close()
+
+		self.parent().tabifyDockWidget(self.docks['plots_1D'][0],self.docks['plots_2D'][0])
+		self.parent().tabifyDockWidget(self.docks['plots_2D'][0],self.docks['plots_TDP'][0])
+		self.parent().setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
+
 		## Initialize Plots
 		self.f,self.a = plt.subplots(2,2,gridspec_kw={'width_ratios':[6,1]},figsize=(6.5,4))
 		self.canvas = FigureCanvas(self.f)
-		sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+		sizePolicy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
 		self.canvas.setSizePolicy(sizePolicy)
 		self.toolbar = NavigationToolbar(self.canvas,None)
 
@@ -91,13 +108,9 @@ class plotter(QWidget):
 		scalewidget.setLayout(g)
 
 		## Put all of the widgets together
-		twidg = QWidget()
-		hbox = QHBoxLayout()
-		hbox.addWidget(self.slider_select)
-		twidg.setLayout(hbox)
 		layout.addWidget(self.canvas)
 		layout.addWidget(self.toolbar)
-		layout.addWidget(twidg)
+		layout.addWidget(self.slider_select)
 		layout.addWidget(scalewidget)
 		self.setLayout(layout)
 
@@ -755,12 +768,16 @@ class plotter(QWidget):
 
 	## Plot the 1D Histogram of the ensemble
 	def hist1d(self):
+		if self.docks['plots_1D'][0].isHidden():
+			self.docks['plots_1D'][0].show()
+		popplot = self.docks['plots_1D'][1]
+		popplot.ax.cla()
+
 		if self.ncolors == 2:
 			fpb = self.get_plot_data()[0]
 
-			plt.figure(5)
 			# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
-			plt.hist(fpb.flatten(),bins=self.gui.prefs['plotter_n_xbins'],range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
+			popplot.ax.hist(fpb.flatten(),bins=self.gui.prefs['plotter_n_xbins'],range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
 
 			if not self.hmm_result is None:
 				r = self.hmm_result
@@ -774,17 +791,21 @@ class plotter(QWidget):
 				for i in range(r.m.size):
 					y = ppi[i]*norm(x,r.m[i],v[i])
 					tot += y
-					plt.plot(x,y,color='k',lw=1,alpha=.8,ls='--')
-				plt.plot(x,tot,color='k',lw=2,alpha=.8)
+					popplot.ax.plot(x,y,color='k',lw=1,alpha=.8,ls='--')
+				popplot.ax.plot(x,tot,color='k',lw=2,alpha=.8)
 
-			plt.xlim(-.4,1.4)
-			plt.xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
-			plt.ylabel('Probability',fontsize=14)
-			plt.tight_layout()
-
-			plt.show()
+			popplot.ax.set_xlim(-.4,1.4)
+			popplot.ax.set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
+			popplot.ax.set_ylabel('Probability',fontsize=14)
+			popplot.f.tight_layout()
+			popplot.f.canvas.draw()
 
 	def hist2d(self):
+		if self.docks['plots_2D'][0].isHidden():
+			self.docks['plots_2D'][0].show()
+		popplot = self.docks['plots_2D'][1]
+		popplot.ax.cla()
+
 		if self.ncolors == 2:
 			fpb = self.get_plot_data()[0]
 			if self.gui.prefs['synchronize_start_flag'] == 'True':
@@ -810,8 +831,6 @@ class plotter(QWidget):
 			ry = .5*(hy[1:]+hy[:-1])
 			x,y = np.meshgrid(rx,ry,indexing='ij')
 
-			plt.figure(6)
-
 			from scipy.ndimage import gaussian_filter
 			z = gaussian_filter(z,(self.gui.prefs['plotter_smoothx'],self.gui.prefs['plotter_smoothy']))
 
@@ -827,28 +846,32 @@ class plotter(QWidget):
 			z/=np.nanmax(z)
 			from matplotlib.colors import LogNorm
 			if vmin <= 0 or vmin >=z.max():
-				pc = plt.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_n_levels'],cmap=cm)
+				pc = popplot.ax.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_n_levels'],cmap=cm)
 			else:
 				# pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
-				pc = plt.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_n_levels'],vmin =vmin,cmap=cm)
+				pc = popplot.ax.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_n_levels'],vmin =vmin,cmap=cm)
 			for pcc in pc.collections:
 				pcc.set_edgecolor("face")
 
-			cb = plt.colorbar()
+			cb = popplot.f.colorbar(pc)
 			cb.set_ticks(np.array((0.,.2,.4,.6,.8,1.)))
 			cb.solids.set_edgecolor('face')
 			cb.solids.set_rasterized(True)
 
-
-			plt.xlim(0,rx.max())
-			plt.xlabel('Time (s)',fontsize=14)
-			plt.ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
+			popplot.ax.set_xlim(0,rx.max())
+			popplot.ax.set_xlabel('Time (s)',fontsize=14)
+			popplot.ax.set_ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
-			plt.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
-			plt.tight_layout()
-			plt.show()
+			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
+			popplot.f.tight_layout()
+			popplot.canvas.draw()
 
 	def tdplot(self):
+		if self.docks['plots_TDP'][0].isHidden():
+			self.docks['plots_TDP'][0].show()
+		popplot = self.docks['plots_TDP'][1]
+		popplot.ax.cla()
+
 		if self.ncolors == 2:
 			fpb = self.get_plot_data()[0]
 			d = np.array([[fpb[i,:-1],fpb[i,1:]] for i in range(fpb.shape[0])])
@@ -870,14 +893,14 @@ class plotter(QWidget):
 			from matplotlib.colors import LogNorm
 			if vmin <= 0:
 				z[z==0] = 1.
-				pc = plt.contourf(x,y,z,np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_n_levels']),cmap=cm,norm=LogNorm())
+				pc = popplot.ax.contourf(x,y,z,np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_n_levels']),cmap=cm,norm=LogNorm())
 			else:
 				# pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
-				pc = plt.contourf(x,y,z,np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_n_levels']),vmin =vmin,cmap=cm,norm=LogNorm())
+				pc = popplot.ax.contourf(x,y,z,np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_n_levels']),vmin =vmin,cmap=cm,norm=LogNorm())
 			for pcc in pc.collections:
 				pcc.set_edgecolor("face")
 
-			cb = plt.colorbar()
+			cb = popplot.f.colorbar(pc)
 			zm = np.floor(np.log10(z.max()))
 			cz = np.logspace(0,zm,zm+1)
 			cb.set_ticks(cz)
@@ -885,15 +908,15 @@ class plotter(QWidget):
 			cb.solids.set_edgecolor('face')
 			cb.solids.set_rasterized(True)
 
-			plt.xlim(rx.min(),rx.max())
-			plt.ylim(ry.min(),ry.max())
-			plt.xlabel(r'Initial E$_{\rm FRET}$',fontsize=14)
-			plt.ylabel(r'Final E$_{\rm FRET}$',fontsize=14)
-			plt.title('Transition Density (Counts)')
+			popplot.ax.set_xlim(rx.min(),rx.max())
+			popplot.ax.set_ylim(ry.min(),ry.max())
+			popplot.ax.set_xlabel(r'Initial E$_{\rm FRET}$',fontsize=14)
+			popplot.ax.set_ylabel(r'Final E$_{\rm FRET}$',fontsize=14)
+			popplot.ax.set_title('Transition Density (Counts)')
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
-			plt.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
-			plt.tight_layout()
-			plt.show()
+			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
+			popplot.f.tight_layout()
+			popplot.f.canvas.draw()
 
 	def update_colors(self):
 		for i in range(self.ncolors):
@@ -1007,6 +1030,34 @@ class plotter(QWidget):
 		order = np.fft.ifft((a*b),axis=1)
 		order = order[:,0].real.argsort()
 		return order
+
+class fake(object):
+	pass
+
+class mpl_plot(QWidget):
+	def __init__(self):
+		super(QWidget,self).__init__()
+
+		self.f,self.ax = plt.subplots(1,figsize=(4,3))
+		self.canvas = FigureCanvas(self.f)
+		self.toolbar = NavigationToolbar(self.canvas,None)
+
+		sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+		self.canvas.setSizePolicy(sizePolicy)
+		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
+
+		self.ax.tick_params(axis='both', which='major', labelsize=8)
+		self.ax.format_coord = lambda x, y: ''
+
+		self.canvas.draw()
+		self.f.tight_layout()
+		plt.close(self.f)
+
+		layout = QVBoxLayout()
+		layout.addWidget(self.canvas)
+		layout.addWidget(self.toolbar)
+		layout.addStretch()
+		self.setLayout(layout)
 
 ## Launch the main window as a standalone GUI (ie without vbscope analyze movies)
 def launch():

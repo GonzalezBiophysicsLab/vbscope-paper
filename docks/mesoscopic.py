@@ -21,6 +21,8 @@ class mpl_plot():
 		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
 
 		[aa.tick_params(axis='both', which='major', labelsize=8) for aa in self.ax]
+		for aa in self.ax:
+			aa.format_coord = lambda x, y: ''
 		self.canvas.draw()
 		self.f.tight_layout()
 		plt.close(self.f)
