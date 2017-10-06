@@ -775,6 +775,7 @@ class plotter(QWidget):
 	def hist1d(self):
 		if self.docks['plots_1D'][0].isHidden():
 			self.docks['plots_1D'][0].show()
+		self.docks['plots_1D'][0].raise_()
 		popplot = self.docks['plots_1D'][1]
 		popplot.ax.cla()
 
@@ -808,8 +809,9 @@ class plotter(QWidget):
 	def hist2d(self):
 		if self.docks['plots_2D'][0].isHidden():
 			self.docks['plots_2D'][0].show()
+		self.docks['plots_2D'][0].raise_()
 		popplot = self.docks['plots_2D'][1]
-		popplot.ax.cla()
+		popplot.clf()
 
 		if self.ncolors == 2:
 			fpb = self.get_plot_data()[0]
@@ -867,15 +869,16 @@ class plotter(QWidget):
 			popplot.ax.set_xlabel('Time (s)',fontsize=14)
 			popplot.ax.set_ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
-			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
+			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
 			popplot.f.tight_layout()
 			popplot.canvas.draw()
 
 	def tdplot(self):
 		if self.docks['plots_TDP'][0].isHidden():
 			self.docks['plots_TDP'][0].show()
+		self.docks['plots_TDP'][0].raise_()
 		popplot = self.docks['plots_TDP'][1]
-		popplot.ax.cla()
+		popplot.clf()
 
 		if self.ncolors == 2:
 			fpb = self.get_plot_data()[0]
@@ -919,7 +922,7 @@ class plotter(QWidget):
 			popplot.ax.set_ylabel(r'Final E$_{\rm FRET}$',fontsize=14)
 			popplot.ax.set_title('Transition Density (Counts)')
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
-			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.95),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
+			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
 			popplot.f.tight_layout()
 			popplot.f.canvas.draw()
 
@@ -941,7 +944,7 @@ class plotter(QWidget):
 	## Plot current trajectory
 	def update(self):
 		intensities = self.d[self.index].copy()
-		
+
 		if self.gui.prefs['convert_flag']:
 			for i in range(self.ncolors):
 				intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*(intensities[i] - self.gui.prefs['convert_offset'])
@@ -1212,19 +1215,15 @@ class mpl_plot(QWidget):
 	def __init__(self):
 		super(QWidget,self).__init__()
 
-		self.f,self.ax = plt.subplots(1,figsize=(4,3))
+		self.f,self.ax = plt.subplots(1,figsize=(6,4))
 		self.canvas = FigureCanvas(self.f)
 		self.toolbar = NavigationToolbar(self.canvas,None)
 
 		sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 		self.canvas.setSizePolicy(sizePolicy)
-		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
-
-		self.ax.tick_params(axis='both', which='major', labelsize=8)
-		self.ax.format_coord = lambda x, y: ''
+		self.fix_ax()
 
 		self.canvas.draw()
-		self.f.tight_layout()
 		plt.close(self.f)
 
 		layout = QVBoxLayout()
@@ -1232,6 +1231,18 @@ class mpl_plot(QWidget):
 		layout.addWidget(self.toolbar)
 		layout.addStretch()
 		self.setLayout(layout)
+
+	def fix_ax(self):
+		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
+
+		self.ax.tick_params(axis='both', which='major', labelsize=8)
+		self.ax.format_coord = lambda x, y: ''
+		self.f.tight_layout()
+
+	def clf(self):
+		self.f.clf()
+		self.ax = self.f.add_subplot(111)
+		self.fix_ax()
 
 ## Launch the main window as a standalone GUI (ie without vbscope analyze movies)
 def launch():
