@@ -941,14 +941,16 @@ class plotter(QWidget):
 	## Plot current trajectory
 	def update(self):
 		intensities = self.d[self.index].copy()
+		
+		if self.gui.prefs['convert_flag']:
+			for i in range(self.ncolors):
+				intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*(intensities[i] - self.gui.prefs['convert_offset'])
+
 		bts = self.gui.prefs['bleedthrough'].reshape((4,4))
 		for i in range(self.ncolors):
 			for j in range(self.ncolors):
 				intensities[j] -= bts[i,j]*intensities[i]
 
-		if self.gui.prefs['convert_flag']:
-			for i in range(self.ncolors):
-				intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*intensities[i]
 
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
 
