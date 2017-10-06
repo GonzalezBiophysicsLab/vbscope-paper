@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog, QDockWidget, QMessageBox, QTabWidget
+from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog, QDockWidget, QMessageBox, QTabWidget, QListWidget, QAbstractItemView
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QDoubleValidator
 
@@ -256,13 +256,16 @@ class plotter(QWidget):
 		file_load_classes = QAction('Load Classes', self, shortcut='Ctrl+P')
 		file_load_classes.triggered.connect(self.load_classes)
 
+		file_batch = QAction('Batch Load',self, shortcut='Ctrl+B')
+		file_batch.triggered.connect(self.batch_load)
+
 		file_about = QAction('About',self)
 		file_about.triggered.connect(self.about)
 
 		file_exit = QAction('Exit', self, shortcut='Ctrl+Q')
 		file_exit.triggered.connect(self.parent().close)
 
-		for f in [file_load_traces,file_load_classes,self.docks['prefs'][0].toggleViewAction(),file_about,file_exit]:
+		for f in [file_load_traces,file_load_classes,file_batch,self.docks['prefs'][0].toggleViewAction(),file_about,file_exit]:
 			menu_file.addAction(f)
 
 		### save
@@ -1032,6 +1035,173 @@ class plotter(QWidget):
 		order = np.fft.ifft((a*b),axis=1)
 		order = order[:,0].real.argsort()
 		return order
+
+	def batch_load(self):
+		try:
+			if not self.ui_batch.isVisible():
+				self.ui_batch.setVisible(True)
+			self.ui_batch.raise_()
+		except:
+			self.ui_batch = ui_batch_loader(self)
+			self.ui_batch.setWindowTitle('Batch Load')
+			self.ui_batch.show()
+
+
+class deleting_list(QListWidget):
+	def __init__(self):
+		super(deleting_list,self).__init__()
+		self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+		self.setDragEnabled(True)
+		self.setDropIndicatorShown(True)
+		self.setDragDropMode(QAbstractItemView.InternalMove)
+
+	def keyPressEvent(self,event):
+		if event.key() == Qt.Key_Backspace or event.key() == Qt.Key_Delete:
+			sis = self.selectedItems()
+			if len(sis) > 0:
+				for si in sis:
+					self.takeItem(self.row(si))
+		QListWidget.keyPressEvent(self,event)
+		event.accept()
+
+	def load_files(self):
+		fname = QFileDialog.getOpenFileNames(self,'Choose Files','./')
+		if len(fname[0]) > 0:
+			self.addItems(fname[0])
+
+class ui_batch_loader(QMainWindow):
+	def __init__(self,parent=None):
+		super(QMainWindow,self).__init__(parent)
+		self.ui = batch_loader(self)
+		self.setCentralWidget(self.ui)
+		self.show()
+
+	def closeEvent(self,event):
+		self.parent().activateWindow()
+		self.parent().raise_()
+		self.parent().setFocus()
+
+class batch_loader(QWidget):
+	def __init__(self,parent=None):
+		super(QWidget,self).__init__(parent=parent)
+		self.initialize()
+		self.window = self.parent().parent()
+
+	def initialize(self):
+		tothbox = QHBoxLayout()
+
+		widl1 = QWidget()
+		vbox = QVBoxLayout()
+		self.l1 = deleting_list()
+		vbox.addWidget(QLabel('Trajectories'))
+		vbox.addWidget(self.l1)
+		hw = QWidget()
+		hbox = QHBoxLayout()
+		b1a = QPushButton('Add')
+		b1c = QPushButton('Clear')
+		hbox.addStretch()
+		hbox.addWidget(b1a)
+		hbox.addWidget(b1c)
+		hw.setLayout(hbox)
+		vbox.addWidget(hw)
+		b1a.clicked.connect(self.l1.load_files)
+		b1c.clicked.connect(self.l1.clear)
+		widl1.setLayout(vbox)
+
+		widl2 = QWidget()
+		vbox = QVBoxLayout()
+		self.l2 = deleting_list()
+		vbox.addWidget(QLabel('Classes/Bleaching'))
+		vbox.addWidget(self.l2)
+		hw = QWidget()
+		hbox = QHBoxLayout()
+		b2a = QPushButton('Add')
+		b2c = QPushButton('Clear')
+		hbox.addStretch()
+		hbox.addWidget(b2a)
+		hbox.addWidget(b2c)
+		hw.setLayout(hbox)
+		vbox.addWidget(hw)
+		b2a.clicked.connect(self.l2.load_files)
+		b2c.clicked.connect(self.l2.clear)
+		widl2.setLayout(vbox)
+
+		vwid = QWidget()
+		vboxsub = QVBoxLayout()
+		ss = 'Bulk Import\nPick trajectories and matching class files\nfor bulk import.  Match corresponding files\nin the same row by dragging and dropping.\nRemove files with delete key or clear. If\nyou do not have class files, keep the class\npane empty. Click the load button to load.'
+		bsub = QPushButton('Load')
+		vboxsub.addWidget(QLabel(ss))
+		vboxsub.addWidget(bsub)
+		vwid.setLayout(vboxsub)
+		bsub.clicked.connect(self.batch_load)
+
+		tothbox.addWidget(widl1)
+		tothbox.addWidget(widl2)
+		tothbox.addWidget(vwid)
+
+		self.setLayout(tothbox)
+
+	def batch_load(self):
+		count1 = self.l1.count()
+		count2 = self.l2.count()
+		if count1 == 0:
+			return None
+		elif (count2 == 0) or (count1 == count2):
+			ltraj = []
+			lclass = []
+			for i in range(count1):
+				ltraj.append(self.l1.item(i).text())
+				if count2 != 0:
+					lclass.append(self.l2.item(i).text())
+				else:
+					lclass.append(None)
+
+			ncolors,suc2 = QInputDialog.getInt(self,"Number of Color Channels","Number of Color Channels",value=2,min=1)
+			if suc2:
+				ds = []
+				cs = []
+				for i in range(len(ltraj)):
+					try:
+						d = np.loadtxt(ltraj[i],delimiter=',').T
+						dd = np.array([d[j::ncolors] for j in range(ncolors)])
+						d = np.moveaxis(dd,1,0)
+
+						if not lclass[i] is None:
+							c = np.loadtxt(lclass[i],delimiter=',').astype('i')
+						else:
+							c = np.zeros((d.shape[0],1+2*ncolors),dtype='i')
+							c[:,2::2] = d.shape[2]
+						ds.append(d)
+						cs.append(c)
+					except:
+						print "Could not load:\n\t%s\n\t%s"%(ltraj[i],lclass[i])
+
+				if len(cs) > 0:
+					cc = np.concatenate(cs,axis=0)
+					maxlength = np.max([dd.shape[2] for dd in ds]).astype('i')
+					for i in range(len(ds)):
+						dsi = ds[i]
+						dtemp = np.zeros((dsi.shape[0],dsi.shape[1],maxlength))
+						dtemp[:,:,:dsi.shape[2]] = dsi
+						ds[i] = dtemp
+					dd = np.concatenate(ds,axis=0)
+
+					self.window.ncolors = ncolors
+					self.window.initialize_data(dd,sort=False)
+					self.window.index = 0
+					self.window.initialize_plots()
+					self.window.initialize_sliders()
+
+					self.window.class_list = cc[:,0]
+					self.window.pre_list = cc[:,1::2].max(1)
+					self.window.pb_list = cc[:,2::2].min(1)
+					self.window.update()
+
+					self.window.ui_batch.close()
+					QMessageBox.information(self,"Batch Load","Loaded %d pairs of files containing a total of %d trajectories."%(len(ds),dd.shape[0]))
+				else:
+					QMessageBox.critical(self,"Batch Load","Could not find any traces in these files")
+
 
 class fake(object):
 	pass
