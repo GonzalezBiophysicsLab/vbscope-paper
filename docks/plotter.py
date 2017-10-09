@@ -491,8 +491,9 @@ class plotter(QWidget):
 			d = self.d[cut]
 			pbt = pbt[cut]
 			pret = pret[cut]
+			print d.shape,pbt.shape,pret.shape
 			self.index = 0
-			self.initialize_data(d)
+			self.initialize_data(d,sort=False)
 			self.pb_list = pbt
 			self.pre_list = pret
 			self.initialize_plots()
