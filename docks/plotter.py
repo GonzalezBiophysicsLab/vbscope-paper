@@ -486,7 +486,7 @@ class plotter(QWidget):
 			pbt = self.pb_list
 			pret = self.pre_list
 			dt = pbt-pret
-			cut = dt > self.gui.prefs['pb_length_cutoff']
+			cut = dt > self.gui.prefs['pb_length']
 			print "kept %d out of %d = %f"%(cut.sum(),pbt.size,cut.sum()/float(pbt.size))
 			d = self.d[cut]
 			self.index = 0
