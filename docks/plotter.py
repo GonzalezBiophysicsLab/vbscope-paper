@@ -483,16 +483,21 @@ class plotter(QWidget):
 	def cull_pb(self):
 		if not self.d is None and self.ncolors == 2:
 			self.safe_hmm()
-			pbt = self.pb_list
-			pret = self.pre_list
+			pbt = self.pb_list.copy()
+			pret = self.pre_list.copy()
 			dt = pbt-pret
 			cut = dt > self.gui.prefs['pb_length']
 			print "kept %d out of %d = %f"%(cut.sum(),pbt.size,cut.sum()/float(pbt.size))
 			d = self.d[cut]
+			pbt = pbt[cut]
+			pret = pret[cut]
 			self.index = 0
 			self.initialize_data(d)
+			self.pb_list = pbt
+			self.pre_list = pret
 			self.initialize_plots()
 			self.initialize_sliders()
+
 
 	# def cull_empty(self):
 	# 	if not self.d is None:
