@@ -822,7 +822,8 @@ class plotter(QWidget):
 					fpb[i] = np.nan
 					pre = self.pre_list[i]
 					post = self.pb_list[i]
-					fpb[i,0:post-pre] = y[pre:post]
+					if pre < post:
+						fpb[i,0:post-pre] = y[pre:post]
 				print np.nansum(fpb)
 
 			dtmin = self.gui.prefs['plotter_xmin']
