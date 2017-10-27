@@ -76,9 +76,15 @@ class plotter(QWidget):
 		self.docks['plots_TDP'][0].setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		parent.addDockWidget(Qt.RightDockWidgetArea, self.docks['plots_TDP'][0])
 		self.docks['plots_TDP'][0].close()
+		self.docks['plots_surv'] = [QDockWidget('Survival Plot',parent),mpl_plot()]
+		self.docks['plots_surv'][0].setWidget(self.docks['plots_surv'][1])
+		self.docks['plots_surv'][0].setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		parent.addDockWidget(Qt.RightDockWidgetArea, self.docks['plots_surv'][0])
+		self.docks['plots_surv'][0].close()
 
 		self.parent().tabifyDockWidget(self.docks['plots_1D'][0],self.docks['plots_2D'][0])
 		self.parent().tabifyDockWidget(self.docks['plots_2D'][0],self.docks['plots_TDP'][0])
+		self.parent().tabifyDockWidget(self.docks['plots_TDP'][0],self.docks['plots_surv'][0])
 		self.parent().setTabPosition(Qt.AllDockWidgetAreas, QTabWidget.North)
 
 		## Initialize Plots
@@ -463,15 +469,26 @@ class plotter(QWidget):
 			cut = snr > snr_threshold
 			print "kept %d out of %d = %f"%(cut.sum(),snr.size,cut.sum()/float(snr.size))
 
-			plt.figure()
-			x = np.linspace(0.,15,131)
-			y = np.zeros_like(x)
-			for i in range(y.size):
-				y[i] = (snr > x[i]).sum()
-			y/=y[0]
-			plt.plot(x,y)
-			plt.axvline(snr_threshold,color='r')
-			plt.show()
+			if self.docks['plots_surv'][0].isHidden():
+				self.docks['plots_surv'][0].show()
+			self.docks['plots_surv'][0].raise_()
+			popplot = self.docks['plots_surv'][1]
+			popplot.ax.cla()
+
+			x = np.linspace(np.min((0.,snr.min())),20,10000)
+			surv = np.array([(snr > x[i]).sum()/float(snr.size) for i in range(x.size)])
+			# x = np.linspace(0.,15,131)
+			# y = np.zeros_like(x)
+			# for i in range(y.size):
+				# y[i] = (snr > x[i]).sum()
+			# y/=y[0]
+			popplot.ax.plot(x,surv)
+			popplot.ax.axvline(snr_threshold,color='r')
+			popplot.ax.set_ylim(0,1)
+			popplot.ax.set_ylabel('Survival Probability')
+			popplot.ax.set_xlabel('SNR')
+			popplot.f.tight_layout()
+			popplot.f.canvas.draw()
 
 			d = self.d[cut]
 			self.index = 0
@@ -563,14 +580,23 @@ class plotter(QWidget):
 					cc = c.split('+')
 					for ccc in cc:
 						y[ind] += intensities[int(ccc)].sum()
-				x = np.logspace(0,np.log10(y.max()),1000)
+				# x = np.logspace(0,np.log10(y.max()),1000)
+				x = np.linspace(y.min(),y.max(),10000)
 				surv = np.array([(y > x[i]).sum()/float(y.size) for i in range(x.size)])
-				plt.figure()
-				plt.semilogx(x,surv)
-				plt.ylim(0,1)
-				plt.ylabel('Survival Probability')
-				plt.xlabel('Total Number of Photons')
-				plt.show()
+
+				if self.docks['plots_surv'][0].isHidden():
+					self.docks['plots_surv'][0].show()
+				self.docks['plots_surv'][0].raise_()
+				popplot = self.docks['plots_surv'][1]
+				popplot.ax.cla()
+
+				# plt.semilogx(x,surv)
+				popplot.ax.plot(x,surv)
+				popplot.ax.set_ylim(0,1)
+				popplot.ax.set_ylabel('Survival Probability')
+				popplot.ax.set_xlabel('Total Number of Photons')
+				popplot.f.tight_layout()
+				popplot.f.canvas.draw()
 				threshold,success2 = QInputDialog.getDouble(self,"Photon Cutoff","Total number of photons required to keep a trajectory",value=1000.,min=0.,max=1e10,decimals=10)
  				if success2:
 					keep = y > threshold
