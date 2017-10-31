@@ -27,10 +27,11 @@ class data_container():
 
 		self.background = None
 		self.image_contrast = np.array((0.,100.))
+		self.metadata = []
 
 
 	def load(self,filename):
-		data = _io_load_tif(filename)
+		data,metadata = _io_load_tif(filename)
 
 		if not data is None:
 			self.initialize()
@@ -52,6 +53,8 @@ class data_container():
 
 			self.transforms = None
 
+			self.metadata = metadata
+			print self.metadata
 			return True
 
 		return False
@@ -130,7 +133,8 @@ def _pil_load(filename,frames=None):
 		movie[i] = np.array((im.getdata())).reshape((nx,ny))
 
 	print "PIL - loaded %d frames"%(movie.shape[0])
-	return movie
+	metadata = []
+	return movie,metadata
 
 def _io_load_tif(filename):
 	'''
@@ -143,9 +147,17 @@ def _io_load_tif(filename):
 
 	try:
 		import tifffile
-		movie = tifffile.TiffFile(filename).asarray()
+		m = tifffile.TiffFile(filename)
+		movie = m.asarray()
 		print "TIFFFile - loaded %d frames"%(movie.shape[0])
-		return movie
+		metadata = []
+		if m.is_micromanager:
+			metadata.append([filename,m.micromanager_metadata])
+		for i in range(len(m.pages)):
+			mm = m.pages[i]
+			if mm.is_micromanager:
+				metadata.append(["Page %d"%(i),mm.tags['micromanager_metadata'].value])
+		return movie,metadata
 
 	except:
 		pass

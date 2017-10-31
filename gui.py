@@ -65,6 +65,7 @@ class gui(QMainWindow):
 		self.add_dock('contrast', 'Contrast', docks.contrast.dock_contrast(self), 'tb', 't')
 		self.add_dock('play', 'Play', docks.play.dock_play(self), 'tb', 't')
 		self.add_dock('rotate', 'Rotate', docks.rotate.dock_rotate(self), 'tb', 't')
+		self.add_dock('tag_viewer', 'Tag Viewer', docks.tag_viewer.dock_tagviewer(self), 'tb', 'b')
 
 		self.add_dock('spotfind', 'Spot Find', docks.spotfind.dock_spotfind(self), 'lr', 'r')
 		self.add_dock('background', 'Background', docks.background.dock_background(self), 'lr', 'r')
@@ -77,6 +78,7 @@ class gui(QMainWindow):
 		self.tabifyDockWidget(self.docks['tools'][0],self.docks['contrast'][0])
 		self.tabifyDockWidget(self.docks['contrast'][0],self.docks['play'][0])
 		self.tabifyDockWidget(self.docks['play'][0],self.docks['rotate'][0])
+		self.docks['tag_viewer'][0].close()
 		self.docks['tools'][0].raise_()
 
 		self.tabifyDockWidget(self.docks['spotfind'][0],self.docks['background'][0])
@@ -114,7 +116,7 @@ class gui(QMainWindow):
 
 		### Movie
 		menu_movie = self.menubar.addMenu('Movie')
-		m = ['tools','contrast','play','rotate']
+		m = ['tools','contrast','play','rotate','tag_viewer']
 		for mm in m:
 			menu_movie.addAction(self.docks[mm][0].toggleViewAction())
 
@@ -169,6 +171,8 @@ class gui(QMainWindow):
 				self.setWindowTitle('vbscope - %s'%(self.data.dispname))
 				self.prefs['filename'] = self.data.filename
 				self.docks['prefs'][1].update_table()
+
+				self.docks['tag_viewer'][1].init_model()
 			else:
 				QMessageBox.critical(None,'Could Not Load File','Could not load file: %s.\nMake sure to use a .TIF format file'%(fname[0]))
 
