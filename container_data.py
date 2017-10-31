@@ -123,11 +123,11 @@ def _pil_load(filename,frames=None):
 		except EOFError:
 			pass
 
-	movie = []
+	nx,ny = im.size
+	movie = np.empty((frames,nx,ny))
 	for i in range(frames):
 		im.seek(i)
-		movie.append(im)
-	movie = np.array(movie)
+		movie[i] = np.array((im.getdata())).reshape((nx,ny))
 
 	print "PIL - loaded %d frames"%(movie.shape[0])
 	return movie
