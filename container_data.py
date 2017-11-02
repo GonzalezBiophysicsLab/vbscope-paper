@@ -54,7 +54,7 @@ class data_container():
 			self.transforms = None
 
 			self.metadata = metadata
-			print self.metadata
+			
 			return True
 
 		return False
