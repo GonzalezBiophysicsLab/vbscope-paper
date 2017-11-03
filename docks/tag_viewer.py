@@ -57,13 +57,16 @@ class dock_tagviewer(QWidget):
 					si_k.setChild(0,si_v)
 
 				si.setChild(i,si_k)
-				si.sortChildren(0)
+
 			return si
 
 		self.model = QStandardItemModel(self.viewer)
-		for i in range(len(self.gui.data.metadata)):
-			l = self.gui.data.metadata[i]
-			dataset = QStandardItem(l[0])
-			dataset.setEditable(False)
-			add_group(l[1],dataset)
-			self.model.appendRow(dataset)
+		# for i in range(len(self.gui.data.metadata)):
+		if len(self.gui.data.metadata) > 1:
+			for i in range(2):
+				l = self.gui.data.metadata[i]
+				dataset = QStandardItem(l[0])
+				dataset.setEditable(False)
+				add_group(l[1],dataset)
+				dataset.sortChildren(0)
+				self.model.appendRow(dataset)

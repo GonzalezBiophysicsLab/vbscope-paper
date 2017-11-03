@@ -169,7 +169,7 @@ class gui(QMainWindow):
 
 				self.statusbar.showMessage('Loaded %s'%(self.data.dispname))
 				self.setWindowTitle('vbscope - %s'%(self.data.dispname))
-				self.prefs['filename'] = self.data.filename
+				# self.prefs['filename'] = self.data.filename
 				self.docks['prefs'][1].update_table()
 
 				self.docks['tag_viewer'][1].init_model()
