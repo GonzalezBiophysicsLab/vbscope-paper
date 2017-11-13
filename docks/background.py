@@ -13,8 +13,8 @@ class dock_background(QWidget):
 
 		self.flag_showing = False
 
-		self.radius1 = 5.
-		self.radius2 = 0.5
+		self.radius1 = 10.
+		self.radius2 = 5.
 
 		layout = QGridLayout()
 
@@ -41,12 +41,11 @@ class dock_background(QWidget):
 
 		self.button_preview.clicked.connect(self.preview)
 
-		self.method = 0
+		self.combo_method.addItems(['None','Minimum','Median','Uniform'])
+		self.method = 1
 		self.combo_method.setCurrentIndex(self.method)
 		self.combo_method.currentIndexChanged.connect(self.update_method)
 
-		self.combo_method.addItems(['None','Minimum','Median','Uniform'])
-		self.combo_method.setCurrentIndex(0)
 
 	def update_radius1(self):
 		self.radius1 = float(self.le_radius1.text())
