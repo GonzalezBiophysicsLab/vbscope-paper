@@ -784,9 +784,9 @@ class plotter(QWidget):
 			for i in range(fpb.shape[1]):
 				fpb[j][i,:self.pre_list[i]] = np.nan
 				fpb[j][i,self.pb_list[i]:] = np.nan
-				if self.gui.prefs['synchronize_start_flag'] != 'True':
-					fpb[j][i,:self.gui.prefs['plotter_xmin']] = np.nan
-					fpb[j][i,self.gui.prefs['plotter_xmax']:] = np.nan
+				# if self.gui.prefs['synchronize_start_flag'] != 'True':
+				# 	fpb[j][i,:self.gui.prefs['plotter_min_time']] = np.nan
+				# 	fpb[j][i,self.gui.prefs['plotter_max_time']:] = np.nan
 
 		checked = self.get_checked()
 		fpb = fpb[:,checked]
@@ -795,6 +795,24 @@ class plotter(QWidget):
 			from supporting.photobleaching import remove_pb_all
 			fpb[0] = remove_pb_all(fpb[0])
 		return fpb
+
+	def get_viterbi_data(self):
+		if not self.hmm_result is None:
+			v = np.empty_like(self.fret[0]) + np.nan
+			for i in range(v.shape[0]):
+				if self.hmm_result.ran.count(i) > 0:
+					ii = self.hmm_result.ran.index(i)
+					v[i,self.pre_list[i]:self.pb_list[i]] = self.hmm_result.viterbi[ii]
+
+			# if self.gui.prefs['synchronize_start_flag'] != 'True':
+			# 	v[i,:self.gui.prefs['plotter_min_time']] = np.nan
+			# 	v[i,self.gui.prefs['plotter_max_time']:] = np.nan
+
+			checked = self.get_checked()
+			v = v[checked]
+			return v
+		else:
+			return None
 
 	def get_checked(self):
 		checked = np.zeros(self.d.shape[0],dtype='bool')
@@ -815,13 +833,13 @@ class plotter(QWidget):
 			fpb = self.get_plot_data()[0]
 
 			# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
-			popplot.ax.hist(fpb.flatten(),bins=self.gui.prefs['plotter_n_xbins'],range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
+			popplot.ax.hist(fpb.flatten(),bins=self.gui.prefs['plotter_nbins_fret'],range=(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret']),histtype='stepfilled',alpha=.8,normed=True)
 
 			if not self.hmm_result is None:
 				r = self.hmm_result
 				def norm(x,m,v):
 					return 1./np.sqrt(2.*np.pi*v)*np.exp(-.5/v*(x-m)**2.)
-				x = np.linspace(-.4,1.4,1001)
+				x = np.linspace(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'],1001)
 				ppi = np.sum([r.gamma[i].sum(0) for i in range(len(r.gamma))],axis=0)
 				ppi /=ppi.sum()
 				v = r.b/r.a
@@ -832,7 +850,7 @@ class plotter(QWidget):
 					popplot.ax.plot(x,y,color='k',lw=1,alpha=.8,ls='--')
 				popplot.ax.plot(x,tot,color='k',lw=2,alpha=.8)
 
-			popplot.ax.set_xlim(-.4,1.4)
+			popplot.ax.set_xlim(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'])
 			popplot.ax.set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
 			popplot.ax.set_ylabel('Probability',fontsize=14)
 			popplot.f.tight_layout()
@@ -857,16 +875,35 @@ class plotter(QWidget):
 					if pre < post:
 						fpb[i,0:post-pre] = y[pre:post]
 				print np.nansum(fpb)
+			elif not self.hmm_result is None:
+				state,success = QInputDialog.getInt(self,"Pick State","Which State?",min=0,max=self.hmm_result.nstates-1)
+				if success:
+					v = self.get_viterbi_data()
+					vv = np.array([[v[i,:-1],v[i,1:]] for i in range(v.shape[0])])
+					oo = []
+					for i in range(fpb.shape[0]):
+						ms = np.nonzero((vv[i,1]==state)*(vv[i,0]!=vv[i,1]))[0]
+						ms = np.append(ms,v.shape[1])
 
-			dtmin = self.gui.prefs['plotter_xmin']
-			dtmax = self.gui.prefs['plotter_xmax']
+						for j in range(ms.size-1):
+							o = fpb[i].copy()
+							o = o[ms[j]-10:ms[j+1]]
+							ooo = np.empty(v.shape[1]) + np.nan
+							ooo[:o.size] = o
+							oo.append(ooo)
+					fpb = np.array(oo)
+
+
+			dtmin = self.gui.prefs['plotter_min_time']
+			dtmax = self.gui.prefs['plotter_max_time']
 			if dtmax == -1:
 				dtmax = fpb.shape[1]
 			dt = np.arange(dtmin,dtmax)*self.gui.prefs['tau']
 			ts = np.array([dt for _ in range(fpb.shape[0])])
 			fpb = fpb[:,dtmin:dtmax]
 			xcut = np.isfinite(fpb)
-			z,hx,hy = np.histogram2d(ts[xcut],fpb[xcut],bins = [self.gui.prefs['plotter_n_xbins'],self.gui.prefs['plotter_n_ybins']],range=[[dt[0],dt[-1]],[-.4,1.4]])
+			bt = (self.gui.prefs['plotter_max_fret'] - self.gui.prefs['plotter_min_fret']) / (self.gui.prefs['plotter_nbins_fret'] + 1)
+			z,hx,hy = np.histogram2d(ts[xcut],fpb[xcut],bins = [self.gui.prefs['plotter_nbins_time'],self.gui.prefs['plotter_nbins_fret']+2],range=[[dt[0],dt[-1]],[self.gui.prefs['plotter_min_fret']-bt,self.gui.prefs['plotter_max_fret']+bt]])
 			rx = hx[:-1]
 			ry = .5*(hy[1:]+hy[:-1])
 			x,y = np.meshgrid(rx,ry,indexing='ij')
@@ -880,25 +917,40 @@ class plotter(QWidget):
 			# if vmin <= 1e-300:
 			# 	vmin = z.min()
 			# pc = plt.pcolor(y.T,x.T,z.T,cmap=cm,vmin=vmin,edgecolors='face')
-			cm = plt.cm.rainbow
-			cm.set_under('w')
+			try:
+				cm = plt.cm.__dict__[self.gui.prefs['plotter_cmap']]
+			except:
+				cm = plt.cm.rainbow
+			try:
+				cm.set_under(self.gui.prefs['plotter_floorcolor'])
+			except:
+				cm.set_under('w')
+
 			vmin = self.gui.prefs['plotter_floor']
-			z/=np.nanmax(z)
+			z /= np.nanmax(z,axis=1)[:,None]
+			z = np.nan_to_num(z)
+
+			x -= self.gui.prefs['plotter_timeshift']
+
 			from matplotlib.colors import LogNorm
 			if vmin <= 0 or vmin >=z.max():
-				pc = popplot.ax.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_n_levels'],cmap=cm)
+				pc = popplot.ax.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_nbins_contour'],cmap=cm)
 			else:
 				# pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
-				pc = popplot.ax.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_n_levels'],vmin =vmin,cmap=cm)
+				pc = popplot.ax.contourf(x.T,y.T,z.T,self.gui.prefs['plotter_nbins_contour'],vmin =vmin,cmap=cm)
 			for pcc in pc.collections:
 				pcc.set_edgecolor("face")
 
-			cb = popplot.f.colorbar(pc)
-			cb.set_ticks(np.array((0.,.2,.4,.6,.8,1.)))
-			cb.solids.set_edgecolor('face')
-			cb.solids.set_rasterized(True)
+			try:
+				cb = popplot.f.colorbar(pc)
+				cb.set_ticks(np.array((0.,.2,.4,.6,.8,1.)))
+				cb.solids.set_edgecolor('face')
+				cb.solids.set_rasterized(True)
+			except:
+				pass
 
-			popplot.ax.set_xlim(0,rx.max())
+			popplot.ax.set_xlim(rx.min()-self.gui.prefs['plotter_timeshift'],rx.max()-self.gui.prefs['plotter_timeshift'])
+			popplot.ax.set_ylim(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'])
 			popplot.ax.set_xlabel('Time (s)',fontsize=14)
 			popplot.ax.set_ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
@@ -917,9 +969,17 @@ class plotter(QWidget):
 			fpb = self.get_plot_data()[0]
 			d = np.array([[fpb[i,:-1],fpb[i,1:]] for i in range(fpb.shape[0])])
 
-			plt.figure(7)
-			rx = np.linspace(-.4,1.4,self.gui.prefs['plotter_n_xbins'])
-			ry = np.linspace(-.4,1.4,self.gui.prefs['plotter_n_ybins'])
+			if not self.hmm_result is None:
+				# state,success = QInputDialog.getInt(self,"Pick State","Which State?",min=0,max=self.hmm_result.nstates-1)
+				# if success:
+				v = self.get_viterbi_data()
+				vv = np.array([[v[i,:-1],v[i,1:]] for i in range(v.shape[0])])
+
+				for i in range(d.shape[0]):
+					d[i,:,vv[i,0]==vv[i,1]] = np.array((np.nan,np.nan))
+
+			rx = np.linspace(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'],self.gui.prefs['plotter_nbins_fret'])
+			ry = np.linspace(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'],self.gui.prefs['plotter_nbins_fret'])
 			x,y = np.meshgrid(rx,ry,indexing='ij')
 			dx = d[:,0].flatten()
 			dy = d[:,1].flatten()
@@ -928,16 +988,26 @@ class plotter(QWidget):
 
 			from scipy.ndimage import gaussian_filter
 			z = gaussian_filter(z,(self.gui.prefs['plotter_smoothx'],self.gui.prefs['plotter_smoothy']))
-			cm = plt.cm.rainbow
-			cm.set_under('w')
-			vmin = self.gui.prefs['plotter_floor']
+
+			try:
+				cm = plt.cm.__dict__[self.gui.prefs['plotter_cmap']]
+			except:
+				cm = plt.cm.rainbow
+			try:
+				cm.set_under(self.gui.prefs['plotter_floorcolor'])
+			except:
+				cm.set_under('w')
+
 			from matplotlib.colors import LogNorm
-			if vmin <= 0:
-				z[z==0] = 1.
-				pc = popplot.ax.contourf(x,y,z,np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_n_levels']),cmap=cm,norm=LogNorm())
+			if self.gui.prefs['plotter_floor'] <= 0:
+				bins = np.logspace(np.log10(z[z>0.].min()),np.log10(z.max()),self.gui.prefs['plotter_nbins_contour'])
+				pc = popplot.ax.contourf(x, y, z, bins, cmap=cm, norm=LogNorm())
 			else:
-				# pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
-				pc = popplot.ax.contourf(x,y,z,np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_n_levels']),vmin =vmin,cmap=cm,norm=LogNorm())
+				z[z< 1e-10] = 1e-9
+				bins = np.logspace(0,np.log10(z.max()),self.gui.prefs['plotter_nbins_contour'])
+				bins = np.append(1e-10,bins)
+				pc = popplot.ax.contourf(x, y, z, bins, vmin=self.gui.prefs['plotter_floor'], cmap=cm, norm=LogNorm())
+
 			for pcc in pc.collections:
 				pcc.set_edgecolor("face")
 
@@ -1030,7 +1100,7 @@ class plotter(QWidget):
 
 		for i in range(self.ncolors-1):
 			if pretime < pbtime:
-				hy,hx = np.histogram(rel[i,pretime:pbtime],range=(-.4,1.4),bins=int(np.sqrt(pbtime-pretime)))
+				hy,hx = np.histogram(rel[i,pretime:pbtime],range=(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret']),bins=int(np.sqrt(pbtime-pretime)))
 			else:
 				hy = np.zeros(100)
 				hx = np.linspace(self.yminmax[0],self.yminmax[1],101)
@@ -1042,7 +1112,7 @@ class plotter(QWidget):
 		self.update_colors()
 
 		self.a[0][0].set_xlim(0,t[-1])
-		self.a[1][0].set_ylim(-.4,1.4)
+		self.a[1][0].set_ylim(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'])
 		self.a[0][1].set_xlim(1, np.max(hymaxes)*1.25)
 		self.a[1][1].set_xlim(self.a[0][1].get_xlim())
 
