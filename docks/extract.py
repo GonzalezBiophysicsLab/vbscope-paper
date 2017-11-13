@@ -5,6 +5,10 @@ import numpy as np
 from scipy.ndimage import center_of_mass as com
 from scipy.special import erf
 
+import multiprocessing as mp
+from supporting.ml_fit import fit
+from time import time
+
 class dock_extract(QWidget):
 	def __init__(self,parent=None):
 		super(dock_extract, self).__init__(parent)
@@ -42,7 +46,7 @@ class dock_extract(QWidget):
 		self.gui.plot.clear_collections()
 		self.gui.plot.canvas.draw()
 		from plotter import ui_plotter
-		self.ui_p = ui_plotter(self.traces,self.get_spots(),self.bgs,self)
+		self.ui_p = ui_plotter(self.traces,self)
 		self.ui_p.setWindowTitle('Plots')
 		self.ui_p.show()
 
@@ -106,6 +110,7 @@ class dock_extract(QWidget):
 			if j > 0:
 				xy = ts[j][0](xy.T).T
 			xy += shifts[j][:,None]
+
 			# xy = np.round(xy).astype('i')
 
 			sigma = self.get_sigma(j)
@@ -117,7 +122,6 @@ class dock_extract(QWidget):
 			elif self.combo_method.currentIndex() == 1:
 				l = (self.gui.prefs['nintegrate']-1)/2
 				ns = []
-				bs = []
 				for i in xrange(xy.shape[1]):
 					xyi = np.round(xy[:,i]).astype('i')
 					xmin = np.max((0,xyi[0]-l))
@@ -125,33 +129,19 @@ class dock_extract(QWidget):
 					ymin = np.max((0,xyi[1]-l))
 					ymax = np.min((self.gui.data.movie.shape[2]-1,xyi[1]+l))
 
-					gx,gy = np.mgrid[xmin:xmax+1,ymin:ymax+1]
 					m = self.gui.data.movie[:,xmin:xmax+1,ymin:ymax+1].astype('f')
-					xyi = com(m.max(0)) + xy[:,i] - l
+					nxy = m.shape[1]*m.shape[2]
 
-					dex = .5 * (erf((xy[0,i]-gx+.5)/(np.sqrt(2.*sigma**2.)))
-						- erf((xy[0,i]-gx -.5)/(np.sqrt(2.*sigma**2.))))
-					dey = .5 * (erf((xy[1,i]-gy+.5)/(np.sqrt(2.*sigma**2.)))
-						- erf((xy[1,i]-gy -.5)/(np.sqrt(2.*sigma**2.))))
-					psi = dex*dey
-				#
-				# 	b = np.min(m*(1.-psi[None,:,:]),axis=(1,2))
-				# 	# b = np.mean(m*(1.-psi[None,:,:]),axis=(1,2))
-				# 	n = ((m-b[:,None,None])*psi[None,:,:]).sum((1,2))/np.sum(psi**2.)
+					from supporting.normal_minmax_dist import estimate_from_min
+					b = estimate_from_min(m.min((1,2)),nxy)
+					b = np.median(m,axis=(1,2))
 
-					# dr = np.sqrt((gx.astype('f')-xy[0])**2. + (gy.astype('f')-xy[1])**2.)
-					# psi = 1./np.sqrt(2.*np.pi*sigma**2.) * np.exp(-.5/sigma/sigma*(dr-0.)**2.)
-					psi /= psi.sum()
+					n = m.sum((1,2)) - b*nxy
 
-					b = np.mean(m*(1.-psi[None,:,:]),axis=(1,2))
-					n = ((m-b[:,None,None])*psi[None,:,:]).sum((1,2))
-					bs.append(b)
 					ns.append(n)
 
 				ns = np.array(ns).T
 				traces.append(ns)
-				bs = np.array(bs).T
-				bgs.append(bs)
 
 			elif self.combo_method.currentIndex() == 2:
 				l = (self.gui.prefs['nintegrate']-1)/2
@@ -169,7 +159,9 @@ class dock_extract(QWidget):
 						gx = gx.astype('f')
 						gy = gy.astype('f')
 						m = self.gui.data.movie[:,xmin:xmax+1,ymin:ymax+1].astype('f')
-						xyi = com(m.max(0)) + xy[:,i] - l
+						# m = self.gui.prefs['convert_c_lambda'][j]/self.gui.prefs['convert_em_gain']*(self.gui.data.movie[:,xmin:xmax+1,ymin:ymax+1].astype('f') - self.gui.prefs['convert_offset'])
+
+						xyi = com(m.sum(0)) + xy[:,i] - l
 
 						dex = .5 * (erf((xy[0,i]-gx+.5)/(np.sqrt(2.*sigma**2.)))
 							- erf((xy[0,i]-gx -.5)/(np.sqrt(2.*sigma**2.))))
@@ -184,7 +176,7 @@ class dock_extract(QWidget):
 
 						n0 = n.sum()
 						psum = np.sum(psi**2.)
-						for it in xrange(100):
+						for it in xrange(1000):
 							b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
 							# b = b.mean()
 							# n = np.sum((m - b)*psi[None,:,:] ,axis=(1,2)) / psum
@@ -198,22 +190,64 @@ class dock_extract(QWidget):
 						n = np.zeros(self.gui.data.movie.shape[0])
 						b = np.zeros(self.gui.data.movie.shape[0])
 					ns.append(n)
-					bs.append(b)
 				ns = np.array(ns).T
 				traces.append(ns)
-				bs = np.array(bs).T
-				bgs.append(bs)
+
+			elif self.combo_method.currentIndex() == 3:
+				ns = self.experimental(np.round(xy).astype('i'),sigma)
+				traces.append(ns)
 
 		traces = np.array(traces)
+		print traces.shape
 		traces = np.moveaxis(traces,2,0)
+		print traces.shape
 		# np.save('test.dat',traces)
 		self.traces = traces
-		try:
-			bgs = np.array(bgs)
-			bgs = np.moveaxis(bgs,2,0)
-			self.bgs = bgs
-			# np.save('test_bg.dat',bgs)
-		except:
-			self.bgs = None
-
 		self.gui.statusbar.showMessage('Traces Extracted')
+
+
+	def cancel_expt(self):
+		self.flag_cancel = True
+
+	def experimental(self,xy,sigma):
+		l = (self.gui.prefs['nintegrate']-1)/2
+		out = np.empty((self.gui.data.movie.shape[0],xy.shape[1]))
+		prog = progress(out.shape[0],out.shape[1])
+		prog.canceled.connect(self.cancel_expt)
+		prog.show()
+		self.gui.app.processEvents()
+		self.flag_cancel = False
+
+		for t in range(self.gui.data.movie.shape[0]):
+			z = self.gui.data.movie[t].astype('double')
+			if not self.flag_cancel:
+				prog.setValue(t)
+				self.gui.app.processEvents()
+				t0 = time()
+				if self.gui.prefs['ncpu'] > 1:
+					pool = mp.Pool(self.gui.prefs['ncpu'])
+					ps = pool.map(_fit_wrapper,[[l,z,sigma,xy[:,i].astype('double')] for i in range(xy.shape[1])])
+					pool.close()
+				else:
+					ps = map(_fit_wrapper,[(l,z,sigma,xy[:,i].astype('double')) for i in range(xy.shape[1])])
+				for i in range(xy.shape[1]):
+					# xyi = xy[:,i].astype('double')
+					# p = fit(l,z,sigma,xyi)
+					# print t,i,p[4],p[5]
+					# out[t,i] = p[4]
+					out[t,i] = ps[i][4]
+				t1 = time()
+				prog.setLabelText('Fitting %d spots, %d frames\ntime/fit = %f sec'%(out.shape[0],out.shape[1],(t1-t0)/out.shape[1]))
+		prog.close()
+		return out
+
+def _fit_wrapper(params):
+	return fit(*params)
+
+from PyQt5.QtWidgets import QProgressDialog
+class progress(QProgressDialog):
+	def __init__(self,nmax,tmax):
+		QProgressDialog.__init__(self)
+		self.setWindowTitle("Fitting Spots")
+		self.setLabelText('Fitting %d spots, %d frames\ntime/fit = 0.0 sec'%(nmax,tmax))
+		self.setRange(0,tmax)
