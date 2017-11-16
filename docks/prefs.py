@@ -6,7 +6,7 @@ import multiprocessing as mp
 
 import matplotlib.pyplot as plt
 
-last_update_date = '2017/10/06'
+last_update_date = '2017/11/14'
 
 class dock_prefs(QWidget):
 	def __init__(self,parent=None):

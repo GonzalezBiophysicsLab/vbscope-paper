@@ -41,7 +41,7 @@ class dock_spotfind(QWidget):
 		label_end = QLabel('End:')
 		self.spin_end = QSpinBox()
 		self.button_search = QPushButton('Range Find')
-		self.button_find = QPushButton('Max Find')
+		self.button_find = QPushButton('Sum Find')
 
 		self.label_bb = QLabel()
 		self.label_pp = QLabel()
@@ -178,9 +178,10 @@ class dock_spotfind(QWidget):
 
 	def findspots(self):
 		if self.gui.data.flag_movie:
-			if not self.flag_priorsloaded:
-				self.get_priors()
-			self.gmms,self.locs = self.setup_spot_find(self.gui.data.current_frame)
+			# if not self.flag_priorsloaded:
+				# self.get_priors()
+			# self.gmms,self.locs = self.setup_spot_find(self.gui.data.current_frame)
+			self.gmms,self.locs = self.setup_spot_find()
 
 			if self.gui.prefs['ncpu'] > 1:
 				pool = mp.Pool(self.gui.prefs['ncpu'])
@@ -195,6 +196,7 @@ class dock_spotfind(QWidget):
 			self.plot_spots()
 			self.flag_spots = True
 			self.print_spotnum()
+			self.gui.docks['contrast'][1].update_image_contrast()
 			# self.gui.statusbar.showMessage('Spot finding complete')
 
 	def update_spots(self):
@@ -424,19 +426,22 @@ class dock_spotfind(QWidget):
 			gmm,locs = self.setup_gmm(ddp,prior=None)
 			self.priors[i] = gmm.prior
 
-	def setup_spot_find(self,frame):
+	# def setup_spot_find(self,frame):
+	def setup_spot_find(self):
 		nc = self.gui.data.ncolors
 		# d = self.gui.data.movie[frame].astype('f')
 
 		start = self.spin_start.value() - 1
 		end = self.spin_end.value() - 1
 		total = end + 1 - start
-		d = np.max(self.gui.data.movie[start:end+1],axis=0).astype('f')
-		dmin = np.min(self.gui.data.movie[start:end+1],axis=0).astype('f')
+		# d = np.max(self.gui.data.movie[start:end+1],axis=0).astype('f')
+		d = np.sum(self.gui.data.movie[start:end+1],axis=0).astype('f') / float(total)
+		# dmin = np.min(self.gui.data.movie[start:end+1],axis=0).astype('f')
 
 		bg = self.gui.docks['background'][1].calc_background(d)
-		self.disp_image = d-bg
-		# self.gui.plot.image.set_array(self.disp_image)
+		self.disp_image = d#-bg
+		self.gui.plot.image.set_array(self.disp_image)
+		self.gui.docks['contrast'][1].update_image_contrast()
 
 		regions,shifts = self.gui.data.regions_shifts()
 		locs = [None for _ in range(nc)]
@@ -448,10 +453,12 @@ class dock_spotfind(QWidget):
 		self.gui.prefs['nsearch']
 		for i in range(nc):
 			r = regions[i]
-			dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]]
+			# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]]
+			dd = (d-bg)[r[0][0]:r[0][1],r[1][0]:r[1][1]]
 
-			gmm,loc = self.setup_gmm(dd,self.priors[i])
-			gmm.frame = frame
+			# gmm,loc = self.setup_gmm(dd,self.priors[i])
+			gmm,loc = self.setup_gmm(dd,prior=None)
+			# gmm.frame = frame
 			gmm.color = i
 
 			locs[i] = loc
