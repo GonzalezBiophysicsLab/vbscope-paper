@@ -132,6 +132,7 @@ default = {
 'alignment_order':4,
 'contrast_scale':20.,
 
+'ml_psf_maxiters':1000,
 'maxiterations':1000,
 'threshold':1e-10,
 'ncpu':mp.cpu_count(),

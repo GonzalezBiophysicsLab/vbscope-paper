@@ -181,7 +181,7 @@ def fit(l,z,s,xy):
 
 from scipy.special import erf
 from scipy.ndimage import center_of_mass as com
-def ml_psf(l,z,sigma,xyi):
+def ml_psf(l,z,sigma,xyi,maxiters=1000):
 	try:
 		xmin = int(max(0,xyi[0]-l))
 		xmax = int(min(z.shape[0]-1,xyi[0]+l) + 1)
@@ -208,7 +208,7 @@ def ml_psf(l,z,sigma,xyi):
 		n0 = n.sum()
 		psum = np.sum(psi**2.)
 
-		for it in xrange(1000):
+		for it in xrange(maxiters):
 			b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
 			n = np.sum((m - b[:,None,None])*psi[None,:,:],axis=(1,2))/np.sum(psi**2.)
 			n1 = n.sum()

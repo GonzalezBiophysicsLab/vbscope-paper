@@ -116,7 +116,9 @@ class dock_extract(QWidget):
 
 			if self.combo_method.currentIndex() == 0:
 				xyi = np.round(xy).astype('i')
-				traces.append(self.gui.data.movie[:,xyi[0],xyi[1]])
+				ns = self.gui.data.movie[:,xyi[0],xyi[1]]
+				bs = np.median(np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])]),axis=0)
+				traces.append(ns-bs)
 
 			elif self.combo_method.currentIndex() == 1:
 				# ns = self.ml_psf(np.round(xy).astype('i'),sigma)
@@ -189,12 +191,13 @@ class dock_extract(QWidget):
 		ts = [0.0]
 		for i in range(out.shape[1]):
 			if not self.flag_cancel:
-				if i > 0:
-					prog.setLabelText('Fitting spot %d/%d\nAvg. time/fit = %f s'%(i+1,out.shape[1],np.mean(ts[1:])))
-				prog.setValue(i)
-				self.gui.app.processEvents()
+				if i%10 == 0:
+					if i > 0:
+						prog.setLabelText('Fitting spot %d/%d\nAvg. time/fit = %f s'%(i+1,out.shape[1],np.mean(ts[1:])))
+					prog.setValue(i)
+					self.gui.app.processEvents()
 				t0 = time()
-				o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'))
+				o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['ml_psf_maxiters'])
 				t1 = time()
 				out[:,i] = o
 				ts.append(t1-t0)
