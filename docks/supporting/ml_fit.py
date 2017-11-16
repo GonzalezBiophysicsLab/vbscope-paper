@@ -102,8 +102,121 @@ def fit(l,z,s,xy):
 	ll = loglikelihood(l,p,z)
 	for i in range(20):
 		p = update(l,p,z)
-		# ll = loglikelihood(l,p,z)
-		# if i > 1 and np.abs((ll-l0)/l0) < 1e-6:
-		# 	break
-		# l0 = ll
+		ll = loglikelihood(l,p,z)
+		if i > 1 and np.abs((ll-l0)/l0) < 1e-6:
+			break
+		l0 = ll
 	return p
+
+# @nb.jit(nb.double[:,:](nb.int64,nb.double[:,:,:],nb.double,nb.double[:,:]),nopython=True)
+# def fit_psf(l,z,s,xys):
+# 	## z is (T,X,Y)
+# 	## l is int
+# 	## s in double
+# 	## xy is [x,y]
+#
+# 	out = np.empty((z.shape[0],xys.shape[1]),dtype=nb.double)
+# 	for ii in range(xys.shape[1]):
+# 		xy = xys[:,ii]
+#
+# 		xmin = int(max(0,xy[0]-l))
+# 		xmax = int(min(z.shape[0]-1,xy[0]+l) + 1)
+# 		ymin = int(max(0,xy[1]-l))
+# 		ymax = int(min(z.shape[1]-1,xy[1]+l) + 1)
+#
+# 		## Find COM
+# 		m = np.zeros((3,3))
+# 		for t in range(z.shape[0]):
+# 			for i in range(3):
+# 				for j in range(3):
+# 					m[i,j] += z[t,int(xy[0])+i-1,int(xy[1])+j-1]
+#
+# 		mxy = np.zeros(2)
+# 		msum = np.sum(m)
+# 		for i in range(3):
+# 			for j in range(3):
+# 				mm = m[i,j]/msum
+# 				x = float(xy[0]+i-1)
+# 				y = float(xy[1]+j-1)
+# 				mxy[0] += mm*x
+# 				mxy[1] += mm*y
+#
+# 		# Calculate Psi
+# 		psi = np.zeros((xmax-xmin,ymax-ymin))
+# 		p2sum = 0.
+# 		for i in range(xmax-xmin):
+# 			for j in range(ymax-ymin):
+# 				dex = de(float(xmin + i),mxy[0],s)
+# 				dey = de(float(ymin + j),mxy[1],s)
+# 				psi[i,j] = dex*dey
+# 				p2sum += psi[i,j]**2.
+#
+# 		## Estimate background and signal
+# 		b = np.zeros(z.shape[0],dtype=nb.double)
+# 		n = np.zeros_like(b)
+# 		n = np.random.rand(z.shape[0])
+# 		nxy = (xmax-xmin)*(ymax-ymin)
+# 		for t in range(b.size):
+# 			b[t] = np.mean(z[t,xmin:xmax,ymin:ymax])
+# 			n[t] = z[t,int(mxy[0]),int(mxy[1])]
+# 			for it in range(10000):
+# 				## update b
+# 				for mi in range(xmax-xmin+1):
+# 					for mj in range(ymax-ymin+1):
+# 						b[t] += 1
+# 						b[t] += z[t,int(xmin + mi),int(ymin+mj)] - n[t]*psi[mi,mj]
+# 				b[t] /= nxy
+# 				## update n
+# 				nt = 0.
+# 				for mi in range(xmax-xmin+1):
+# 					for mj in range(ymax-ymin+1):
+# 						nt += (z[t,int(xmin + mi),int(ymin+mj)] - b[t]*psi[mi,mj]) / p2sum
+# 				if np.less_equal(abs(nt-n[t]),1e-8 + 1e-5*np.abs(n[t])):
+# 					break
+# 				else:
+# 					n[t] = nt
+#
+# 		out[:,ii] = n
+# 	return out
+
+from scipy.special import erf
+from scipy.ndimage import center_of_mass as com
+def ml_psf(l,z,sigma,xyi):
+	try:
+		xmin = int(max(0,xyi[0]-l))
+		xmax = int(min(z.shape[0]-1,xyi[0]+l) + 1)
+		ymin = int(max(0,xyi[1]-l))
+		ymax = int(min(z.shape[1]-1,xyi[1]+l) + 1)
+
+		gx,gy = np.mgrid[xmin:xmax,ymin:ymax]
+		gx = gx.astype('f')
+		gy = gy.astype('f')
+		m = z[:,xmin:xmax,ymin:ymax].astype('f')
+
+		## Find COM
+		xyi = com(m.sum(0)) + xyi - l
+
+		dex = .5 * (erf((xyi[0]-gx+.5)/(np.sqrt(2.*sigma**2.))) - erf((xyi[0]-gx -.5)/(np.sqrt(2.*sigma**2.))))
+		dey = .5 * (erf((xyi[1]-gy+.5)/(np.sqrt(2.*sigma**2.))) - erf((xyi[1]-gy -.5)/(np.sqrt(2.*sigma**2.))))
+		psi = dex*dey
+
+		# b = np.mean(m*(1.-psi[None,:,:]),axis=(1,2))
+		b = np.mean(m,axis=(1,2))
+		n = z[:,np.round(xyi[0]).astype('i'),np.round(xyi[1]).astype('i')]
+		# n = ((m-b[:,None,None])*psi[None,:,:]).sum((1,2))/np.sum(psi**2.)
+
+		n0 = n.sum()
+		psum = np.sum(psi**2.)
+
+		for it in xrange(1000):
+			b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
+			n = np.sum((m - b[:,None,None])*psi[None,:,:],axis=(1,2))/np.sum(psi**2.)
+			n1 = n.sum()
+			if np.isclose(n1,n0):
+				break
+			else:
+				n0 = n1
+	except:
+		n = np.zeros(z.shape[0])
+		b = np.zeros(z.shape[0])
+	return n

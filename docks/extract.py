@@ -16,7 +16,7 @@ class dock_extract(QWidget):
 
 		self.button_extract = QPushButton('Extract')
 		self.combo_method = QComboBox()
-		self.combo_method.addItems(['Center','Radial Sum','Average PSF','ML PSF'])
+		self.combo_method.addItems(['Center','Average PSF','ML PSF'])
 		self.combo_reduction = QComboBox()
 		self.combo_reduction.addItems(['all','1','2','3','4'])
 
@@ -31,7 +31,7 @@ class dock_extract(QWidget):
 		layout.addWidget(self.button_plotter,2,1)
 		self.setLayout(layout)
 
-		self.combo_method.setCurrentIndex(2)
+		self.combo_method.setCurrentIndex(1)
 		self.combo_reduction.setCurrentIndex(0)
 
 		self.button_extract.clicked.connect(self.extract)
@@ -119,44 +119,18 @@ class dock_extract(QWidget):
 				traces.append(self.gui.data.movie[:,xyi[0],xyi[1]])
 
 			elif self.combo_method.currentIndex() == 1:
-				l = (self.gui.prefs['nintegrate']-1)/2
-				ns = []
-				for i in xrange(xy.shape[1]):
-					xyi = np.round(xy[:,i]).astype('i')
-					xmin = np.max((0,xyi[0]-l))
-					xmax = np.min((self.gui.data.movie.shape[1]-1,xyi[0]+l))
-					ymin = np.max((0,xyi[1]-l))
-					ymax = np.min((self.gui.data.movie.shape[2]-1,xyi[1]+l))
-
-					m = self.gui.data.movie[:,xmin:xmax+1,ymin:ymax+1].astype('f')
-					nxy = m.shape[1]*m.shape[2]
-
-					from supporting.normal_minmax_dist import estimate_from_min
-					b = estimate_from_min(m.min((1,2)),nxy)
-					b = np.median(m,axis=(1,2))
-
-					n = m.sum((1,2)) - b*nxy
-
-					ns.append(n)
-
-				ns = np.array(ns).T
+				# ns = self.ml_psf(np.round(xy).astype('i'),sigma)
+				# traces.append(ns)
+				ns = self.ml_psf(xy,sigma,j)
 				traces.append(ns)
 
 			elif self.combo_method.currentIndex() == 2:
-				# ns = self.ml_psf(np.round(xy).astype('i'),sigma)
-				# traces.append(ns)
-				ns = self.ml_psf(xy,sigma)
-				traces.append(ns)
-
-
-			elif self.combo_method.currentIndex() == 3:
 				ns = self.experimental(np.round(xy).astype('i'),sigma)
 				traces.append(ns)
 
 		traces = np.array(traces)
-		print traces.shape
 		traces = np.moveaxis(traces,2,0)
-		print traces.shape
+
 		# np.save('test.dat',traces)
 		self.traces = traces
 		self.gui.statusbar.showMessage('Traces Extracted')
@@ -197,81 +171,46 @@ class dock_extract(QWidget):
 		prog.close()
 		return out
 
-	def ml_psf(self,xy,sigma):
+	def ml_psf(self,xy,sigma,color):
+		from supporting.ml_fit import ml_psf
+		from time import time
+
 		l = (self.gui.prefs['nintegrate']-1)/2
-		# out = np.empty((self.gui.data.movie.shape[0],xy.shape[1]))
-		# z = self.gui.data.movie.astype('double')
+		out = np.empty((self.gui.data.movie.shape[0],xy.shape[1]))
 
-		# # if self.gui.prefs['ncpu'] > 1:
-		# # 	pool = mp.Pool(self.gui.prefs['ncpu'])
-		# # 	ps = pool.map(_fit_psf_wrapper,[[l,z,sigma,xy[:,i].astype('double')] for i in range(xy.shape[1])])
-		# # 	pool.close()
-		# # else:
-		# 	# ps = map(_fit_psf_wrapper,[[l,z,sigma,xy[:,i].astype('double')] for i in range(xy.shape[1])])
-		from supporting.ml_fit import fit_psf,reg_psf
-		out = reg_psf(l,self.gui.data.movie.astype('double'),sigma,xy)
+		prog = progress(out.shape[0],out.shape[1])
+		prog.setWindowTitle("Fitting Color %d"%(color))
+		prog.setRange(0,out.shape[1])
+		prog.canceled.connect(self.cancel_expt)
+		prog.show()
+		self.gui.app.processEvents()
+		self.flag_cancel = False
+
+		ts = [0.0]
+		for i in range(out.shape[1]):
+			if not self.flag_cancel:
+				if i > 0:
+					prog.setLabelText('Fitting spot %d/%d\nAvg. time/fit = %f s'%(i+1,out.shape[1],np.mean(ts[1:])))
+				prog.setValue(i)
+				self.gui.app.processEvents()
+				t0 = time()
+				o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'))
+				t1 = time()
+				out[:,i] = o
+				ts.append(t1-t0)
+		prog.close()
 		return out
-
-		# l = (self.gui.prefs['nintegrate']-1)/2
-		# ns = []
-		# bs = []
-		# for i in xrange(xy.shape[1]):
-		# 	try:
-		# 		xyi = np.round(xy[:,i]).astype('i')
-		# 		xmin = np.max((0,xyi[0]-l))
-		# 		xmax = np.min((self.gui.data.movie.shape[1]-1,xyi[0]+l))
-		# 		ymin = np.max((0,xyi[1]-l))
-		# 		ymax = np.min((self.gui.data.movie.shape[2]-1,xyi[1]+l))
-        #
-		# 		gx,gy = np.mgrid[xmin:xmax+1,ymin:ymax+1]
-		# 		gx = gx.astype('f')
-		# 		gy = gy.astype('f')
-		# 		m = self.gui.data.movie[:,xmin:xmax+1,ymin:ymax+1].astype('f')
-		# 		# m = self.gui.prefs['convert_c_lambda'][j]/self.gui.prefs['convert_em_gain']*(self.gui.data.movie[:,xmin:xmax+1,ymin:ymax+1].astype('f') - self.gui.prefs['convert_offset'])
-        #
-		# 		xyi = com(m.sum(0)) + xy[:,i] - l
-        #
-		# 		dex = .5 * (erf((xy[0,i]-gx+.5)/(np.sqrt(2.*sigma**2.)))
-		# 			- erf((xy[0,i]-gx -.5)/(np.sqrt(2.*sigma**2.))))
-		# 		dey = .5 * (erf((xy[1,i]-gy+.5)/(np.sqrt(2.*sigma**2.)))
-		# 			- erf((xy[1,i]-gy -.5)/(np.sqrt(2.*sigma**2.))))
-		# 		psi = dex*dey
-        #
-		# 		# b = np.mean(m*(1.-psi[None,:,:]),axis=(1,2))
-		# 		b = np.mean(m,axis=(1,2))
-		# 		n = self.gui.data.movie[:,np.round(xyi[0]).astype('i'),np.round(xyi[1]).astype('i')]
-		# 		# n = ((m-b[:,None,None])*psi[None,:,:]).sum((1,2))/np.sum(psi**2.)
-        #
-		# 		n0 = n.sum()
-		# 		psum = np.sum(psi**2.)
-		# 		for it in xrange(1000):
-		# 			b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
-		# 			# b = b.mean()
-		# 			# n = np.sum((m - b)*psi[None,:,:] ,axis=(1,2)) / psum
-		# 			n = np.sum((m - b[:,None,None])*psi[None,:,:] ,axis=(1,2))/np.sum(psi**2.)
-		# 			n1 = n.sum()
-		# 			if np.isclose(n1,n0):
-		# 				break
-		# 			else:
-		# 				n0 = n1
-		# 	except:
-		# 		n = np.zeros(self.gui.data.movie.shape[0])
-		# 		b = np.zeros(self.gui.data.movie.shape[0])
-		# 	ns.append(n)
-		# ns = np.array(ns).T
-		# return ns
 
 def _fit_wrapper(params):
 	from supporting.ml_fit import fit
 	return fit(*params)
-def _fit_psf_wrapper(params):
-	from supporting.ml_fit import fit_psf
-	return fit_psf(*params)
 
 from PyQt5.QtWidgets import QProgressDialog
 class progress(QProgressDialog):
 	def __init__(self,nmax,tmax):
 		QProgressDialog.__init__(self)
+		from PyQt5.Qt import QFont
+		self.setFont(QFont('monospace'))
 		self.setWindowTitle("Fitting Spots")
 		self.setLabelText('Fitting %d spots, %d frames\ntime/fit = 0.0 sec'%(nmax,tmax))
 		self.setRange(0,tmax)
