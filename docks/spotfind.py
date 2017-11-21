@@ -260,7 +260,7 @@ class dock_spotfind(QWidget):
 				g = self.gmms[2*i+j]
 				l = self.locs[2*i+j]
 				class_list = self.not_background_class(g,self.bb)
-				probs = (g.r[:,class_list]).sum(1)/g.r.sum(1)
+				probs = (g.r[:,class_list]).sum(1)#/g.r.sum(1)
 				total_probs[j][l[0],l[1]] += probs
 			spots = total_probs[j] > self.pp
 			cut = np.nonzero(spots)
