@@ -203,12 +203,29 @@ class dock_spotfind(QWidget):
 		self.xys = [None for _ in range(self.gui.data.ncolors)]
 		self.gui.plot.clear_collections()
 		r,shifts = self.gui.data.regions_shifts()
-		for i in range(self.gui.data.ncolors):
-			v = self.spot_cutoff(self.gmms[i], self.pp, bg_cutoff = self.bb).astype('i')
-			cut = np.nonzero(v)[0]
-			x = self.locs[i][0][cut]
-			y = self.locs[i][1][cut]
-			self.xys[i] = np.array([x+shifts[i][0],y+shifts[i][1]])
+		if len(self.gmms) == self.gui.data.ncolors:
+			for i in range(self.gui.data.ncolors):
+				v = self.spot_cutoff(self.gmms[i], self.pp, bg_cutoff = self.bb).astype('i')
+				cut = np.nonzero(v)[0]
+				x = self.locs[i][0][cut]
+				y = self.locs[i][1][cut]
+				self.xys[i] = np.array([x+shifts[i][0],y+shifts[i][1]])
+		else:
+			n = len(self.gmms)/2
+			self.xys = []
+			for j in range(self.gui.data.ncolors):
+				self.xys.append(np.array(()).reshape((2,0)))
+				for i in range(n):
+					g = self.gmms[2*i+j]
+					l = self.locs[2*i+j]
+					v = self.spot_cutoff(g, self.pp, bg_cutoff = self.bb).astype('i')
+					cut = np.nonzero(v)[0]
+					x = l[0][cut]
+					y = l[1][cut]
+					self.xys[j] = np.append(self.xys[j],np.array((x+shifts[j][0],y+shifts[j][1])),axis=1)
+					# self.xys[j][0] = np.append(self.xys[j][0],x+shifts[j][0])
+					# self.xys[j][1] = np.append(self.xys[j][1],y+shifts[j][1])
+					# np.array([x+shifts[i][0],y+shifts[i][1]])))
 
 	def searchspots(self):
 		if self.gui.data.flag_movie:
@@ -239,55 +256,63 @@ class dock_spotfind(QWidget):
 			self.gmms = gmms#[-2:]
 			self.locs = locs#[-2:]
 
-			self.compile_spots()
+			# self.compile_spots()
+			self.update_spots()
 			self.gui.plot.clear_collections()
 			self.plot_spots()
 			self.print_spotnum()
 			self.flag_spots = True
 			# self.gui.statusbar.showMessage('Spot finding complete')
 
-	def compile_spots(self):
-		self.xys = [None for _ in range(self.gui.data.ncolors)]
-		self.gui.plot.clear_collections()
-		r,shifts = self.gui.data.regions_shifts()
+	# def compile_spots(self):
+		# self.xys = [None for _ in range(self.gui.data.ncolors)]
+		# self.gui.plot.clear_collections()
+		# r,shifts = self.gui.data.regions_shifts()
+        #
+		# n = len(self.gmms)/2
+		# total_probs = [np.zeros(self.gui.data.movie[0].shape,dtype='f')[r[j][0][0]:r[j][0][1],r[j][1][0]:r[j][1][1]] for  j in range(self.gui.data.ncolors)]
+        #
+		# # temp = np.zeros_like(self.gui.data.movie[0],dtype='f')
+		# for j in range(self.gui.data.ncolors):
+		# 	for i in range(n):
+		# 		g = self.gmms[2*i+j]
+		# 		l = self.locs[2*i+j]
+		# 		class_list = self.not_background_class(g,self.bb)
+		# 		probs = (g.r[:,class_list]).sum(1)/g.r.sum(1)
+		# 		total_probs[j][l[0],l[1]] += probs
+		# 	spots = total_probs[j] > self.pp
+		# 	cut = np.nonzero(spots)
+		# 	x = cut[0]
+		# 	y = cut[1]
+		# 	self.xys[j] = np.array([x+shifts[j][0],y+shifts[j][1]])
 
-		n = len(self.gmms)/2
-		total_probs = [np.zeros(self.gui.data.movie[0].shape,dtype='f')[r[j][0][0]:r[j][0][1],r[j][1][0]:r[j][1][1]] for  j in range(self.gui.data.ncolors)]
-
-		temp = np.zeros_like(self.gui.data.movie[0],dtype='f')
-		for j in range(self.gui.data.ncolors):
-			for i in range(n):
-				g = self.gmms[2*i+j]
-				l = self.locs[2*i+j]
-				class_list = self.not_background_class(g,self.bb)
-				probs = (g.r[:,class_list]).sum(1)#/g.r.sum(1)
-				total_probs[j][l[0],l[1]] += probs
-			spots = total_probs[j] > self.pp
-			cut = np.nonzero(spots)
-			x = cut[0]
-			y = cut[1]
-			self.xys[j] = np.array([x+shifts[j][0],y+shifts[j][1]])
-
-			temp[r[j][0][0]:r[j][0][1],r[j][1][0]:r[j][1][1]] = total_probs[j]
+			# temp[r[j][0][0]:r[j][0][1],r[j][1][0]:r[j][1][1]] = total_probs[j]
 
 		# testing
 
-		self.gmms = [None for _ in range(self.gui.data.ncolors)]
-		self.locs = [None for _ in range(self.gui.data.ncolors)]
-		for j in range(self.gui.data.ncolors):
-			g,l = self.setup_gmm(total_probs[j])
-			g.threshold=1e-10
-			g.run()
-			self.gmms[j] = g
-			self.locs[j] = l
+		# self.gmms = [None for _ in range(self.gui.data.ncolors)]
+		# self.gmms = self.gmms[:self.gui.data.ncolors]
+		# self.locs = [None for _ in range(self.gui.data.ncolors)]
+		# self.locs = self.locs[:self.gui.data.ncolors]
+		# self.total_probs = total_probs
+		# for j in range(self.gui.data.ncolors):
+		# 	# g,l = self.setup_gmm(total_probs[j])
+		# 	# g.threshold=1e-10
+		# 	# g.run()
+		# 	# self.gmms[j] = g
+		# 	# self.locs[j] = l
+		# 	self.gmms[j].r = total_probs[j]
+
+		# for j in range(self.gui.data.ncolors):
+
 
 		# self.gui.plot.image.set_array(temp)
 		# self.gui.plot.image.set_clim(temp.min(),temp.max())
 		# self.gui.plot.canvas.draw()
 
-		self.gui.plot.clear_collections()
-		self.plot_spots()
-		self.flag_spots = True
+		# self.gui.plot.clear_collections()
+		# self.plot_spots()
+		# self.flag_spots = True
 		# self.gui.statusbar.showMessage('Spot finding complete')
 
 

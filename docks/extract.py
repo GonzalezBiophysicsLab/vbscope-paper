@@ -59,27 +59,37 @@ class dock_extract(QWidget):
 		regions,shifts = self.gui.data.regions_shifts()
 		ts = self.gui.docks['transform'][1].transforms
 
+		for i in range(self.gui.data.ncolors):
+			s[i] = cull_rep_px(s[i].astype('double'),self.gui.data.movie.shape[1],self.gui.data.movie.shape[2])
+
 		if v == 0:
 			if len(s[0]) >  1:
 				ss = [s[i] - shifts[i][:,None] for i in range(self.gui.data.ncolors)]
+
 				if self.gui.data.ncolors > 1:
 					for j in range(1,self.gui.data.ncolors):
-						try:
-							cutoff = self.gui.prefs['same_cutoff']
+						# try:
+							# cutoff = self.gui.prefs['same_cutoff']
 							ss[j] = ts[j][0](ss[j].T).T
-							r = np.sqrt((ss[0][0,:,None]-ss[j][0,None,:])**2. + (ss[0][1,:,None]-ss[j][1,None,:])**2.)
-							rr = r.min(0)
-							cutoff = self.gui.prefs['same_cutoff']
-							cut = np.nonzero(np.sum((r < cutoff),axis=0) == 0)[0]
-							ss[j] = ss[j][:,cut]
-						except:
-							pass
+							# r = np.sqrt((ss[0][0,:,None]-ss[j][0,None,:])**2. + (ss[0][1,:,None]-ss[j][1,None,:])**2.)
+							# rr = r.min(0)
+							# cutoff = self.gui.prefs['same_cutoff']
+							# cut = np.nonzero(np.sum((r < cutoff),axis=0) == 0)[0]
+							# ss[j] = ss[j][:,cut]
+						# except:
+							# pass
+
 			spots = np.concatenate(ss,axis=1)
+			spots = avg_close(spots,self.gui.prefs['same_cutoff'])
+
 		else:
 			i = v - 1
 			spots = s[i] - shifts[i][:,None]
 			if i != 0:
 				spots = ts[0][i](spots.T).T
+				spots = avg_close(spots,self.gui.prefs['same_cutoff'])
+
+		print "Total spots: %d"%(spots.shape[1])
 		return spots
 
 	def get_sigma(self,j):
@@ -217,3 +227,72 @@ class progress(QProgressDialog):
 		self.setWindowTitle("Fitting Spots")
 		self.setLabelText('Fitting %d spots, %d frames\ntime/fit = 0.0 sec'%(nmax,tmax))
 		self.setRange(0,tmax)
+
+import numba as nb
+@nb.jit('double[:,:](double[:,:],double)',nopython=True)
+def avg_close(ss,cutoff):
+
+	totalx = []
+	totaly = []
+
+	### AVERAGE
+	# already = []
+	# for j in range(ss[0].size):
+	# 	currentn = 1.
+	# 	currentx = ss[0][j]
+	# 	currenty = ss[1][j]
+	# 	if already.count(j) == 0:
+	# 		for i in range(j+1,ss[0].size):
+	# 			if already.count(i) == 0:
+	# 				r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
+	# 				if r < cutoff:
+	# 					currentx += ss[0][i]
+	# 					currenty += ss[1][i]
+	# 					currentn += 1.
+	# 					already.append(i)
+    #
+	# 		totalx.append(currentx/currentn)
+	# 		totaly.append(currenty/currentn)
+	# 		already.append(j)
+	# return np.array((totalx,totaly))
+
+	#### FIRST
+	already = []
+	for j in range(ss[0].size):
+		# currentn = 1.
+		# currentx = ss[0][j]
+		# currenty = ss[1][j]
+		if already.count(j) == 0:
+			for i in range(j+1,ss[0].size):
+				if already.count(i) == 0:
+					r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
+					if r < cutoff:
+						# currentx += ss[0][i]
+						# currenty += ss[1][i]
+						# currentn += 1.
+						already.append(i)
+
+			# totalx.append(currentx/currentn)
+			# totaly.append(currenty/currentn)
+			totalx.append(ss[0][j])
+			totaly.append(ss[1][j])
+			already.append(j)
+	return np.array((totalx,totaly))
+
+@nb.jit("double[:,:](double[:,:],int64,int64)",nopython=True)
+def cull_rep_px(ss,nx,ny):
+	x = ss[0]
+	y = ss[1]
+
+	m = np.zeros((nx,ny))
+	for i in range(x.size):
+		m[int(x[i]),int(y[i])] += 1
+
+	x = []
+	y = []
+	for i in range(nx):
+		for j in range(ny):
+			if m[i,j] > 0:
+				x.append(i)
+				y.append(j)
+	return np.array((x,y),dtype=nb.double)
