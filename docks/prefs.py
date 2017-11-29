@@ -155,6 +155,7 @@ default = {
 'plotter_min_time':0,
 'plotter_max_time':100,
 'plotter_nbins_time':100,
+'plotter_syncpreframes':10,
 
 'convert_flag':False,
 'convert_c_lambda':[11.64,12.75],
@@ -162,5 +163,8 @@ default = {
 'convert_offset':0,
 
 'photobleaching_flag':True,
-'synchronize_start_flag':False
+'synchronize_start_flag':False,
+
+'hmm_nrestarts':4,
+'hmm_sigmasmooth':False
 }

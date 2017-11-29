@@ -402,10 +402,15 @@ class plotter(QWidget):
 						if yy.size > 5:
 							y.append(yy)
 							ran.append(i)
-				nrestarts = 8
+				nrestarts = self.gui.prefs['hmm_nrestarts']
 				priors = [hmm.initialize_priors(y,nstates) for _ in range(nrestarts)]
 
-				result,lbs = hmm.hmm(y,nstates,priors,nrestarts)
+
+				if self.gui.prefs['hmm_sigmasmooth'] == "True":
+					sigma_smooth = 0.5
+				else:
+					sigma_smooth = False
+				result,lbs = hmm.hmm(y,nstates,priors,nrestarts,sigma_smooth)
 				ppi = np.sum([result.gamma[i].sum(0) for i in range(len(result.gamma))],axis=0)
 				ppi /= ppi.sum()
 
@@ -891,7 +896,8 @@ class plotter(QWidget):
 
 						for j in range(ms.size-1):
 							o = fpb[i].copy()
-							o = o[ms[j]-10:ms[j+1]]
+							ox = int(np.max((0,ms[j]-self.gui.prefs['plotter_syncpreframes'])))
+							o = o[ox:ms[j+1]]
 							ooo = np.empty(v.shape[1]) + np.nan
 							ooo[:o.size] = o
 							oo.append(ooo)
