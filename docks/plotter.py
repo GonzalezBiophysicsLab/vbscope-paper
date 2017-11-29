@@ -406,8 +406,12 @@ class plotter(QWidget):
 				priors = [hmm.initialize_priors(y,nstates) for _ in range(nrestarts)]
 
 				result,lbs = hmm.hmm(y,nstates,priors,nrestarts)
+				ppi = np.sum([result.gamma[i].sum(0) for i in range(len(result.gamma))],axis=0)
+				ppi /= ppi.sum()
+
 				print lbs
 				print '\nHMM - k = %d, iter= %d, lowerbound=%f'%(nstates,result.iterations,result.lowerbound)
+				print '  f:',ppi
 				print '  m:',result.m
 				print 'sig:',(result.b/result.a)**.5
 				rates = -np.log(1.-result.Astar)/self.gui.prefs['tau']
