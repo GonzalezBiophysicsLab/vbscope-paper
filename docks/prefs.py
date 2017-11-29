@@ -155,7 +155,8 @@ default = {
 'plotter_min_time':0,
 'plotter_max_time':100,
 'plotter_nbins_time':100,
-'plotter_syncpreframes':10,
+'plotter_2d_syncpreframes':10,
+'plotter_2d_normalizecolumn':False,
 
 'convert_flag':False,
 'convert_c_lambda':[11.64,12.75],

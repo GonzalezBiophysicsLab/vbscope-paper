@@ -892,11 +892,13 @@ class plotter(QWidget):
 					oo = []
 					for i in range(fpb.shape[0]):
 						ms = np.nonzero((vv[i,1]==state)*(vv[i,0]!=vv[i,1]))[0]
+						if v[i,0] == state:
+							ms = np.append(0,ms)
 						ms = np.append(ms,v.shape[1])
 
 						for j in range(ms.size-1):
 							o = fpb[i].copy()
-							ox = int(np.max((0,ms[j]-self.gui.prefs['plotter_syncpreframes'])))
+							ox = int(np.max((0,ms[j]-self.gui.prefs['plotter_2d_syncpreframes'])))
 							o = o[ox:ms[j+1]]
 							ooo = np.empty(v.shape[1]) + np.nan
 							ooo[:o.size] = o
@@ -937,7 +939,12 @@ class plotter(QWidget):
 				cm.set_under('w')
 
 			vmin = self.gui.prefs['plotter_floor']
-			z /= np.nanmax(z,axis=1)[:,None]
+
+			if self.gui.prefs['plotter_2d_normalizecolumn'] == 'True':
+				z /= np.nanmax(z,axis=1)[:,None]
+			else:
+				z /= np.nanmax(z)
+
 			z = np.nan_to_num(z)
 
 			x -= self.gui.prefs['plotter_timeshift']
