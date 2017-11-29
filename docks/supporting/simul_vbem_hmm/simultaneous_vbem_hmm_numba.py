@@ -14,24 +14,22 @@ class results_hmm:
 	def __init__(self, *args):
 		self.args = args
 
-def initialize_priors(data,nstates):
+def initialize_priors(data,nstates,flag_vbfret=True,flag_custom=False,flag_user=False):
 	# NxTxKxD
 	y = np.concatenate(data)
 	npoints = y.size
 
 	xmin = np.percentile(y,.01)
 	xmax = np.percentile(y,99.99)
-	# np.random.seed()
+	np.random.seed()
 	# # m = np.random.uniform(xmin,xmax,size=nstates)
-	# m = np.linspace(xmin,xmax,nstates)
-	# m+=np.random.normal(size=nstates)*(xmax-xmin)/6
+	m = np.linspace(xmin,xmax,nstates)
+	m += np.random.normal(size=nstates)*(xmax-xmin)/6
 	# ## Pick randomly in region defined by min and max
 	# # m = np.array([np.random.uniform(xmin[i],xmax[i],nstates) for i in range(ndim)]).T
-	# m.sort()
-	# print m
-	from sklearn.cluster import k_means
-	m = k_means(y.reshape((y.size,1)),nstates)[0].flatten()
 	m.sort()
+	# print m
+
 
 	dist = np.sqrt(np.square(y[:,None] - m[None,:]))
 	gamma = (dist == dist.min(1)[:,None]).astype('double') + 0.1
@@ -41,15 +39,28 @@ def initialize_priors(data,nstates):
 	# rho += 1.
 	rho = np.ones(nstates)
 
-	# vbFRET priors are alpha = 1, a = 2.5, b = 0.01, beta = 0.25
-	alpha = np.zeros((nstates,nstates)) + .1 + np.identity(nstates)*1.#1.#10.
-	#.1,.005,.25
-	a = np.zeros(nstates) + 1#2.5#1.
-	b = np.zeros(nstates) + (xmax-xmin)**2./36.#(xmax-xmin)**2./36.
-	beta = np.zeros(nstates) + nstates**2. * 36. / (xmax-xmin)**2.#nstates**2. * 36. / (xmax-xmin)**2.
+	if flag_custom:
+		from sklearn.cluster import k_means
+		m = k_means(y.reshape((y.size,1)),nstates)[0].flatten()
+		m.sort()
+		alpha = np.zeros((nstates,nstates)) + .1 + np.identity(nstates)*1.#1.#10.
+
+		#.1,.005,.25
+		a = np.zeros(nstates) + 1#2.5#1.
+		b = np.zeros(nstates) + (xmax-xmin)**2./36.#(xmax-xmin)**2./36.
+		beta = np.zeros(nstates) + nstates**2. * 36. / (xmax-xmin)**2.#nstates**2. * 36. / (xmax-xmin)**2.
+
+	elif flag_vbfret:
+		## vbFRET!!
+		# vbFRET priors are alpha = 1, a = 2.5, b = 0.01, beta = 0.25
+		alpha = np.ones((nstates,nstates))
+		a = np.zeros(nstates) + 2.5
+		b = np.zeros(nstates) + 0.01
+		beta = np.zeros(nstates) + 0.25
+
 	return [m,beta,a,b,alpha,rho]
 
-def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
+def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,sigma_smooth=False):
 	'''
 	Format is # NxTxKxD
 	Data should be a list of nmol np.ndarray(npoints) trjectories. If only one trace, try [y]
@@ -61,6 +72,9 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
 	# if y.ndim != 3:
 	# 	raise Exception("Data should be Molecules x Time x Dimensionality")
 	nmol = len(data)
+	if not sigma_smooth is False:
+		from scipy.ndimage import gaussian_filter
+		data = [gaussian_filter(dd,sigma_smooth) for dd in data]
 	flaty = np.concatenate(data)
 
 	# Parse Prior
@@ -160,12 +174,12 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False):
 	result.ln_p_x_z = ln_p_x_z
 	return result
 
-def hmm_with_restarts(y,nstates,priors,nrestarts=8):
+def hmm_with_restarts(y,nstates,priors,nrestarts=8,sigma_smooth=False):
 	import multiprocessing as mp
 	cpus = np.min((nrestarts,mp.cpu_count()))
 
 	pool = mp.Pool(processes = np.min((nrestarts,mp.cpu_count())))
-	results = [pool.apply_async(simultaneous_vbem_hmm, args=(y,nstates,priors[i])) for i in xrange(nrestarts)]
+	results = [pool.apply_async(simultaneous_vbem_hmm, args=(y,nstates,priors[i],False,sigma_smooth)) for i in xrange(nrestarts)]
 	results = [p.get() for p in results]
 	pool.close()
 

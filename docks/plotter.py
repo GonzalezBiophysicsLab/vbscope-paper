@@ -403,7 +403,7 @@ class plotter(QWidget):
 							y.append(yy)
 							ran.append(i)
 				nrestarts = self.gui.prefs['hmm_nrestarts']
-				priors = [hmm.initialize_priors(y,nstates) for _ in range(nrestarts)]
+				priors = [hmm.initialize_priors(y,nstates,flag_vbfret=False,flag_custom=True) for _ in range(nrestarts)]
 
 
 				if self.gui.prefs['hmm_sigmasmooth'] == "True":
