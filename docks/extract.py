@@ -127,7 +127,27 @@ class dock_extract(QWidget):
 			if self.combo_method.currentIndex() == 0:
 				xyi = np.round(xy).astype('i')
 				ns = self.gui.data.movie[:,xyi[0],xyi[1]]
-				bs = np.median(np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])]),axis=0)
+
+				# ## get global background
+				# from supporting import minmax
+				# from supporting import normal_minmax_dist as nd
+				# r = regions[j]
+				# imm = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].min(0)
+				# mmin,mmax = minmax.minmax_map(imm,self.gui.prefs['nsearch'],self.gui.prefs['clip border'])
+				# bgfit = nd.estimate_from_min(imm[mmin],self.gui.prefs['nsearch']**2 * imm.shape[0])
+
+				# ## Good - bg is median of four corners for everyframe for every spot. dynamic
+				# bs = np.median(np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])] ),axis=0)
+
+				## Okay - bg is mean infered from min-value order statistics of four corners for every spot. static
+				from supporting import normal_minmax_dist as nd
+				bs = np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])] )
+				bs = np.min(bs,axis=0)
+				bgg = np.zeros(bs.shape[1])
+				for i in range(bgg.size):
+					bgg[i] = nd.estimate_from_min(bs[:,i], 4.)[0]
+				bs = bgg[None,:]
+
 				traces.append(ns-bs)
 
 			elif self.combo_method.currentIndex() == 1:
