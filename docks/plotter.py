@@ -673,11 +673,14 @@ class plotter(QWidget):
 								np.savetxt(oname[0],q,delimiter=',')
 
 						if c == 'SMD' and n == 2:
+							from time import ctime
+							from hashlib import md5
+							teatime = ctime()
+							hashed= md5(teatime + str(np.random.rand())).hexdigest()
 							ttype = np.array([[ (np.array([u'vbscope'],dtype='<U42'),)]],dtype=[('session', 'O')])
-							spoofid = np.array([u'tp6deeb440_fa42_46b4_a743_f7beefde1ee8'],
-		dtype='<U38')
-							fake_attr = np.array('no')
-							cols = np.array([[np.array([u'fret'],dtype='<U4'),np.array([u'donor'], dtype='<U5'),np.array([u'acceptor'],dtype='<U8')]], dtype='O')
+							spoofid = np.array([hashed], dtype='<U38')
+							fake_attr = np.array('none')
+							cols = np.array([[np.array([u'fret'],dtype='<U4'),np.array([u'donor'], dtype='<U5'), np.array([u'acceptor'],dtype='<U8')]], dtype='O')
 							q = {'type':ttype,'id':spoofid,'attr':fake_attr,'columns':cols}
 							dt = np.dtype([('id', 'O'), ('index', 'O'), ('values', 'O'), ('attr', 'O')])
 							data = []
@@ -685,6 +688,8 @@ class plotter(QWidget):
 								if checked[i] == 1:
 									pre = self.pre_list[i]
 									post = self.pb_list[i]
+									hashed= md5(teatime + str(np.random.rand())).hexdigest()
+									spoofid = np.array([hashed], dtype='<U38')
 									o = np.array((spoofid,np.arange(post-pre),np.vstack((np.zeros(post-pre),dd[i,:,pre:post])).T,fake_attr),dtype=dt)
 									data.append(o)
 							q['data'] = np.hstack(data)
@@ -692,8 +697,6 @@ class plotter(QWidget):
 							if oname[0] != "":
 								from scipy.io.matlab import savemat
 								savemat(oname[0],q)
-
-
 
 					except:
 						QMessageBox.critical(self,'Export Processed Traces','There was a problem trying to export the processed traces')
