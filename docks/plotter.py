@@ -280,10 +280,13 @@ class plotter(QWidget):
 		export_traces = QAction('Save Traces', self, shortcut='Ctrl+S')
 		export_traces.triggered.connect(self.export_traces)
 
+		export_processed_traces = QAction('Save Processed Traces', self)
+		export_processed_traces.triggered.connect(self.export_processed_traces)
+
 		export_classes = QAction('Save Classes', self, shortcut='Ctrl+D')
 		export_classes.triggered.connect(self.export_classes)
 
-		for f in [export_traces,export_classes]:
+		for f in [export_traces,export_classes,export_processed_traces]:
 			menu_save.addAction(f)
 
 		### tools
@@ -615,6 +618,85 @@ class plotter(QWidget):
 					self.initialize_plots()
 					self.initialize_sliders()
 
+	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)
+	def export_processed_traces(self):
+		n = self.ncolors
+		if not self.d is None:
+			dd = np.copy(self.d)
+
+			# Bleedthrough
+			bts = self.gui.prefs['bleedthrough'].reshape((4,4))
+			for i in range(self.ncolors):
+				for j in range(self.ncolors):
+					dd[:,j] -= bts[i,j]*dd[:,i]
+
+			checked = self.get_checked()
+
+			combos = ['2D','1D','SMD']
+			c,success = QInputDialog.getItem(self,"Format","Choose Format of Exported Data",combos,editable=False)
+			if success:
+					try:
+						if c == '1D':
+							identities = np.array([])
+							j = 0
+							ds = [np.array([]) for _ in range(n)]
+							for i in range(dd.shape[0]):
+								if checked[i] == 1:
+									pre = self.pre_list[i]
+									post = self.pb_list[i]
+									identities = np.append(identities, np.repeat(j,post-pre))
+									for k in range(self.ncolors):
+										ds[k] = np.append(ds[k],dd[i,k,pre:post])
+									j += 1
+							q = np.vstack((identities,ds)).T
+							oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.dat','*.dat')
+							if oname[0] != "":
+								np.savetxt(oname[0],q,delimiter=',')
+
+						elif c == '2D': # 2D
+							# Photobleaching
+							for i in range(dd.shape[0]):
+								pre = self.pre_list[i]
+								post = self.pb_list[i]
+								dd[i,:,:post-pre] = dd[i,:,pre:post]
+								dd[i,:,post-pre:] = np.nan
+
+							# Classes
+							dd = dd[checked]
+
+							q = np.zeros((dd.shape[0]*n,dd.shape[2]))
+							for i in range(n):
+								q[i::n] = dd[:,i]
+							q = q.T
+							oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.dat','*.dat')
+							if oname[0] != "":
+								np.savetxt(oname[0],q,delimiter=',')
+
+						if c == 'SMD' and n == 2:
+							ttype = np.array([[ (np.array([u'vbscope'],dtype='<U42'),)]],dtype=[('session', 'O')])
+							spoofid = np.array([u'tp6deeb440_fa42_46b4_a743_f7beefde1ee8'],
+		dtype='<U38')
+							fake_attr = np.array('no')
+							cols = np.array([[np.array([u'fret'],dtype='<U4'),np.array([u'donor'], dtype='<U5'),np.array([u'acceptor'],dtype='<U8')]], dtype='O')
+							q = {'type':ttype,'id':spoofid,'attr':fake_attr,'columns':cols}
+							dt = np.dtype([('id', 'O'), ('index', 'O'), ('values', 'O'), ('attr', 'O')])
+							data = []
+							for i in range(dd.shape[0]):
+								if checked[i] == 1:
+									pre = self.pre_list[i]
+									post = self.pb_list[i]
+									o = np.array((spoofid,np.arange(post-pre),np.vstack((np.zeros(post-pre),dd[i,:,pre:post])).T,fake_attr),dtype=dt)
+									data.append(o)
+							q['data'] = np.hstack(data)
+							oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.mat','*.mat')
+							if oname[0] != "":
+								from scipy.io.matlab import savemat
+								savemat(oname[0],q)
+
+
+
+					except:
+						QMessageBox.critical(self,'Export Processed Traces','There was a problem trying to export the processed traces')
 
 	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)
 	def export_traces(self):
