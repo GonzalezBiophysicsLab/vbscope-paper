@@ -200,6 +200,8 @@ class plotter(QWidget):
 		## Set the ticks/labels so that they look nice
 		for aa in self.a:
 			for aaa in aa:
+				for asp in ['top','bottom','left','right']:
+					aaa.spines[asp].set_linewidth(1.0/self.canvas.devicePixelRatio())
 				aaa.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=2./self.canvas.devicePixelRatio())
 				aaa.tick_params(axis='both',which='major',length=4./self.canvas.devicePixelRatio())
 
@@ -1237,7 +1239,7 @@ class plotter(QWidget):
 
 		self.a[0][0].set_title(str(self.index)+' / '+str(self.d.shape[0] - 1) + " -  %d"%(self.class_list[self.index]),fontsize=12./self.canvas.devicePixelRatio())
 
-		
+
 		self.a[0][0].yaxis.set_label_coords(-.17, 0.5)
 		self.a[1][0].yaxis.set_label_coords(-.17, 0.5)
 		self.a[1][0].xaxis.set_label_coords(0.5, -.2)
