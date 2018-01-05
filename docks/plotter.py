@@ -220,9 +220,9 @@ class plotter(QWidget):
 		self.update()
 		self.label_axes()
 		self.f.tight_layout()
-		offset1 = .08 / self.canvas.devicePixelRatio()
-		offset2 = 0.02 / self.canvas.devicePixelRatio()
-		offset3 = 0.14 / self.canvas.devicePixelRatio()
+		offset1 = .08
+		offset2 = 0.02
+		offset3 = 0.14
 		self.f.subplots_adjust(left=offset3,right=1.-offset2,top=1.-offset1,bottom=offset3,hspace=.03,wspace=0.015)
 		self.f.canvas.draw()
 
@@ -1240,10 +1240,10 @@ class plotter(QWidget):
 
 		self.a[0][0].set_title(str(self.index)+' / '+str(self.d.shape[0] - 1) + " -  %d"%(self.class_list[self.index]),fontsize=12./self.canvas.devicePixelRatio())
 
-		self.a[0][0].yaxis.set_label_coords(-.17, 0.5)
-		self.a[1][0].yaxis.set_label_coords(-.17, 0.5)
-		self.a[1][0].xaxis.set_label_coords(0.5, -.2)
-		self.a[1][1].xaxis.set_label_coords(0.5, -.2)
+		self.a[0][0].yaxis.set_label_coords(-.18, 0.5)
+		self.a[1][0].yaxis.set_label_coords(-.18, 0.5)
+		self.a[1][0].xaxis.set_label_coords(0.5, -.21)
+		self.a[1][1].xaxis.set_label_coords(0.5, -.21)
 		self.canvas.draw()
 
 	## Calculate the anti-correlation for sorting traces
@@ -1452,8 +1452,9 @@ class mpl_plot(QWidget):
 		self.setLayout(layout)
 
 	def fix_ax(self):
-		offset = .08 / self.canvas.devicePixelRatio()
-		self.f.subplots_adjust(left=offset,right=1.-offset,top=1.-offset,bottom=offset)
+		offset = .08
+		offset2 = 0.14
+		self.f.subplots_adjust(left=offset2,right=1.-offset,top=1.-offset,bottom=offset2)
 		self.ax.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
 
 		self.ax.tick_params(axis='both', which='major', labelsize=12./self.canvas.devicePixelRatio())
