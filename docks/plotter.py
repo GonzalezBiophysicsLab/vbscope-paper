@@ -166,7 +166,7 @@ class plotter(QWidget):
 		## clear everything
 		[[aaa.cla() for aaa in aa] for aa in self.a]
 
-		lw=.75
+		lw=.75 / self.canvas.devicePixelRatio()
 		pb=.2
 
 		for i in range(self.ncolors):
@@ -1231,7 +1231,7 @@ class plotter(QWidget):
 		# delta = mmax-mmin
 		# self.a[0][0].set_ylim( mmin - delta*.25, mmax + delta*.25)
 
-		self.a[0][0].set_title(str(self.index)+' / '+str(self.d.shape[0] - 1) + " -  %d"%(self.class_list[self.index]))
+		self.a[0][0].set_title(str(self.index)+' / '+str(self.d.shape[0] - 1) + " -  %d"%(self.class_list[self.index]),fontsize=12./self.canvas.devicePixelRatio())
 
 		self.a[0][0].yaxis.set_label_coords(-.17, 0.5)
 		self.a[1][0].yaxis.set_label_coords(-.17, 0.5)
