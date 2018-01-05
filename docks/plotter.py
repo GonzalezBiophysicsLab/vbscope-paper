@@ -1055,6 +1055,7 @@ class plotter(QWidget):
 			try:
 				cb = popplot.f.colorbar(pc)
 				cb.set_ticks(np.array((0.,.2,.4,.6,.8,1.)))
+				cb.ax.yaxis.set_tick_params(labelsize=12./self.canvas.devicePixelRatio())
 				cb.solids.set_edgecolor('face')
 				cb.solids.set_rasterized(True)
 			except:
@@ -1065,7 +1066,7 @@ class plotter(QWidget):
 			popplot.ax.set_xlabel('Time (s)',fontsize=14./self.canvas.devicePixelRatio())
 			popplot.ax.set_ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14./self.canvas.devicePixelRatio())
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
-			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
+			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=12./self.canvas.devicePixelRatio())
 			popplot.f.tight_layout()
 			popplot.canvas.draw()
 
@@ -1450,7 +1451,7 @@ class mpl_plot(QWidget):
 	def fix_ax(self):
 		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
 
-		self.ax.tick_params(axis='both', which='major', labelsize=8./self.canvas.devicePixelRatio())
+		self.ax.tick_params(axis='both', which='major', labelsize=12./self.canvas.devicePixelRatio())
 		self.ax.format_coord = lambda x, y: ''
 		self.f.tight_layout()
 
