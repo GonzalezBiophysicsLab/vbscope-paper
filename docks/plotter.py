@@ -216,8 +216,6 @@ class plotter(QWidget):
 		self.a[0][1].tick_params(axis='y',which='both',direction='in')
 		self.a[1][1].tick_params(axis='y',which='both',direction='in')
 
-
-
 		## Redraw everything
 		self.update()
 		self.label_axes()
@@ -1239,11 +1237,11 @@ class plotter(QWidget):
 
 		self.a[0][0].set_title(str(self.index)+' / '+str(self.d.shape[0] - 1) + " -  %d"%(self.class_list[self.index]),fontsize=12./self.canvas.devicePixelRatio())
 
-
-		self.a[0][0].yaxis.set_label_coords(-.17, 0.5)
-		self.a[1][0].yaxis.set_label_coords(-.17, 0.5)
-		self.a[1][0].xaxis.set_label_coords(0.5, -.2)
-		self.a[1][1].xaxis.set_label_coords(0.5, -.2)
+		if self.canvas.devicePixelRatio() == 1:
+			self.a[0][0].yaxis.set_label_coords(-.17, 0.5)
+			self.a[1][0].yaxis.set_label_coords(-.17, 0.5)
+			self.a[1][0].xaxis.set_label_coords(0.5, -.2)
+			self.a[1][1].xaxis.set_label_coords(0.5, -.2)
 		self.canvas.draw()
 
 	## Calculate the anti-correlation for sorting traces
