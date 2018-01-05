@@ -1237,6 +1237,7 @@ class plotter(QWidget):
 
 		self.a[0][0].set_title(str(self.index)+' / '+str(self.d.shape[0] - 1) + " -  %d"%(self.class_list[self.index]),fontsize=12./self.canvas.devicePixelRatio())
 
+		
 		self.a[0][0].yaxis.set_label_coords(-.17, 0.5)
 		self.a[1][0].yaxis.set_label_coords(-.17, 0.5)
 		self.a[1][0].xaxis.set_label_coords(0.5, -.2)
@@ -1449,7 +1450,8 @@ class mpl_plot(QWidget):
 		self.setLayout(layout)
 
 	def fix_ax(self):
-		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
+		offset = .08 / self.canvas.devicePixelRatio()
+		self.f.subplots_adjust(left=offset,right=1.-offset,top=1.-offset,bottom=offset)
 		self.ax.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
 
 		self.ax.tick_params(axis='both', which='major', labelsize=12./self.canvas.devicePixelRatio())
