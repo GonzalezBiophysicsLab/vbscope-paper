@@ -220,7 +220,10 @@ class plotter(QWidget):
 		self.update()
 		self.label_axes()
 		self.f.tight_layout()
-		self.f.subplots_adjust(hspace=.03,wspace=0.015)
+		offset1 = .08 / self.canvas.devicePixelRatio()
+		offset2 = 0.02 / self.canvas.devicePixelRatio()
+		offset3 = 0.14 / self.canvas.devicePixelRatio()
+		self.f.subplots_adjust(left=offset3,right=1.-offset2,top=1.-offset1,bottom=offset3,hspace=.03,wspace=0.015)
 		self.f.canvas.draw()
 
 	## Reset everything with the new trajectories loaded in with this function
@@ -1241,7 +1244,6 @@ class plotter(QWidget):
 		self.a[1][0].yaxis.set_label_coords(-.17, 0.5)
 		self.a[1][0].xaxis.set_label_coords(0.5, -.2)
 		self.a[1][1].xaxis.set_label_coords(0.5, -.2)
-		self.f.tight_layout()
 		self.canvas.draw()
 
 	## Calculate the anti-correlation for sorting traces
