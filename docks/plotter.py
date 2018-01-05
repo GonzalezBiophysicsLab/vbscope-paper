@@ -961,7 +961,7 @@ class plotter(QWidget):
 			popplot.ax.set_ylabel('Probability',fontsize=14./self.canvas.devicePixelRatio())
 			for asp in ['top','bottom','left','right']:
 				popplot.ax.spines[asp].set_linewidth(1.0/self.canvas.devicePixelRatio())
-			popplot.f.subplots_adjust(left=.15,bottom=.14,top=.95,right=.99)
+			popplot.f.subplots_adjust(left=.13,bottom=.15,top=.95,right=.99)
 			popplot.f.canvas.draw()
 
 	def hist2d(self):
@@ -1061,6 +1061,8 @@ class plotter(QWidget):
 				cb = popplot.f.colorbar(pc)
 				cb.set_ticks(np.array((0.,.2,.4,.6,.8,1.)))
 				cb.ax.yaxis.set_tick_params(labelsize=12./self.canvas.devicePixelRatio(),direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
+				for asp in ['top','bottom','left','right']:
+					cb.ax.spines[asp].set_linewidth(1.0/self.canvas.devicePixelRatio())
 				cb.solids.set_edgecolor('face')
 				cb.solids.set_rasterized(True)
 			except:
@@ -1068,7 +1070,7 @@ class plotter(QWidget):
 
 			for asp in ['top','bottom','left','right']:
 				popplot.ax.spines[asp].set_linewidth(1.0/self.canvas.devicePixelRatio())
-			popplot.f.subplots_adjust(left=.15,bottom=.14,top=.95,right=.99)
+			popplot.f.subplots_adjust(left=.18,bottom=.14,top=.95,right=.99)
 
 			popplot.ax.set_xlim(rx.min()-self.gui.prefs['plotter_timeshift'],rx.max()-self.gui.prefs['plotter_timeshift'])
 			popplot.ax.set_ylim(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'])
@@ -1137,6 +1139,8 @@ class plotter(QWidget):
 			cb.set_ticks(cz)
 			# cb.set_ticklabels(cz)
 			cb.ax.yaxis.set_tick_params(labelsize=12./self.canvas.devicePixelRatio(),direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
+			for asp in ['top','bottom','left','right']:
+				cb.ax.spines[asp].set_linewidth(1.0/self.canvas.devicePixelRatio())
 			cb.solids.set_edgecolor('face')
 			cb.solids.set_rasterized(True)
 
@@ -1144,13 +1148,13 @@ class plotter(QWidget):
 			popplot.ax.set_ylim(ry.min(),ry.max())
 			popplot.ax.set_xlabel(r'Initial E$_{\rm FRET}$',fontsize=14./self.canvas.devicePixelRatio())
 			popplot.ax.set_ylabel(r'Final E$_{\rm FRET}$',fontsize=14./self.canvas.devicePixelRatio())
-			popplot.ax.set_title('Transition Density (Counts)')
+			popplot.ax.set_title('Transition Density (Counts)',fontsize=12/self.canvas.devicePixelRatio())
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./self.canvas.devicePixelRatio())
 			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=12./self.canvas.devicePixelRatio())
 
 			for asp in ['top','bottom','left','right']:
 				popplot.ax.spines[asp].set_linewidth(1.0/self.canvas.devicePixelRatio())
-			popplot.f.subplots_adjust(left=.15,bottom=.14,top=.95,right=.99)
+			popplot.f.subplots_adjust(left=.18,bottom=.14,top=.92,right=.99)
 
 			popplot.f.canvas.draw()
 
