@@ -430,9 +430,10 @@ class plotter(QWidget):
 
 				print lbs
 				print '\nHMM - k = %d, iter= %d, lowerbound=%f'%(nstates,result.iterations,result.lowerbound)
-				print '  f:',ppi
-				print '  m:',result.m
-				print 'sig:',(result.b/result.a)**.5
+				print '    f:',ppi
+				print '    m:',result.m
+				print 'm_sig',1./np.sqrt(result.beta)
+				print '  sig:',(result.b/result.a)**.5
 				rates = -np.log(1.-result.Astar)/self.gui.prefs['tau']
 				for i in range(rates.shape[0]):
 					rates[i,i] = 0.
