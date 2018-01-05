@@ -90,6 +90,7 @@ class plotter(QWidget):
 		## Initialize Plots
 		self.f,self.a = plt.subplots(2,2,gridspec_kw={'width_ratios':[6,1]},figsize=(6.5,4))
 		self.canvas = FigureCanvas(self.f)
+		self.f.set_dpi(self.f.get_dpi()/self.canvas.devicePixelRatio())
 		sizePolicy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
 		self.canvas.setSizePolicy(sizePolicy)
 		self.toolbar = NavigationToolbar(self.canvas,None)
@@ -207,6 +208,10 @@ class plotter(QWidget):
 		self.a[0][0].tick_params(axis='x', which='both',length=0)
 		self.a[0][1].tick_params(axis='y',which='both',direction='in')
 		self.a[1][1].tick_params(axis='y',which='both',direction='in')
+		for aa in self.a:
+			for aaa in aa:
+				aaa.tick_params(labelsize=12./self.canvas.devicePixelRatio())
+
 
 		## Redraw everything
 		self.update()
@@ -1426,6 +1431,7 @@ class mpl_plot(QWidget):
 
 		sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 		self.canvas.setSizePolicy(sizePolicy)
+		self.f.set_dpi(self.f.get_dpi()/self.canvas.devicePixelRatio())
 		self.fix_ax()
 
 		self.canvas.draw()
@@ -1440,7 +1446,7 @@ class mpl_plot(QWidget):
 	def fix_ax(self):
 		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
 
-		self.ax.tick_params(axis='both', which='major', labelsize=8)
+		self.ax.tick_params(axis='both', which='major', labelsize=8./self.canvas.devicePixelRatio())
 		self.ax.format_coord = lambda x, y: ''
 		self.f.tight_layout()
 
