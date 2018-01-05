@@ -177,7 +177,7 @@ class plotter(QWidget):
 			self.a[0][0].plot(np.random.rand(self.d.shape[0]),color=color,ls=':',alpha=pb,lw=lw)
 
 			## Plot histograms of intensities
-			self.a[0][1].plot(np.random.rand(100),color=color,alpha=.8)
+			self.a[0][1].plot(np.random.rand(100),color=color,alpha=.8,lw=1./ self.canvas.devicePixelRatio())
 
 		## plot pre-truncated, kept, and post-truncated trajectory (E_{FRET})
 		for i in range(1,self.ncolors):
@@ -189,7 +189,7 @@ class plotter(QWidget):
 			self.a[1][0].plot(np.random.rand(self.d.shape[0]),color=color,alpha=.8,lw=lw)
 			self.a[1][0].plot(np.random.rand(self.d.shape[0]),color=color,ls=':',alpha=pb,lw=lw)
 			## Plot histograms of rel. intensities
-			self.a[1][1].plot(np.random.rand(100),color=color,alpha=.8)
+			self.a[1][1].plot(np.random.rand(100),color=color,alpha=.8,lw=1./ self.canvas.devicePixelRatio())
 
 		## Make it so that certain plots zoom together
 		self.a[0][0].get_shared_y_axes().join(self.a[0][0],self.a[0][1])
@@ -198,6 +198,11 @@ class plotter(QWidget):
 		self.a[0][1].get_shared_x_axes().join(self.a[0][1],self.a[1][1])
 
 		## Set the ticks/labels so that they look nice
+		for aa in self.a:
+			for aaa in aa:
+				aaa.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0,length=2.)
+				aaa.tick_params(axis='both',which='major',length=4.)
+
 		plt.setp(self.a[0][0].get_xticklabels(), visible=False)
 		for aa in [self.a[0][1],self.a[1][1]]:
 			aa.yaxis.tick_right()
@@ -208,9 +213,7 @@ class plotter(QWidget):
 		self.a[0][0].tick_params(axis='x', which='both',length=0)
 		self.a[0][1].tick_params(axis='y',which='both',direction='in')
 		self.a[1][1].tick_params(axis='y',which='both',direction='in')
-		for aa in self.a:
-			for aaa in aa:
-				aaa.tick_params(labelsize=12./self.canvas.devicePixelRatio())
+
 
 
 		## Redraw everything
