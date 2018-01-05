@@ -814,7 +814,8 @@ class plotter(QWidget):
 
 	## Add axis labels to plots
 	def label_axes(self):
-		fs = 12
+		fs = 12./self.canvas.devicePixelRatio()
+
 		self.a[0][0].set_ylabel(r'Intensity (a.u.)',fontsize=fs,va='top')
 		if self.ncolors == 2:
 			self.a[1][0].set_ylabel(r'E$_{\rm{FRET}}$',fontsize=fs,va='top')
@@ -950,8 +951,8 @@ class plotter(QWidget):
 				popplot.ax.plot(x,tot,color='k',lw=2,alpha=.8)
 
 			popplot.ax.set_xlim(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'])
-			popplot.ax.set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
-			popplot.ax.set_ylabel('Probability',fontsize=14)
+			popplot.ax.set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14./self.canvas.devicePixelRatio())
+			popplot.ax.set_ylabel('Probability',fontsize=14./self.canvas.devicePixelRatio())
 			popplot.f.tight_layout()
 			popplot.f.canvas.draw()
 
@@ -1058,8 +1059,8 @@ class plotter(QWidget):
 
 			popplot.ax.set_xlim(rx.min()-self.gui.prefs['plotter_timeshift'],rx.max()-self.gui.prefs['plotter_timeshift'])
 			popplot.ax.set_ylim(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'])
-			popplot.ax.set_xlabel('Time (s)',fontsize=14)
-			popplot.ax.set_ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14)
+			popplot.ax.set_xlabel('Time (s)',fontsize=14./self.canvas.devicePixelRatio())
+			popplot.ax.set_ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14./self.canvas.devicePixelRatio())
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
 			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
 			popplot.f.tight_layout()
@@ -1128,8 +1129,8 @@ class plotter(QWidget):
 
 			popplot.ax.set_xlim(rx.min(),rx.max())
 			popplot.ax.set_ylim(ry.min(),ry.max())
-			popplot.ax.set_xlabel(r'Initial E$_{\rm FRET}$',fontsize=14)
-			popplot.ax.set_ylabel(r'Final E$_{\rm FRET}$',fontsize=14)
+			popplot.ax.set_xlabel(r'Initial E$_{\rm FRET}$',fontsize=14./self.canvas.devicePixelRatio())
+			popplot.ax.set_ylabel(r'Final E$_{\rm FRET}$',fontsize=14./self.canvas.devicePixelRatio())
 			popplot.ax.set_title('Transition Density (Counts)')
 			bbox_props = dict(boxstyle="square", fc="w", alpha=1.0)
 			popplot.ax.annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props)
