@@ -200,8 +200,8 @@ class plotter(QWidget):
 		## Set the ticks/labels so that they look nice
 		for aa in self.a:
 			for aaa in aa:
-				aaa.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0,length=2.)
-				aaa.tick_params(axis='both',which='major',length=4.)
+				aaa.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=2./self.canvas.devicePixelRatio())
+				aaa.tick_params(axis='both',which='major',length=4./self.canvas.devicePixelRatio())
 
 		plt.setp(self.a[0][0].get_xticklabels(), visible=False)
 		for aa in [self.a[0][1],self.a[1][1]]:
@@ -1055,7 +1055,7 @@ class plotter(QWidget):
 			try:
 				cb = popplot.f.colorbar(pc)
 				cb.set_ticks(np.array((0.,.2,.4,.6,.8,1.)))
-				cb.ax.yaxis.set_tick_params(labelsize=12./self.canvas.devicePixelRatio())
+				cb.ax.yaxis.set_tick_params(labelsize=12./self.canvas.devicePixelRatio(),direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
 				cb.solids.set_edgecolor('face')
 				cb.solids.set_rasterized(True)
 			except:
@@ -1450,6 +1450,7 @@ class mpl_plot(QWidget):
 
 	def fix_ax(self):
 		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
+		self.ax.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
 
 		self.ax.tick_params(axis='both', which='major', labelsize=12./self.canvas.devicePixelRatio())
 		self.ax.format_coord = lambda x, y: ''
