@@ -273,6 +273,9 @@ class plotter(QWidget):
 		file_load_classes = QAction('Load Classes', self, shortcut='Ctrl+P')
 		file_load_classes.triggered.connect(self.load_classes)
 
+		file_load_hmm = QAction('Load HMM', self)
+		file_load_hmm.triggered.connect(self.load_hmm)
+
 		file_batch = QAction('Batch Load',self, shortcut='Ctrl+B')
 		file_batch.triggered.connect(self.batch_load)
 
@@ -282,7 +285,7 @@ class plotter(QWidget):
 		file_exit = QAction('Exit', self, shortcut='Ctrl+Q')
 		file_exit.triggered.connect(self.parent().close)
 
-		for f in [file_load_traces,file_load_classes,file_batch,self.docks['prefs'][0].toggleViewAction(),file_about,file_exit]:
+		for f in [file_load_traces,file_load_classes,file_load_hmm,file_batch,self.docks['prefs'][0].toggleViewAction(),file_about,file_exit]:
 			menu_file.addAction(f)
 
 		### save
@@ -447,20 +450,46 @@ class plotter(QWidget):
 
 				########### EXPORT
 
-				q = np.zeros((self.d.shape[0],self.d.shape[2])) + np.nan
-				j = 0
-				for i in range(self.d.shape[0]):
-					if self.hmm_result.ran.count(i)>0:
-						pbtime = int(self.pb_list[i])
-						pretime = int(self.pre_list[i])
-						q[i,pretime:pbtime] = self.hmm_result.m[self.hmm_result.viterbi[j]]
-						j += 1
-				oname = QFileDialog.getSaveFileName(self, 'Export Viterbi Paths', '_viterbi.dat','*.dat')
+				# q = np.zeros((self.d.shape[0],self.d.shape[2])) + np.nan
+				# j = 0
+				# for i in range(self.d.shape[0]):
+				# 	if self.hmm_result.ran.count(i)>0:
+				# 		pbtime = int(self.pb_list[i])
+				# 		pretime = int(self.pre_list[i])
+				# 		q[i,pretime:pbtime] = self.hmm_result.m[self.hmm_result.viterbi[j]]
+				# 		j += 1
+				# oname = QFileDialog.getSaveFileName(self, 'Export Viterbi Paths', '_viterbi.dat','*.dat')
+				# if oname[0] != "":
+				# 	try:
+				# 		np.savetxt(oname[0],q.T,delimiter=',')
+				# 	except:
+				# 		QMessageBox.critical(self,'Export Traces','There was a problem trying to export the viterbi paths')
+
+				import cPickle as pickle
+				oname = QFileDialog.getSaveFileName(self, 'Export HMM results', '_HMM.dat','*.dat')
 				if oname[0] != "":
 					try:
-						np.savetxt(oname[0],q.T,delimiter=',')
+						f = open(oname[0],'w')
+						pickle.dump(self.hmm_result, f)
+						f.close()
 					except:
-						QMessageBox.critical(self,'Export Traces','There was a problem trying to export the viterbi paths')
+						QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
+
+	def load_hmm(self):
+		if not self.d is None:
+			fname = QFileDialog.getOpenFileName(self,'Choose HMM result file','./')
+			if fname[0] != "":
+				try:
+				# if 1:
+					import cPickle as pickle
+					f = open(fname[0],'r')
+					self.hmm_result = pickle.load(f)
+					f.close()
+					if len(self.a[1,0].lines) < 4:
+						self.a[1,0].plot(np.random.rand(100),np.random.rand(100),color='k',lw=1.,alpha=.8)
+					self.update()
+				except:
+					print "failed"
 
 	def show_class_counts(self):
 		if not self.d is None:
