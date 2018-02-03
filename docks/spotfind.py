@@ -327,7 +327,7 @@ class dock_spotfind(QWidget):
 			if oname[0] != "":
 				try:
 					for i in range(self.gui.data.ncolors):
-						np.savetxt(oname[0]+'_%d'%(i),np.array(self.xys[i]))
+						np.savetxt(oname[0][:-4]+'_%d.dat'%(i),np.array(self.xys[i]).T)
 				except:
 					QMessageBox.critical(self,'Export Status','There was a problem trying to export the spot locations')
 
