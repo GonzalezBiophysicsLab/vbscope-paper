@@ -872,6 +872,19 @@ class plotter(QWidget):
 				self.initialize_plots()
 				self.initialize_sliders()
 
+	def load_traces_m(self, fname):
+
+		ncolors = 2
+		d = np.loadtxt(fname,delimiter=',').T
+		dd = np.array([d[i::ncolors] for i in range(ncolors)])
+		d = np.moveaxis(dd,1,0)
+
+		self.ncolors = ncolors
+		self.initialize_data(d,sort=False)
+		self.index = 0
+		# self.initialize_plots()
+		# self.initialize_sliders()
+
 	## Try to load classes/bleach times from a vbscope style file (commas) (Nx5)
 	def load_classes(self):
 		fname = QFileDialog.getOpenFileName(self,'Choose file to load classes','./')#,filter='TIF File (*.tif *.TIF)')
@@ -889,6 +902,15 @@ class plotter(QWidget):
 				self.pre_list = d[:,1::2].max(1)
 				self.pb_list = d[:,2::2].min(1)
 				self.update()
+
+	def load_classes_m(self, fname):
+
+		d = np.loadtxt(fname,delimiter=',').astype('i')
+		if d.shape[0] == self.d.shape[0]:
+			self.class_list = d[:,0]
+			self.pre_list = d[:,1::2].max(1)
+			self.pb_list = d[:,2::2].min(1)
+			# self.update()
 
 	## Handler for mouse clicks in main plots
 	def mouse_click(self,event):
@@ -1584,15 +1606,31 @@ class mpl_plot(QWidget):
 		self.ax = self.f.add_subplot(111)
 		self.fix_ax()
 
-## Launch the main window as a standalone GUI (ie without vbscope analyze movies)
 def launch():
+	'''
+	Launch the main window as a standalone GUI (ie without vbscope analyze movies), or for scripting.
+	----------------------
+	Example:
+	from plotter import launch
+
+	g = launch()
+	g.ui.load_traces_m('RF2(271)_mutArfA_1uM_combined_traces.dat')
+	g.ui.load_classes_m('RF2(271)_mutArfA_1uM_combined_classes.dat')
+	g.ui.hist2d()
+	popplot = g.ui.docks['plots_2D'][1]
+	popplot.f.savefig('test.pdf')
+	----------------------
+	'''
 	import sys
 	app = QApplication([])
 	app.setStyle('fusion')
 
 	g = ui_plotter(None,[])
 	app.setWindowIcon(g.windowIcon())
-	sys.exit(app.exec_())
+	if __name__ == '__main__':
+		sys.exit(app.exec_())
+	else:
+		return g
 
 ## Run from the command line with `python plotter.py`
 if __name__ == '__main__':
