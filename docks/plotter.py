@@ -259,6 +259,15 @@ class plotter(QWidget):
 		# C-1,N,T
 		self.fret = np.array([q[:,i]/q.sum(1) for i in range(1,self.ncolors)])
 
+	def get_sum_fluor(self):
+		q = np.copy(self.d)
+		bts = self.gui.prefs['bleedthrough'].reshape((4,4))
+		for i in range(self.ncolors):
+			for j in range(self.ncolors):
+				q[:,j] -= bts[i,j]*q[:,i]
+		return q.sum(1)
+
+
 	## Setup the menu items at the top
 	def setup_menubar(self):
 		self.menubar = self.parent().menuBar()
@@ -404,23 +413,37 @@ class plotter(QWidget):
 		from supporting import simul_vbem_hmm as hmm
 
 		if not self.d is None and self.ncolors == 2:
-			nstates,success = QInputDialog.getInt(self,"Number of HMM States","Number of HMM States",min=2)
+			if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+				nstates = 2
+				success = True
+			else:
+				nstates,success = QInputDialog.getInt(self,"Number of HMM States","Number of HMM States",min=2)
 			if success and nstates > 1:
 				self.update_fret()
 				y = []
 				checked = self.get_checked()
 				ran = []
+				if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+					z = self.get_sum_fluor()
 				for i in range(self.fret.shape[1]):
 					if checked[i]:
-						yy = self.fret[0,i,self.pre_list[i]:self.pb_list[i]]
-						yy[np.isnan(yy)] = -1.
-						yy[yy < -1.] = -1.
-						yy[yy > 2] = 2.
+						if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+							yy = z[i,self.pre_list[i]:self.pb_list[i]]
+						else:
+							yy = self.fret[0,i,self.pre_list[i]:self.pb_list[i]]
+							yy[np.isnan(yy)] = -1.
+							yy[yy < -1.] = -1.
+							yy[yy > 2] = 2.
 						if yy.size > 5:
 							y.append(yy)
 							ran.append(i)
 				nrestarts = self.gui.prefs['hmm_nrestarts']
 				priors = [hmm.initialize_priors(y,nstates,flag_vbfret=False,flag_custom=True) for _ in range(nrestarts)]
+				if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+					for iii in range(nrestarts):
+						priors[iii][0] = np.array((0,1000.)) ## m
+						priors[iii][1] = np.ones(2) ## beta
+
 
 
 				if self.gui.prefs['hmm_sigmasmooth'] == "True":
@@ -1240,7 +1263,13 @@ class plotter(QWidget):
 		if not self.hmm_result is None:
 			if self.hmm_result.ran.count(self.index)>0:
 				ii = self.hmm_result.ran.index(self.index)
-				self.a[1,0].lines[-1].set_data(t[pretime:pbtime],self.hmm_result.m[self.hmm_result.viterbi[ii]])
+				if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+					mmmm = np.array((0.,1.))
+					vvvv = self.hmm_result.viterbi[ii]
+
+					self.a[1,0].lines[-1].set_data(t[pretime:pbtime],mmmm[vvvv])
+				else:
+					self.a[1,0].lines[-1].set_data(t[pretime:pbtime],self.hmm_result.m[self.hmm_result.viterbi[ii]])
 			else:
 				self.a[1,0].lines[-1].set_data([0,0],[0,0])
 
