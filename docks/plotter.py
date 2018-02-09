@@ -413,7 +413,7 @@ class plotter(QWidget):
 		from supporting import simul_vbem_hmm as hmm
 
 		if not self.d is None and self.ncolors == 2:
-			if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+			if self.gui.prefs['hmm_binding_expt'] == 'True':
 				nstates = 2
 				success = True
 			else:
@@ -423,11 +423,11 @@ class plotter(QWidget):
 				y = []
 				checked = self.get_checked()
 				ran = []
-				if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+				if self.gui.prefs['hmm_binding_expt'] == 'True':
 					z = self.get_sum_fluor()
 				for i in range(self.fret.shape[1]):
 					if checked[i]:
-						if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+						if self.gui.prefs['hmm_binding_expt'] == 'True':
 							yy = z[i,self.pre_list[i]:self.pb_list[i]]
 						else:
 							yy = self.fret[0,i,self.pre_list[i]:self.pb_list[i]]
@@ -439,7 +439,7 @@ class plotter(QWidget):
 							ran.append(i)
 				nrestarts = self.gui.prefs['hmm_nrestarts']
 				priors = [hmm.initialize_priors(y,nstates,flag_vbfret=False,flag_custom=True) for _ in range(nrestarts)]
-				if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+				if self.gui.prefs['hmm_binding_expt'] == 'True':
 					for iii in range(nrestarts):
 						priors[iii][0] = np.array((0,1000.)) ## m
 						priors[iii][1] = np.ones(2) ## beta
@@ -497,6 +497,51 @@ class plotter(QWidget):
 						f.close()
 					except:
 						QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
+
+				if self.gui.prefs['hmm_binding_expt'] == 'True':
+					oname = QFileDialog.getSaveFileName(self, 'Save Chopped Traces', '_chopped.dat','*.dat')
+					if oname[0] == "":
+						return
+
+					## N,C,T
+					out = None
+
+					from scipy.ndimage import label as ndilabel
+					from scipy.ndimage import find_objects as ndifind
+
+					## If it has an HMM
+					for j in range(len(self.hmm_result.ran)): ## hmm index
+						i = self.hmm_result.ran[j] ## trace index
+
+						v = self.hmm_result.viterbi[j]
+
+						pre = int(self.pre_list[i])
+						post = int(self.pb_list[i])
+						q = self.d[i,:,pre:post]
+
+						labels,numlabels = ndilabel(v)
+						slices = ndifind(labels)
+						if len(slices)>0:
+							for ss in slices:
+								ss = ss[0]
+								tmp = np.zeros((1,self.d.shape[1],self.d.shape[2]))
+								tmp[0,:,:ss.stop-ss.start] = self.d[i,:,pre+ss.start:pre+ss.stop]
+								tmp_cl = np.array((0,0,ss.stop-ss.start,0,ss.stop-ss.start))[None,:]
+								if out is None:
+									out = tmp.copy()
+									classes = tmp_cl.copy()
+								else:
+									out = np.append(out,tmp,axis=0)
+									classes = np.append(classes,tmp_cl,axis=0)
+
+					q = np.zeros((out.shape[0]*out.shape[1],out.shape[2]))
+					for i in range(out.shape[1]):
+						q[i::out.shape[1]] = out[:,i]
+					np.savetxt(oname[0],q.T,delimiter=',')
+					np.savetxt(oname[0][:-4]+"_classes.dat",classes.astype('i'),delimiter=',')
+
+
+
 
 	def load_hmm(self):
 		if not self.d is None:
@@ -1263,7 +1308,7 @@ class plotter(QWidget):
 		if not self.hmm_result is None:
 			if self.hmm_result.ran.count(self.index)>0:
 				ii = self.hmm_result.ran.index(self.index)
-				if self.gui.prefs['hmm_sum_fluorescence'] == 'True':
+				if self.gui.prefs['hmm_binding_expt'] == 'True':
 					mmmm = np.array((0.,1.))
 					vvvv = self.hmm_result.viterbi[ii]
 

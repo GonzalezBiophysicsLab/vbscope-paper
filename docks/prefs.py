@@ -168,5 +168,5 @@ default = {
 
 'hmm_nrestarts':4,
 'hmm_sigmasmooth':False,
-'hmm_sum_fluorescence':False
+'hmm_binding_expt':False
 }
