@@ -93,8 +93,9 @@ class dock_play(QWidget):
 		self.label_framenumber.setText('%0*d / %d'%(len(str(self.gui.data.total_frames)),self.gui.data.current_frame+1,self.gui.data.total_frames))
 
 	def update_frame(self):
-		self.gui.docks['background'][1].update_background()
-		self.gui.plot.image.set_data(self.gui.data.movie[self.gui.data.current_frame] - self.gui.data.background)
+		# self.gui.docks['background'][1].update_background()
+		# self.gui.plot.image.set_data(self.gui.data.movie[self.gui.data.current_frame] - self.gui.data.background)
+		self.gui.plot.image.set_data(self.gui.data.movie[self.gui.data.current_frame])
 		self.gui.plot.draw()
 
 	def stop_playing(self):
@@ -122,6 +123,6 @@ class dock_play(QWidget):
 			self.timer_playing.timeout.connect(self.advance_frame)
 			self.flag_playing = True
 			self.button_play.setText('||')
-			self.timer_playing.start(1./self.gui.prefs['playback_fps']*1000)
+			self.timer_playing.start(1./self.gui.prefs['movie_playback_fps']*1000)
 		else:
 			self.stop_playing()

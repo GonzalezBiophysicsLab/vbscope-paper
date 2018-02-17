@@ -41,20 +41,22 @@ class dock_contrast(QWidget):
 		self.slider_ceiling.sliderReleased.connect(self.update_image_contrast)
 
 	def update_image_contrast(self):
-		try:
+		# try:
 			d = self.gui.data
-			if d.flag_movie:
-				xx = self.gui.prefs['contrast_scale']*((d.image_contrast / 100.) -.5)
-				y = 1./(1.+np.exp(-xx))
-				m = d.movie[d.current_frame]
-				# m -= self.gui.docks['background'][1].calc_background(m)
-				self.gui.plot.image.set_clim(np.percentile(m,y[0]*100.), np.percentile(m,y[1]*100.))
+			# if d.flag_movie:
+			xx = self.gui.prefs['plot_contrast_scale']*((d.image_contrast / 100.) -.5)
+			y = 1./(1.+np.exp(-xx))
+			# m = d.movie[d.current_frame]
+			m = self.gui.plot.image.get_array()
 
-				# self.gui.plot.image.set_clim(np.percentile(d.movie[d.current_frame],y[0]*100.),
-					# np.percentile(d.movie[d.current_frame],y[1]*100.))
-				self.gui.plot.draw()
-		except:
-			pass
+			# m -= self.gui.docks['background'][1].calc_background(m)
+			self.gui.plot.image.set_clim(np.percentile(m,y[0]*100.), np.percentile(m,y[1]*100.))
+
+			# self.gui.plot.image.set_clim(np.percentile(d.movie[d.current_frame],y[0]*100.),
+				# np.percentile(d.movie[d.current_frame],y[1]*100.))
+			self.gui.plot.draw()
+		# except:
+			# pass
 
 	def change_floor(self,v):
 		vv = float(v)/100.
