@@ -17,6 +17,7 @@ class logger(QMainWindow):
 	def init_ui(self):
 		self.textedit = QPlainTextEdit()
 		self.textedit.setReadOnly(True)
+		self.textedit.setStyleSheet('font:Courier')
 
 		self.button_save = QPushButton("Save")
 		self.button_save.clicked.connect(self.save)

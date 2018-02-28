@@ -10,7 +10,9 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-from prefs import dock_prefs
+default_prefs = {
+}
+# from prefs import dock_prefs
 
 ## GUI for plotting 2D smFRET trajectories
 class ui_plotter(QMainWindow):
@@ -23,8 +25,8 @@ class ui_plotter(QMainWindow):
 			self.ncolors = self.gui.data.ncolors
 		else:
 			self.gui = fake()
-			from prefs import default as dfprefs
-			self.gui.prefs = dfprefs
+			# from prefs import default as dfprefs
+			# self.gui.prefs = dfprefs
 			self.ncolors = 2
 
 		## Make the plotter widget
@@ -46,7 +48,7 @@ class ui_plotter(QMainWindow):
 class plotter(QWidget):
 	def __init__(self,data,parent=None):
 		super(QWidget,self).__init__(parent=parent)
-
+		self.default_prefs = default_prefs
 		self.gui = parent.gui
 		layout = QVBoxLayout()
 
@@ -54,12 +56,12 @@ class plotter(QWidget):
 
 		## Docks
 		self.docks = {}
-		self.docks['prefs'] = [QDockWidget('Preferences',parent),dock_prefs(self)]
-		self.docks['prefs'][0].setWidget(self.docks['prefs'][1])
-		self.docks['prefs'][0].setAllowedAreas(Qt.NoDockWidgetArea)
-		parent.addDockWidget(Qt.BottomDockWidgetArea, self.docks['prefs'][0])
-		self.docks['prefs'][0].setFloating(True)
-		self.docks['prefs'][0].close()
+		# self.docks['prefs'] = [QDockWidget('Preferences',parent),dock_prefs(self)]
+		# self.docks['prefs'][0].setWidget(self.docks['prefs'][1])
+		# self.docks['prefs'][0].setAllowedAreas(Qt.NoDockWidgetArea)
+		# parent.addDockWidget(Qt.BottomDockWidgetArea, self.docks['prefs'][0])
+		# self.docks['prefs'][0].setFloating(True)
+		# self.docks['prefs'][0].close()
 
 		self.docks['plots_1D'] = [QDockWidget('1D Histogram',parent),mpl_plot()]
 		self.docks['plots_1D'][0].setWidget(self.docks['plots_1D'][1])

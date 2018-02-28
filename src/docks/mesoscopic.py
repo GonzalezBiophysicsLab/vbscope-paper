@@ -9,27 +9,36 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 
-class mpl_plot():
-	def __init__(self):
-		self.f,self.ax = plt.subplots(1,figsize=(4,3))
-		self.ax = [self.ax]
-		self.canvas = FigureCanvas(self.f)
-		self.toolbar = NavigationToolbar(self.canvas,None)
+# class mpl_plot():
+# 	def __init__(self):
+# 		self.f,self.ax = plt.subplots(1,figsize=(4,3))
+# 		self.ax = [self.ax]
+# 		self.canvas = FigureCanvas(self.f)
+# 		self.toolbar = NavigationToolbar(self.canvas,None)
+#
+# 		sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+# 		self.canvas.setSizePolicy(sizePolicy)
+# 		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
+#
+# 		[aa.tick_params(axis='both', which='major', labelsize=8) for aa in self.ax]
+# 		for aa in self.ax:
+# 			aa.format_coord = lambda x, y: ''
+# 		self.canvas.draw()
+# 		self.f.tight_layout()
+# 		plt.close(self.f)
 
-		sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-		self.canvas.setSizePolicy(sizePolicy)
-		self.f.subplots_adjust(left=.08,right=.92,top=.92,bottom=.08)
 
-		[aa.tick_params(axis='both', which='major', labelsize=8) for aa in self.ax]
-		for aa in self.ax:
-			aa.format_coord = lambda x, y: ''
-		self.canvas.draw()
-		self.f.tight_layout()
-		plt.close(self.f)
+from ..ui import gui
+from ..containers import popout_plot_container
+
+default_prefs = {
+}
 
 class dock_mesoscopic(QWidget):
 	def __init__(self,parent=None):
 		super(dock_mesoscopic, self).__init__(parent)
+
+		self.default_prefs = default_prefs
 
 		self.gui = parent
 
@@ -64,7 +73,7 @@ class dock_mesoscopic(QWidget):
 
 		rects = []
 		regions,shifts = self.gui.data.regions_shifts()
-		c = self.gui.prefs['channel_colors']
+		c = self.gui.prefs['channels_colors']
 
 		t = np.arange(start,end)
 

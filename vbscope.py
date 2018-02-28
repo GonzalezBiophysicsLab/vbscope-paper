@@ -8,12 +8,17 @@ matplotlib.use('Qt5Agg')
 
 from src.ui import movie_viewer
 from src import docks
-from src.containers.data import data_container
+from src.containers import data_container
+from src.containers import popout_plot_container
+from src import plots
 
 default_prefs = {
 	'render_title':'vbscope',
 	'render_artist':'vbscope',
-	'plot_fontsize':12
+	'plot_fontsize':12,
+
+	'channels_colors':['green','red','blue','purple'],
+	'channels_wavelengths':np.array((570.,680.,488.,800.))
 }
 
 class vbscope_gui(movie_viewer):
@@ -26,6 +31,7 @@ class vbscope_gui(movie_viewer):
 
 		self.setup_vbscope_docks()
 		self.setup_vbscope_menus()
+		self.setup_vbscope_plots()
 
 		self.app_name = 'vbscope'
 		self.about_text = "From the Gonzalez Lab (Columbia University).\n\nPrinciple authors: JH,CKT,RLG.\nMany thanks to the entire lab for their input."
@@ -44,18 +50,18 @@ class vbscope_gui(movie_viewer):
 		self.add_dock('background', 'Background', docks.background.dock_background(self), 'lr', 'r')
 		self.add_dock('transform', 'Transform', docks.transform.dock_transform(self), 'lr', 'r')
 		self.add_dock('extract', 'Extract', docks.extract.dock_extract(self), 'lr', 'r')
-		self.add_dock('mesoscopic', 'Mesoscopic', docks.mesoscopic.dock_mesoscopic(self), 'lr', 'r')
+		# self.add_dock('mesoscopic', 'Mesoscopic', docks.mesoscopic.dock_mesoscopic(self), 'lr', 'r')
 
 		## Display docks in tabs
 		self.tabifyDockWidget(self.docks['rotate'][0],self.docks['render'][0])
 		self.tabifyDockWidget(self.docks['spotfind'][0],self.docks['background'][0])
 		self.tabifyDockWidget(self.docks['background'][0],self.docks['transform'][0])
 		self.tabifyDockWidget(self.docks['transform'][0],self.docks['extract'][0])
-		self.tabifyDockWidget(self.docks['extract'][0],self.docks['mesoscopic'][0])
+		# self.tabifyDockWidget(self.docks['extract'][0],self.docks['mesoscopic'][0])
 
 		## Hide/show certain docks
 		self.docks['tag_viewer'][0].hide()
-		self.docks['mesoscopic'][0].hide()
+		# self.docks['mesoscopic'][0].hide()
 		self.docks['tools'][0].raise_()
 		self.docks['spotfind'][0].raise_()
 
@@ -63,56 +69,41 @@ class vbscope_gui(movie_viewer):
 	def setup_vbscope_menus(self):
 		## Add menu items
 		menu_analysis = self.menubar.addMenu('Analysis')
-		m = ['spotfind', 'background', 'transform', 'extract', 'mesoscopic']
+		m = ['spotfind', 'background', 'transform', 'extract']
 		for mm in m:
 			menu_analysis.addAction(self.docks[mm][0].toggleViewAction())
 		self.menu_movie.addAction(self.docks['tag_viewer'][0].toggleViewAction())
 
-	def load_tif(self):
-		self.docks['play'][1].stop_playing()
 
-		## Load File
-		fname = QFileDialog.getOpenFileName(self,'Choose Movie to load','./')
-		if fname[0] != "":
-			## Try loading data
-			d = data_container(self)
-			success = d.load(fname[0])
+	def setup_vbscope_plots(self):
+		menu_plot = self.menubar.addMenu('Plots')
+		plt_region = QAction('Region plot',self)
+		plt_region.triggered.connect(self.plt_region)
 
-			if success:
-				## Get data
-				self.data = d
-				self.plot.background = np.zeros_like(self.data.movie[0])
+		for a in [plt_region]:
+			menu_plot.addAction(a)
 
-				## Setup plot
-				x,y = self.data.movie.shape[1:]
-				self.plot.image.set_extent([0,x,0,y])
-				self.plot.ax.set_xlim(0,x)
-				self.plot.ax.set_ylim(0,y)
-				self.plot.ax.set_visible(True) # Turn on the plot -- first initialization
-				self.plot.canvas.draw() # Need to initialize on first showing -- for fast plotting
+		self.add_dock('pc_region', 'Region Plot', popout_plot_container(1), 'lr', 'r')
+		self.tabifyDockWidget(self.docks['extract'][0],self.docks['pc_region'][0])
+		self.docks['pc_region'][0].hide()
+		self.ui_update()
 
-				## Setup play docks
-				self.docks['play'][1].slider_frame.setMaximum(self.data.total_frames)
-				self.docks['play'][1].slider_frame.setValue(self.data.current_frame+1)
-				self.docks['play'][1].update_frame_slider()
-				self.docks['play'][1].update_label()
+	def raise_plot(self,dockstr):
+		if self.docks[dockstr][0].isHidden():
+			self.docks[dockstr][0].show()
+		self.docks[dockstr][0].raise_()
+		self.docks[dockstr][1].clf()
 
-				## Show Image
-				self.plot.image.set_data(self.data.movie[self.data.current_frame])
-				self.docks['contrast'][1].slider_ceiling.setValue(10000.)
-				self.docks['contrast'][1].slider_floor.setValue(0.)
-				self.docks['contrast'][1].update_image_contrast()
-				self.docks['spotfind'][1].setup_sliders()
-				self.plot.image.set_cmap(self.prefs['color map'])
-				self.plot.draw()
+	def plt_region(self):
+		self.raise_plot('pc_region')
+		plots.region(self)
 
-				## Update tables
-				self._prefs.update_table()
-				self.docks['tag_viewer'][1].init_model()
-
-			else:
-				QMessageBox.critical(None,'Could Not Load File','Could not load file: %s.\nMake sure to use a .TIF format file'%(fname[0]))
-
+	def load(self):
+		success = super(vbscope_gui, self).load()
+		if success:
+			self.docks['spotfind'][1].setup_sliders()
+			self._prefs.update_table()
+			self.docks['tag_viewer'][1].init_model()
 
 def launch():
 	app = QApplication([])

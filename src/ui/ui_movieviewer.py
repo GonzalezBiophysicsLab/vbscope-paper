@@ -88,6 +88,7 @@ class movie_viewer(gui):
 
 			if success:
 				self.data = d
+				print self.data.total_frames
 
 				y,x = self.data.movie.shape[1:]
 				self.plot.image.set_extent([0,x,0,y])
@@ -121,11 +122,13 @@ class movie_viewer(gui):
 
 				self.setWindowTitle('%s - %s'%(self.app_name,self.data.filename))
 				self._prefs.add_pref('movie_filename',self.data.filename)
+				return True
 
 			else:
 				message = 'Could not load file: %s.'%(fname[0])
 				QMessageBox.critical(None,'Could Not Load File',message)
 				self.log(message,True)
+		return False
 
 	def ui_update(self):
 		self.plot.toolbar.setStyleSheet('color:%s;background-color:%s;'%(self.prefs['ui_fontcolor'],self.prefs['ui_bgcolor']))

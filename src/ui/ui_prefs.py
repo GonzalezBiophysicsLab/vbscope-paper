@@ -28,9 +28,11 @@ class preferences(QMainWindow):
 
 		self.gui = gui
 		self.gui.prefs = default
+		self.edit_callback = None
 
 		self.init_ui()
 		self.init_table()
+
 
 	def init_ui(self):
 
@@ -71,6 +73,8 @@ class preferences(QMainWindow):
 			pass
 
 		self.update_table()
+		if not self.edit_callback is None:
+			self.edit_callback()
 
 
 	def init_table(self):
@@ -86,7 +90,10 @@ class preferences(QMainWindow):
 		p.sort()
 		rows = len(p)
 
-		columns = np.max([np.size(p[i][1]) for i in range(rows)])
+		if rows > 0:
+			columns = np.max([np.size(p[i][1]) for i in range(rows)])
+		else:
+			columns = 1
 		self.viewer.setRowCount(rows)
 		self.viewer.setColumnCount(columns)
 
@@ -100,14 +107,19 @@ class preferences(QMainWindow):
 			else:
 				v = [QTableWidgetItem(str(p[i][1][j])) for j in range(s)]
 
+			for j in range(self.viewer.columnCount()):
+				self.viewer.setItem(i,j,None)
 			for j in range(len(v)):
 				self.viewer.setItem(i,j,v[j])
+
 
 		self.viewer.setVerticalHeaderLabels(labels)
 
 		self.viewer.resizeColumnsToContents()
 		self.viewer.resizeRowsToContents()
 		self.viewer.blockSignals(False)
+		self.viewer.setHorizontalHeaderLabels([ "Value"])
+		self.adjustSize()
 
 		try:
 			self.gui.ui_update()

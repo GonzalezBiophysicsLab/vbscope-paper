@@ -8,9 +8,22 @@ from scipy.special import erf
 import multiprocessing as mp
 from time import time
 
+
+default_prefs = {
+	'extract_same_cutoff':1.0,
+	'extract_numerical_aperture':1.2,
+	'extract_pixel_size':13300.0,
+	'extract_magnification':60.0,
+	'extract_binning':2,
+	'extract_nintegrate':7,
+	'extract_ml_psf_maxiters':1000
+}
+
 class dock_extract(QWidget):
 	def __init__(self,parent=None):
 		super(dock_extract, self).__init__(parent)
+
+		self.default_prefs = default_prefs
 
 		self.gui = parent
 
@@ -44,8 +57,8 @@ class dock_extract(QWidget):
 	def launch_plotter(self):
 		self.gui.plot.clear_collections()
 		self.gui.plot.canvas.draw()
-		from plotter import ui_plotter
-		self.ui_p = ui_plotter(self.traces,self)
+		from ..ui.ui_plotter import plotter_gui
+		self.ui_p = plotter_gui(self.traces,gui=self.gui)
 		self.ui_p.setWindowTitle('Plots')
 		self.ui_p.show()
 
@@ -80,14 +93,14 @@ class dock_extract(QWidget):
 							# pass
 
 			spots = np.concatenate(ss,axis=1)
-			spots = avg_close(spots,self.gui.prefs['same_cutoff'])
+			spots = avg_close(spots,self.gui.prefs['extract_same_cutoff'])
 
 		else:
 			i = v - 1
 			spots = s[i] - shifts[i][:,None]
 			if i != 0:
 				spots = ts[0][i](spots.T).T
-				spots = avg_close(spots,self.gui.prefs['same_cutoff'])
+				spots = avg_close(spots,self.gui.prefs['extract_same_cutoff'])
 
 		print "Total spots: %d"%(spots.shape[1])
 		return spots
@@ -96,8 +109,8 @@ class dock_extract(QWidget):
 		''' j is the color index to pick the wavelenght of light '''
 
 		c = 0.42 # .45 or .42, airy disk to gaussian
-		psf_sig = c*self.gui.prefs['channel_wavelengths'][j]*self.gui.prefs['numerical_aperture']
-		sigma = psf_sig/self.gui.prefs['pixel_size']*self.gui.prefs['magnification']/self.gui.prefs['binning']
+		psf_sig = c*self.gui.prefs['channels_wavelengths'][j]*self.gui.prefs['extract_numerical_aperture']
+		sigma = psf_sig/self.gui.prefs['extract_pixel_size']*self.gui.prefs['extract_magnification']/self.gui.prefs['extract_binning']
 		return sigma
 
 	def extract(self):
@@ -140,7 +153,7 @@ class dock_extract(QWidget):
 				# bs = np.median(np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])] ),axis=0)
 
 				## Okay - bg is mean infered from min-value order statistics of four corners for every spot. static
-				from supporting import normal_minmax_dist as nd
+				from ..supporting import normal_minmax_dist as nd
 				bs = np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])] )
 				bs = np.min(bs,axis=0)
 				bgg = np.zeros(bs.shape[1])
@@ -172,7 +185,7 @@ class dock_extract(QWidget):
 		self.flag_cancel = True
 
 	def experimental(self,xy,sigma):
-		l = (self.gui.prefs['nintegrate']-1)/2
+		l = (self.gui.prefs['extract_nintegrate']-1)/2
 		out = np.empty((self.gui.data.movie.shape[0],xy.shape[1]))
 		prog = progress(out.shape[0],out.shape[1])
 		prog.canceled.connect(self.cancel_expt)
@@ -186,8 +199,8 @@ class dock_extract(QWidget):
 				prog.setValue(t)
 				self.gui.app.processEvents()
 				t0 = time()
-				if self.gui.prefs['ncpu'] > 1:
-					pool = mp.Pool(self.gui.prefs['ncpu'])
+				if self.gui.prefs['computer_ncpu'] > 1:
+					pool = mp.Pool(self.gui.prefs['computer_ncpu'])
 					ps = pool.map(_fit_wrapper,[[l,z,sigma,xy[:,i].astype('double')] for i in range(xy.shape[1])])
 					pool.close()
 				else:
@@ -204,10 +217,10 @@ class dock_extract(QWidget):
 		return out
 
 	def ml_psf(self,xy,sigma,color):
-		from supporting.ml_fit import ml_psf
+		from ..supporting.ml_fit import ml_psf
 		from time import time
 
-		l = (self.gui.prefs['nintegrate']-1)/2
+		l = (self.gui.prefs['extract_nintegrate']-1)/2
 		out = np.empty((self.gui.data.movie.shape[0],xy.shape[1]))
 
 		prog = progress(out.shape[0],out.shape[1])
@@ -227,7 +240,7 @@ class dock_extract(QWidget):
 					prog.setValue(i)
 					self.gui.app.processEvents()
 				t0 = time()
-				o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['ml_psf_maxiters'])
+				o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['extract_ml_psf_maxiters'])
 				t1 = time()
 				out[:,i] = o
 				ts.append(t1-t0)
@@ -235,7 +248,7 @@ class dock_extract(QWidget):
 		return out
 
 def _fit_wrapper(params):
-	from supporting.ml_fit import fit
+	from ..supporting.ml_fit import fit
 	return fit(*params)
 
 from PyQt5.QtWidgets import QProgressDialog
@@ -299,7 +312,7 @@ def avg_close(ss,cutoff):
 			already.append(j)
 	return np.array((totalx,totaly))
 
-@nb.jit("double[:,:](double[:,:],int64,int64)",nopython=True)
+@nb.jit(["double[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
 def cull_rep_px(ss,nx,ny):
 	x = ss[0]
 	y = ss[1]
@@ -315,4 +328,4 @@ def cull_rep_px(ss,nx,ny):
 			if m[i,j] > 0:
 				x.append(i)
 				y.append(j)
-	return np.array((x,y),dtype=nb.double)
+	return np.array((x,y),dtype=ss.dtype)

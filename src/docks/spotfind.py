@@ -6,17 +6,27 @@ import cPickle as pickle
 import multiprocessing as mp
 
 import numpy as np
-
 import matplotlib.pyplot as plt
 
-from supporting import minmax
-from supporting import normal_minmax_dist as nd
-from supporting import vbem_gmm as vb
+from ..supporting import minmax
+from ..supporting import normal_minmax_dist as nd
+from ..supporting import vbem_gmm as vb
+
+
+default_prefs = {
+	'spotfind_nsearch':3,
+	'spotfind_clip_border':5,
+	'spotfind_threshold':1e-10,
+	'spotfind_maxiterations':1000,
+	'spotfind_nstates':4
+}
 
 
 class dock_spotfind(QWidget):
 	def __init__(self,parent=None):
 		super(dock_spotfind, self).__init__(parent)
+
+		self.default_prefs = default_prefs
 
 		self.flag_priorsloaded = False
 		self.flag_spots = False
@@ -183,8 +193,8 @@ class dock_spotfind(QWidget):
 			# self.gmms,self.locs = self.setup_spot_find(self.gui.data.current_frame)
 			self.gmms,self.locs = self.setup_spot_find()
 
-			if self.gui.prefs['ncpu'] > 1:
-				pool = mp.Pool(self.gui.prefs['ncpu'])
+			if self.gui.prefs['computer_ncpu'] > 1:
+				pool = mp.Pool(self.gui.prefs['computer_ncpu'])
 				self.gmms = pool.map(_run,self.gmms)
 				pool.close()
 			else:
@@ -226,6 +236,7 @@ class dock_spotfind(QWidget):
 					# self.xys[j][0] = np.append(self.xys[j][0],x+shifts[j][0])
 					# self.xys[j][1] = np.append(self.xys[j][1],y+shifts[j][1])
 					# np.array([x+shifts[i][0],y+shifts[i][1]])))
+		self.remove_duplicates()
 
 	def searchspots(self):
 		if self.gui.data.flag_movie:
@@ -243,8 +254,8 @@ class dock_spotfind(QWidget):
 					gmms.append(g[j])
 					locs.append(l[j])
 
-			if self.gui.prefs['ncpu'] > 1:
-				pool = mp.Pool(self.gui.prefs['ncpu'])
+			if self.gui.prefs['computer_ncpu'] > 1:
+				pool = mp.Pool(self.gui.prefs['computer_ncpu'])
 				gmms = pool.map(_run,gmms)
 				pool.close()
 			else:
@@ -367,7 +378,7 @@ class dock_spotfind(QWidget):
 		if not color is None:
 			colors = [color for _ in range(self.gui.data.ncolors)]
 		else:
-			colors = self.gui.prefs['channel_colors']
+			colors = self.gui.prefs['channels_colors']
 		if not self.gmms is None:
 			for i in range(self.gui.data.ncolors):
 				self.gui.plot.scatter(self.xys[i][0],self.xys[i][1],color=colors[i])
@@ -412,23 +423,23 @@ class dock_spotfind(QWidget):
 	def setup_gmm(self,dd,prior=None,max_frames = 1):
 		p = self.gui.prefs
 
-		bg = self.gui.docks['background'][1].calc_background(dd)
-		image = dd-bg
+		#bg = self.gui.docks['background'][1].calc_background(dd)
+		image = dd#-bg
 
 		## Find local mins and local maxes
-		mmin,mmax = minmax.minmax_map(image,p['nsearch'],p['clip border'])
+		mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
 
 		## Estimate background distribution from local mins
-		bgfit = nd.estimate_from_min(image[mmin],p['nsearch']**2 * max_frames)
-		background = vb.background(p['nsearch']**2 * max_frames,*bgfit)
+		bgfit = nd.estimate_from_min(image[mmin],p['spotfind_nsearch']**2 * max_frames)
+		background = vb.background(p['spotfind_nsearch']**2 * max_frames,*bgfit)
 
 		## Classify local maxes
 		if not prior is None:
-			gmm = vb.vbem_gmm(image[mmax], p['nstates'], bg=background, prior=prior)
+			gmm = vb.vbem_gmm(image[mmax], p['spotfind_nstates'], bg=background, prior=prior)
 		else:
-			gmm = vb.vbem_gmm(image[mmax], p['nstates'], bg=background)
-		gmm.threshold = p['threshold']
-		gmm.maxiters = p['maxiterations']
+			gmm = vb.vbem_gmm(image[mmax], p['spotfind_nstates'], bg=background)
+		gmm.threshold = p['spotfind_threshold']
+		gmm.maxiters = p['spotfind_maxiterations']
 		gmm._debug = False
 
 		locs = np.nonzero(mmax)
@@ -475,7 +486,7 @@ class dock_spotfind(QWidget):
 		self.gui.statusbar.showMessage('Finding spots...')
 		self.gui.app.processEvents()
 
-		self.gui.prefs['nsearch']
+		self.gui.prefs['spotfind_nsearch']
 		for i in range(nc):
 			r = regions[i]
 			# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]]
@@ -515,7 +526,7 @@ class dock_spotfind(QWidget):
 		self.gui.statusbar.showMessage('Finding spots...')
 		self.gui.app.processEvents()
 
-		self.gui.prefs['nsearch']
+		self.gui.prefs['spotfind_nsearch']
 		for i in range(nc):
 			r = regions[i]
 			# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]]
@@ -529,6 +540,12 @@ class dock_spotfind(QWidget):
 			locs[i] = loc
 			gmms[i] = gmm
 		return gmms,locs
+
+	def remove_duplicates(self):
+		from .extract import cull_rep_px
+		for i in range(self.gui.data.ncolors):
+			print i
+			self.xys[i] = cull_rep_px(self.xys[i],self.gui.data.movie.shape[1],self.gui.data.movie.shape[2])
 
 def _run(a):
 	a.run()

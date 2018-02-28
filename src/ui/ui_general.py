@@ -92,6 +92,11 @@ class gui(QMainWindow):
 			l = Qt.RightDockWidgetArea
 		self.addDockWidget(l, self.docks[name][0])
 
+		try:
+			self._prefs.combine_prefs(widget.default_prefs)
+		except:
+			pass
+
 	def init_docks(self):
 		# self.docks is a dictionary with [QDockWidget,Widget] for the docks
 		self.docks = {}
@@ -101,7 +106,7 @@ class gui(QMainWindow):
 		self.menubar.setNativeMenuBar(False)
 
 		### File
-		menu_file = self.menubar.addMenu('File')
+		self.menu_file = self.menubar.addMenu('File')
 
 		file_load = QAction('Load', self, shortcut='Ctrl+O')
 		file_load.triggered.connect(self.load)
@@ -123,7 +128,7 @@ class gui(QMainWindow):
 		file_exit.triggered.connect(self.close)
 
 		for f in [file_load,file_log,file_prefs,file_about,file_exit]:
-			menu_file.addAction(f)
+			self.menu_file.addAction(f)
 
 ################################################################################
 

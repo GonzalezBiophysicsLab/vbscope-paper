@@ -6,9 +6,18 @@ import numpy as np
 
 from scipy.ndimage import median_filter,gaussian_filter,minimum_filter,uniform_filter
 
+default_prefs = {
+	'background_pixel_dist':3,
+	'background_time_dist':10,
+	'background_smooth_dist':3
+}
+
 class dock_background(QWidget):
 	def __init__(self,parent=None):
 		super(dock_background, self).__init__(parent)
+
+		self.default_prefs = default_prefs
+
 		self.gui = parent
 
 		self.flag_showing = False
@@ -41,7 +50,7 @@ class dock_background(QWidget):
 
 		self.button_preview.clicked.connect(self.preview)
 
-		self.combo_method.addItems(['None','Minimum','Median','Uniform'])
+		self.combo_method.addItems(['None','Minimum','Median','Uniform','Test'])
 		self.method = 1
 		self.combo_method.setCurrentIndex(self.method)
 		self.combo_method.currentIndexChanged.connect(self.update_method)
@@ -69,6 +78,9 @@ class dock_background(QWidget):
 			return median_filter(gaussian_filter(image,self.radius2),int(self.radius1))
 		elif self.method == 3:#new
 			return uniform_filter(gaussian_filter(image,self.radius2),int(self.radius1))
+		elif self.method == 4:
+			x =  self.test()
+			return image*(x-1.)/x
 		else:
 			return np.zeros(image.shape,dtype='f')
 
@@ -89,3 +101,14 @@ class dock_background(QWidget):
 		self.flag_showing = ~self.flag_showing
 		self.update_background()
 		self.draw_background()
+
+	def test(self):
+		from PyQt5.QtWidgets import QMessageBox
+		power = np.median(self.gui.data.movie,axis=(1,2))
+		power /= np.median(power)
+
+		from ..supporting import solve_bg
+		background = solve_bg(self.gui.data.movie / power[:,None,None], m=self.gui.prefs['background_pixel_dist'], n=self.gui.prefs['background_time_dist'], sigma=self.gui.prefs['background_smooth_dist']).astype('f')
+		# background /= np.median(background)
+
+		return background

@@ -5,9 +5,16 @@ from matplotlib.collections import PatchCollection
 
 import numpy as np
 
+
+default_prefs = {
+	'transform_alignment_order':4
+}
+
 class dock_transform(QWidget):
 	def __init__(self,parent=None):
 		super(dock_transform, self).__init__(parent)
+
+		self.default_prefs = default_prefs
 
 		self.gui = parent
 
@@ -113,7 +120,7 @@ class dock_transform(QWidget):
 				success = False
 
 			if success:
-				from supporting import transforms
+				from ..supporting import transforms
 				self.label_load.setText('%d x %d'%(d.shape[0],d.shape[1]))
 				self.gui.statusbar.showMessage('Loaded Alignment: %s'%(fname[0]))
 
@@ -134,7 +141,7 @@ class dock_transform(QWidget):
 		# 	self.gui.plot.colorlist = self.gui.plot.colorlist_ordered
 
 		if self.gui.data.flag_movie:
-			c = self.gui.prefs['channel_colors']#self.gui.plot.colorlist
+			c = self.gui.prefs['channels_colors']#self.gui.plot.colorlist
 			alpha = .4
 
 			self.flag_sectors = True
@@ -157,7 +164,7 @@ class dock_transform(QWidget):
 			self.plot_overlapped()
 
 	def estimate(self,cs=None):
-		from supporting import transforms
+		from ..supporting import transforms
 
 		regions,shifts = self.gui.data.regions_shifts()
 
@@ -179,7 +186,7 @@ class dock_transform(QWidget):
 					else:
 						c1 = cs[i].copy()
 						c2 = cs[j].copy()
-						tts[j] = transforms.poly(c1.T.astype('f'),c2.T.astype('f'),order=self.gui.prefs['alignment_order'])
+						tts[j] = transforms.poly(c1.T.astype('f'),c2.T.astype('f'),order=self.gui.prefs['transform_alignment_order'])
 
 			ts.append(tts)
 		self.transforms = ts
@@ -187,7 +194,7 @@ class dock_transform(QWidget):
 		self.gui.statusbar.showMessage('Finished Finding Transforms')
 
 	def plot_overlapped(self,cs = None):
-		colors = self.gui.prefs['channel_colors']#self.gui.plot.colorlist
+		colors = self.gui.prefs['channels_colors']#self.gui.plot.colorlist
 		self.gui.plot.clear_collections()
 		regions,shifts = self.gui.data.regions_shifts()
 
