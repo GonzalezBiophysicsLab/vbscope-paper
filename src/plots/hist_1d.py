@@ -1,3 +1,6 @@
+import numpy as np
+import matplolib.pyplot as plt
+
 default_prefs = {
 	'plotter_min_fret':-.5,
 	'plotter_max_fret':1.5,
