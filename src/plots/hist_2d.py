@@ -1,4 +1,5 @@
-
+def hist_2d(gui):
+	pass
 #
 # 	def hist2d(self):
 # 		if self.docks['plots_2D'][0].isHidden():

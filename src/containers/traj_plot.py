@@ -29,16 +29,19 @@ class traj_plot_container():
 		self.toolbar = NavigationToolbar(self.canvas,None)
 
 		self.index = 0
+		self.arm_blit()
+		self.f.canvas.mpl_connect('resize_event',lambda e: self.arm_blit())
 
 		self.canvas.draw()
 		plt.close(self.f)
 
-	def draw(self):
+	def arm_blit(self):
+		self.flag_arm = True
 
+	def draw(self):
 		self.canvas.update()
 		self.canvas.flush_events()
 		self.canvas.draw()
-
 
 	## Read in y-min and y-max values, then update the plot
 	def update_minmax(self):
@@ -175,6 +178,9 @@ class traj_plot_container():
 
 # 	## Plot current trajectory
 	def update_plots(self):
+		if self.flag_arm:
+			self.update_blits()
+			self.flag_arm = False
 		[[self.f.canvas.restore_region(bbb) for bbb in bb] for bb in self.blit_bgs]
 
 		t,intensities,rel,pretime,pbtime = self.calc_trajectory()
@@ -195,7 +201,6 @@ class traj_plot_container():
 		self.update_colors()
 
 		[[[aaa.draw_artist(l) for l in aaa.lines] for aaa in aa] for aa in self.a]
-		self.a[0][0].draw_artist(self.a[0][0].title)
 		[[self.f.canvas.blit(aaa.bbox) for aaa in aa] for aa in self.a]
 
 		self.canvas.update()
@@ -249,8 +254,6 @@ class traj_plot_container():
 		self.canvas.draw()
 		# self.draw()
 
-		self.update_blits()
-
 		for i in range(self.gui.ncolors):
 			## plot pre-truncated, kept, and post-truncated trajectory (Intensities)
 			color = self.gui.prefs['channel_colors'][i]
@@ -274,10 +277,15 @@ class traj_plot_container():
 			self.a[1][1].plot(np.random.rand(100),color=color,alpha=.8,lw=1./ self.canvas.devicePixelRatio())
 
 		self.update_colors()
+
+		self.update_blits()
 		self.update_plots()
 
 	def update_blits(self):
+		[[[l.set_visible(False) for l in aaa.lines] for aaa in aa] for aa in self.a]
+		self.f.canvas.draw()
 		self.blit_bgs = [[self.f.canvas.copy_from_bbox(aaa.bbox) for aaa in aa] for aa in self.a]
+		[[[l.set_visible(True) for l in aaa.lines] for aaa in aa] for aa in self.a]
 
 	def initialize_hmm_plot(self):
 		if len(self.a[1,0].lines) < 4:

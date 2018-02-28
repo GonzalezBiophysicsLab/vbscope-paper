@@ -14,7 +14,8 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 
 from . import ui_general
 from .ui_batch_loader import gui_batch_loader
-from ..containers import traj_plot_container, traj_container
+from ..containers import traj_plot_container, traj_container, popout_plot_container
+from .. import plots
 
 default_prefs = {
 
@@ -75,6 +76,8 @@ class plotter_gui(ui_general.gui):
 			self.initialize_data(data.astype('double'))
 			self.plot.initialize_plots()
 			self.plot.update_plots()
+
+		self.initialize_plot_docks()
 
 		self.app_name = 'vbscope plotter'
 		self.about_text = 'plotting tool'
@@ -231,19 +234,19 @@ class plotter_gui(ui_general.gui):
 		for f in [tools_cullpb,tools_cullphotons,tools_step,tools_var,tools_remove,tools_hmm]:
 			menu_tools.addAction(f)
 #
-# 		### plots
-# 		menu_plots = self.menubar.addMenu('Plots')
-#
-# 		plots_1d = QAction('1D Histogram', self)
-# 		plots_1d.triggered.connect(self.hist1d)
-# 		plots_2d = QAction('2D Histogram', self)
-# 		plots_2d.triggered.connect(self.hist2d)
-# 		plots_tdp = QAction('Transition Density Plot', self)
-# 		plots_tdp.triggered.connect(self.tdplot)
-#
-# 		for f in [plots_1d,plots_2d,plots_tdp]:
-# 			menu_plots.addAction(f)
-#
+		### plots
+		menu_plots = self.menubar.addMenu('Plots')
+
+		plots_1d = QAction('1D Histogram', self)
+		plots_1d.triggered.connect(self.plot_hist1d)
+		plots_2d = QAction('2D Histogram', self)
+		plots_2d.triggered.connect(self.plot_hist2d)
+		plots_tdp = QAction('Transition Density Plot', self)
+		plots_tdp.triggered.connect(self.plot_tdp)
+
+		for f in [plots_1d,plots_2d,plots_tdp]:
+			menu_plots.addAction(f)
+
 		### classes
 		menu_classes = self.menubar.addMenu("Classes")
 
@@ -294,6 +297,36 @@ class plotter_gui(ui_general.gui):
 		_make_shortcut(Qt.Key_9,lambda : self.callback_keypress(9))
 		_make_shortcut(Qt.Key_0,lambda : self.callback_keypress(0))
 
+	def initialize_plot_docks(self):
+		self.add_dock('plot_hist1d', '1D Histogram', popout_plot_container(1), 'lr', 'r')
+		self.add_dock('plot_hist2d', '2D Histogram', popout_plot_container(1), 'lr', 'r')
+		self.add_dock('plot_tdp',    'Transition Density Plot', popout_plot_container(1), 'lr', 'r')
+
+		self.tabifyDockWidget(self.docks['plot_hist1d'][0],self.docks['plot_hist2d'][0])
+		self.tabifyDockWidget(self.docks['plot_hist2d'][0],self.docks['plot_tdp'][0])
+
+		self.docks['plot_hist1d'][0].hide()
+		self.docks['plot_hist2d'][0].hide()
+		self.docks['plot_tdp'][0].hide()
+		self.ui_update()
+
+	def raise_plot(self,dockstr):
+		if self.docks[dockstr][0].isHidden():
+			self.docks[dockstr][0].show()
+		self.docks[dockstr][0].raise_()
+		self.docks[dockstr][1].clf()
+
+	def plot_hist1d(self):
+		self.raise_plot('plot_hist1d')
+		plots.hist_1d(self)
+
+	def plot_hist2d(self):
+		self.raise_plot('plot_hist2d')
+		plots.hist_2d(self)
+
+	def plot_tdp(self):
+		self.raise_plot('plot_tdp')
+		plots.tdp(self)
 
 	## Callback function for keyboard presses
 	def callback_keypress(self,kk):
@@ -657,8 +690,6 @@ class plotter_gui(ui_general.gui):
 					msg = 'There was a problem trying to export the classes/cuts'
 					QMessageBox.critical(self,'Export Classes',msg)
 					self.log(msg,True)
-
-
 
 
 def launch_plotter(scriptable=True):

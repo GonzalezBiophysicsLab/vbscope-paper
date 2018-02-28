@@ -1,3 +1,5 @@
+def hist_1d(gui):
+	pass
 #
 # 	## Plot the 1D Histogram of the ensemble
 # 	def hist1d(self):
