@@ -1,4 +1,10 @@
-def hist_1d(gui):
+default_prefs = {
+	'plotter_min_fret':-.5,
+	'plotter_max_fret':1.5,
+	'plotter_nbins_fret':41
+}
+
+def plot(gui):
 	popplot = gui.docks['plot_hist1d'][1]
 	popplot.ax[0].cla()
 
@@ -6,13 +12,13 @@ def hist_1d(gui):
 		fpb = gui.data.get_plot_data()[0]
 
 		# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
-		popplot.ax[0].hist(fpb.flatten(),bins=gui.prefs['plotter_nbins_fret'],range=(gui.prefs['plotter_min_fret'],gui.prefs['plotter_max_fret']),histtype='stepfilled',alpha=.8,normed=True)
+		popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['plotter_nbins_fret'],range=(popplot.prefs['plotter_min_fret'],popplot.prefs['plotter_max_fret']),histtype='stepfilled',alpha=.8,normed=True)
 
 		if not gui.data.hmm_result is None:
 			r = gui.data.hmm_result
 			def norm(x,m,v):
 				return 1./np.sqrt(2.*np.pi*v)*np.exp(-.5/v*(x-m)**2.)
-			x = np.linspace(gui.prefs['plotter_min_fret'],gui.prefs['plotter_max_fret'],1001)
+			x = np.linspace(popplot.prefs['plotter_min_fret'],popplot.prefs['plotter_max_fret'],1001)
 			ppi = np.sum([r.gamma[i].sum(0) for i in range(len(r.gamma))],axis=0)
 			ppi /=ppi.sum()
 			v = r.b/r.a
@@ -23,7 +29,7 @@ def hist_1d(gui):
 				popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
 			popplot.ax[0].plot(x,tot,color='k',lw=2,alpha=.8)
 
-		popplot.ax[0].set_xlim(gui.prefs['plotter_min_fret'],gui.prefs['plotter_max_fret'])
+		popplot.ax[0].set_xlim(popplot.prefs['plotter_min_fret'],popplot.prefs['plotter_max_fret'])
 		popplot.ax[0].set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14./gui.plot.canvas.devicePixelRatio())
 		popplot.ax[0].set_ylabel('Probability',fontsize=14./gui.plot.canvas.devicePixelRatio())
 		for asp in ['top','bottom','left','right']:

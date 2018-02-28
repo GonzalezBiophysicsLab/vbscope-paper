@@ -42,6 +42,11 @@ class traj_container():
 	def safe_hmm(self):
 		if not self.hmm_result is None:
 			self.hmm_result = None
+			try:
+				self.gui.plot.plot_no_hmm()
+				self.gui.plot.update_blits()
+			except:
+				pass
 			self.safe_hmm()
 
 	## Remove trajectories with number of kept-frames < threshold

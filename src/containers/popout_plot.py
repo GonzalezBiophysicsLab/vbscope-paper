@@ -24,7 +24,7 @@ class popout_plot_container(QWidget):
 
 		self.nplots = nplots
 
-		self.f,self.ax = plt.subplots(nplots,sharex=True)
+		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(4,4))
 		if not type(self.ax) is np.ndarray:
 			self.ax = np.array([self.ax])
 		self.canvas = FigureCanvas(self.f)
@@ -43,7 +43,6 @@ class popout_plot_container(QWidget):
 
 		qw = QWidget()
 		hbox = QHBoxLayout()
-		hbox.addWidget(self.toolbar)
 		button_refresh = QPushButton("Refresh")
 		button_prefs = QPushButton("Preferences")
 		button_refresh.clicked.connect(self.replot)
@@ -56,13 +55,12 @@ class popout_plot_container(QWidget):
 
 		layout = QVBoxLayout()
 		layout.addWidget(self.canvas)
-		# layout.addWidget(self.toolbar)
+		layout.addWidget(self.toolbar)
 		layout.addWidget(qw)
 
 		# layout.addStretch(1)
 		self.setLayout(layout)
 		self.f.tight_layout()
-
 
 	def open_preferences(self):
 		self._open_ui(self._prefs)
@@ -97,5 +95,9 @@ class popout_plot_container(QWidget):
 		self.fix_ax()
 
 	def replot(self):
-		''' overload this '''
-		print "overload me"
+		''' overload me '''
+		# print "overload me"
+
+	def setcallback(self,fxn):
+		self.replot = fxn
+		self._prefs.edit_callback = self.replot

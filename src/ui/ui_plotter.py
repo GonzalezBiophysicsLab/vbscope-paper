@@ -29,22 +29,22 @@ default_prefs = {
 	'downsample':1,
 	'snr_threshold':.5,
 	'pb_length':10,
-
-	'plotter_floor':0.2,
-	'plotter_nbins_contour':20,
-	'plotter_smoothx':0.5,
-	'plotter_smoothy':0.5,
-	'plotter_timeshift':0.0,
-	'plotter_floorcolor':'lightgoldenrodyellow',
-	'plotter_cmap':'rainbow',
+    #
+	# 'plotter_floor':0.2,
+	# 'plotter_nbins_contour':20,
+	# 'plotter_smoothx':0.5,
+	# 'plotter_smoothy':0.5,
+	# 'plotter_timeshift':0.0,
+	# 'plotter_floorcolor':'lightgoldenrodyellow',
+	# 'plotter_cmap':'rainbow',
 	'plotter_min_fret':-.5,
 	'plotter_max_fret':1.5,
-	'plotter_nbins_fret':41,
-	'plotter_min_time':0,
-	'plotter_max_time':100,
-	'plotter_nbins_time':100,
-	'plotter_2d_syncpreframes':10,
-	'plotter_2d_normalizecolumn':False,
+	# 'plotter_nbins_fret':41,
+	# 'plotter_min_time':0,
+	# 'plotter_max_time':100,
+	# 'plotter_nbins_time':100,
+	# 'plotter_2d_syncpreframes':10,
+	# 'plotter_2d_normalizecolumn':False,
 
 	'convert_flag':False,
 	'convert_c_lambda':[11.64,12.75],
@@ -302,6 +302,14 @@ class plotter_gui(ui_general.gui):
 		self.add_dock('plot_hist2d', '2D Histogram', popout_plot_container(1), 'lr', 'r')
 		self.add_dock('plot_tdp',    'Transition Density Plot', popout_plot_container(1), 'lr', 'r')
 
+		self.docks['plot_hist1d'][1]._prefs.combine_prefs(plots.hist_1d.default_prefs)
+		self.docks['plot_hist2d'][1]._prefs.combine_prefs(plots.hist_2d.default_prefs)
+		self.docks['plot_tdp'  ][1]._prefs.combine_prefs(plots.tdp.default_prefs)
+
+		self.docks['plot_hist1d'][1].setcallback(lambda: plots.hist_1d.plot(self))
+		self.docks['plot_hist2d'][1].setcallback(lambda: plots.hist_2d.plot(self))
+		self.docks['plot_tdp'][1].setcallback(lambda: plots.tdp.plot(self))
+
 		self.tabifyDockWidget(self.docks['plot_hist1d'][0],self.docks['plot_hist2d'][0])
 		self.tabifyDockWidget(self.docks['plot_hist2d'][0],self.docks['plot_tdp'][0])
 
@@ -318,15 +326,15 @@ class plotter_gui(ui_general.gui):
 
 	def plot_hist1d(self):
 		self.raise_plot('plot_hist1d')
-		plots.hist_1d(self)
+		plots.hist_1d.plot(self)
 
 	def plot_hist2d(self):
 		self.raise_plot('plot_hist2d')
-		plots.hist_2d(self)
+		plots.hist_2d.plot(self)
 
 	def plot_tdp(self):
 		self.raise_plot('plot_tdp')
-		plots.tdp(self)
+		plots.tdp.plot(self)
 
 	## Callback function for keyboard presses
 	def callback_keypress(self,kk):
@@ -351,6 +359,7 @@ class plotter_gui(ui_general.gui):
 			self.gui.app.processEvents()
 		except:
 			pass
+
 		self.plot.update_plots()
 
 
@@ -468,6 +477,7 @@ class plotter_gui(ui_general.gui):
 				self.plot.update_plots()
 
 				self.ui_batch.close()
+				self.update_display_traces()
 				msg = "Loaded %d pairs of files containing a total of %d trajectories."%(len(ds),dd.shape[0])
 				QMessageBox.information(self,"Batch Load",msg)
 				self.log(msg,True)
@@ -525,6 +535,7 @@ class plotter_gui(ui_general.gui):
 				if filename is None:
 					self.plot.initialize_plots()
 					self.initialize_sliders()
+					self.update_display_traces()
 				self.log("Loaded traces from %s"%(fname),True)
 				return
 		self.log("Could not load %s"%(fname),True)
@@ -553,6 +564,7 @@ class plotter_gui(ui_general.gui):
 				self.data.pb_list = d[:,2::2].min(1)
 				if filename is None:
 					self.plot.update_plots()
+					self.update_display_traces()
 				self.log("Loaded classes from %s"%(fname),True)
 				return
 		self.log("Could not load %s"%(fname),True)
