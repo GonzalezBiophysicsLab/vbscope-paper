@@ -74,8 +74,12 @@ class plotter_gui(ui_general.gui):
 
 		if not data is None:
 			self.initialize_data(data.astype('double'))
+			self.plot.index = 0
 			self.plot.initialize_plots()
-			self.plot.update_plots()
+
+			self.initialize_sliders()
+			self.update_display_traces()
+			self.log("Loaded %d traces from vbscope gui"%(self.data.d.shape[0]),True)
 
 		self.initialize_plot_docks()
 

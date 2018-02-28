@@ -1,12 +1,12 @@
 ## Install the Required Python Libraries
-pyqt 5.6
-numpy 1.13
-matplotlib 2.0
-scipy 0.19
-scikit-image 0.13
-scikit-learn 0.19.0
-numba 0.34
-gitpython 2.1
+* pyqt 5.6
+* numpy 1.13
+* matplotlib 2.0
+* scipy 0.19
+* scikit-image 0.13
+* scikit-learn 0.19.0
+* numba 0.34
+* gitpython 2.1
 
 ### Using conda
 ``` bash
@@ -16,8 +16,8 @@ conda install scikit-image scipy numpy matplotlib pyqt scikit-learn numba gitpyt
 ## Make a Terminal Shortcut
 To your rc file (eg ~/.bashrc, ~/.zshrc, ~/.profile, etc) add
 ``` bash
-alias vbscope="python /home/username/directory/to/vbscope/gui.py"
-alias vbscope_plot="python /home/username/directory/to/vbscope/docks/plotter.py"
+alias vbscope="python /home/username/directory/to/vbscope/vbscope.py"
+alias vbscope_plot="python /home/username/directory/to/vbscope/plotter.py"
 ```
 
 ## Parameters
