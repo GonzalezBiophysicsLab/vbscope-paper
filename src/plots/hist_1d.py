@@ -1,5 +1,5 @@
 import numpy as np
-import matplolib.pyplot as plt
+import matplotlib.pyplot as plt
 
 default_prefs = {
 	'plotter_min_fret':-.5,
