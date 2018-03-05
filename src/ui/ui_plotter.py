@@ -247,8 +247,10 @@ class plotter_gui(ui_general.gui):
 		plots_2d.triggered.connect(self.plot_hist2d)
 		plots_tdp = QAction('Transition Density Plot', self)
 		plots_tdp.triggered.connect(self.plot_tdp)
+		plots_tranM = QAction('Transition Matrix Plot', self)
+		plots_tranM.triggered.connect(self.plot_tranM)
 
-		for f in [plots_1d,plots_2d,plots_tdp]:
+		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM]:
 			menu_plots.addAction(f)
 
 		### classes
@@ -304,15 +306,18 @@ class plotter_gui(ui_general.gui):
 	def initialize_plot_docks(self):
 		self.add_dock('plot_hist1d', '1D Histogram', popout_plot_container(1), 'lr', 'r')
 		self.add_dock('plot_hist2d', '2D Histogram', popout_plot_container(1), 'lr', 'r')
-		self.add_dock('plot_tdp',    'Transition Density Plot', popout_plot_container(1), 'lr', 'r')
+		self.add_dock('plot_tdp', 'Transition Density Plot', popout_plot_container(1), 'lr', 'r')
+		self.add_dock('plot_tranM', 'Transition Matrix Plot', popout_plot_container(1), 'lr', 'r')
 
 		self.docks['plot_hist1d'][1]._prefs.combine_prefs(plots.hist_1d.default_prefs)
 		self.docks['plot_hist2d'][1]._prefs.combine_prefs(plots.hist_2d.default_prefs)
 		self.docks['plot_tdp'  ][1]._prefs.combine_prefs(plots.tdp.default_prefs)
+		self.docks['plot_tranM'  ][1]._prefs.combine_prefs(plots.tranM.default_prefs)
 
 		self.docks['plot_hist1d'][1].setcallback(lambda: plots.hist_1d.plot(self))
 		self.docks['plot_hist2d'][1].setcallback(lambda: plots.hist_2d.plot(self))
 		self.docks['plot_tdp'][1].setcallback(lambda: plots.tdp.plot(self))
+		self.docks['plot_tranM'][1].setcallback(lambda: plots.tranM.plot(self))
 
 		self.tabifyDockWidget(self.docks['plot_hist1d'][0],self.docks['plot_hist2d'][0])
 		self.tabifyDockWidget(self.docks['plot_hist2d'][0],self.docks['plot_tdp'][0])
@@ -320,6 +325,7 @@ class plotter_gui(ui_general.gui):
 		self.docks['plot_hist1d'][0].hide()
 		self.docks['plot_hist2d'][0].hide()
 		self.docks['plot_tdp'][0].hide()
+		self.docks['plot_tranM'][0].hide()
 		self.ui_update()
 
 	def raise_plot(self,dockstr):
@@ -339,6 +345,10 @@ class plotter_gui(ui_general.gui):
 	def plot_tdp(self):
 		self.raise_plot('plot_tdp')
 		plots.tdp.plot(self)
+
+	def plot_tranM(self):
+		self.raise_plot('plot_tranM')
+		plots.tranM.plot(self)
 
 	## Callback function for keyboard presses
 	def callback_keypress(self,kk):
@@ -503,9 +513,9 @@ class plotter_gui(ui_general.gui):
 					self.plot.initialize_hmm_plot()
 					self.plot.update_plots()
 					self.log("Loaded HMM result from %s"%(fname),True)
+
 				except:
 					self.log("Failed to load HMM result",True)
-
 
 	## Try to load trajectories from a vbscope style file (commas)
 	def load_traces(self,checked=False,filename=None):
