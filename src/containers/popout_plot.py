@@ -43,11 +43,11 @@ class popout_plot_container(QWidget):
 
 		qw = QWidget()
 		hbox = QHBoxLayout()
-		button_refresh = QPushButton("Refresh")
+		self.button_refresh = QPushButton("Refresh")
 		button_prefs = QPushButton("Preferences")
-		button_refresh.clicked.connect(self.replot)
+		self.button_refresh.clicked.connect(self.replot)
 		button_prefs.clicked.connect(self.open_preferences)
-		hbox.addWidget(button_refresh)
+		hbox.addWidget(self.button_refresh)
 		hbox.addWidget(button_prefs)
 
 		hbox.addStretch(1)
@@ -101,3 +101,4 @@ class popout_plot_container(QWidget):
 	def setcallback(self,fxn):
 		self.replot = fxn
 		self._prefs.edit_callback = self.replot
+		self.button_refresh.clicked.connect(self.replot)
