@@ -185,7 +185,7 @@ def hmm_with_restarts(y,nstates,priors,nrestarts=8,sigma_smooth=False):
 		results = [p.get() for p in results]
 		pool.close()
 	else:
-		[simultaneous_vbem_hmm(y,nstates,priors[i],False,sigma_smooth) for i in xrange(nrestarts)]
+		results = [simultaneous_vbem_hmm(y,nstates,priors[i],False,sigma_smooth) for i in xrange(nrestarts)]
 
 	lbs = [results[i].lowerbounds[-1] for i in xrange(nrestarts)]
 	iters = [results[i].iterations for i in xrange(nrestarts)]
