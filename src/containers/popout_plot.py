@@ -54,7 +54,7 @@ class popout_plot_container_widget(QWidget):
 
 		self.nplots = nplots
 
-		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(self.prefs['fig_width'],self.prefs['fig_height'])
+		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(self.prefs['fig_width'],self.prefs['fig_height']))
 		if not type(self.ax) is np.ndarray:
 			self.ax = np.array([self.ax])
 		self.canvas = FigureCanvas(self.f)
