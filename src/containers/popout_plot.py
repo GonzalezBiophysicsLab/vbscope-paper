@@ -8,6 +8,7 @@ from matplotlib.widgets import  RectangleSelector
 from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget,QToolBar,QAction,QHBoxLayout,QPushButton,QMainWindow,QDockWidget
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QTimer
+from PyQt5.QtGui import QPixmap
 import numpy as np
 # from ..ui import ui_prefs
 from ..ui.ui_prefs import preferences
@@ -54,7 +55,7 @@ class popout_plot_container_widget(QWidget):
 
 		self.nplots = nplots
 
-		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(self.prefs['fig_width'],self.prefs['fig_height']))
+		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(self.prefs['fig_width']/QPixmap().devicePixelRatio(),self.prefs['fig_height']/QPixmap().devicePixelRatio()))
 		if not type(self.ax) is np.ndarray:
 			self.ax = np.array([self.ax])
 		self.canvas = FigureCanvas(self.f)
