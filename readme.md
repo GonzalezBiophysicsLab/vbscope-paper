@@ -1,7 +1,7 @@
 ## Install the Required Python Libraries
 * pyqt 5.6
 * numpy 1.13
-* matplotlib 2.0
+* matplotlib 2.2
 * scipy 0.19
 * scikit-image 0.13
 * scikit-learn 0.19.0
