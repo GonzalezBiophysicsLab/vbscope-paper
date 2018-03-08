@@ -17,7 +17,7 @@ def plot(gui):
 		fpb = gui.data.get_plot_data()[0]
 
 		# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
-		popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['plotter_nbins_fret'],range=(popplot.prefs['plotter_min_fret'],popplot.prefs['plotter_max_fret']),histtype='stepfilled',alpha=.8,normed=True)
+		popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['plotter_nbins_fret'],range=(popplot.prefs['plotter_min_fret'],popplot.prefs['plotter_max_fret']),histtype='stepfilled',alpha=.8,density=True)
 
 		if not gui.data.hmm_result is None:
 			r = gui.data.hmm_result
