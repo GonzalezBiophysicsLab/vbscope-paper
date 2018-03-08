@@ -54,7 +54,7 @@ class popout_plot_container_widget(QWidget):
 
 		self.nplots = nplots
 
-		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(self.prefs['fig_width'],self.prefs['fig_height']))
+		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(self.prefs['fig_width']/self.canvas.devicePixelRatio(),self.prefs['fig_height']/self.canvas.devicePixelRatio()))
 		if not type(self.ax) is np.ndarray:
 			self.ax = np.array([self.ax])
 		self.canvas = FigureCanvas(self.f)
@@ -135,7 +135,7 @@ class popout_plot_container_widget(QWidget):
 	def resize_fig(self):
 
 		self.f.clf()
-		self.canvas.resize(int(self.prefs['fig_width']*self.f.get_dpi()),int(self.prefs['fig_height']*self.f.get_dpi()))
+		self.canvas.resize(int(self.prefs['fig_width']*self.f.get_dpi()/self.canvas.devicePixelRatio()),int(self.prefs['fig_height']*self.f.get_dpi()/self.canvas.devicePixelRatio()))
 		self.f.set_figheight(self.prefs['fig_height'])
 		self.f.set_figwidth(self.prefs['fig_width'])
 		self.f.set_size_inches(self.prefs['fig_width'],self.prefs['fig_height'])
