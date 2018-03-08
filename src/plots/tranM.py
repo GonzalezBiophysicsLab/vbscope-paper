@@ -7,8 +7,11 @@ default_prefs = {
 }
 
 def plot(gui):
-	popplot = gui.docks['plot_tranM'][1]
+	popplot = gui.popout_plots['plot_tranM'].ui
 	popplot.ax[0].cla()
+	popplot.resize_fig()
+	gui.app.processEvents()
+
 	if not gui.data.hmm_result is None:
 		A = gui.data.hmm_result.alpha
 		m = gui.data.hmm_result.m
@@ -29,10 +32,10 @@ def plot(gui):
 			popplot.f.axes[1].cla()
 			cb = popplot.f.colorbar(im,cax=popplot.f.axes[1])
 		popplot.ax[0].set_xticks(np.arange(A.shape[0]))
-		popplot.ax[0].set_xticklabels(["%.2f"%(mm) for mm in m])
-		popplot.ax[0].set_xlabel('Starting FRET State')
+		popplot.ax[0].set_xticklabels(["%.2f"%(mm) for mm in m],fontsize=popplot.prefs['label_ticksize'])
+		popplot.ax[0].set_xlabel('Starting FRET State',fontsize=popplot.prefs['label_fontsize'])
 		popplot.ax[0].set_yticks(np.arange(A.shape[1]))
-		popplot.ax[0].set_yticklabels(["%.2f"%(mm) for mm in m])
-		popplot.ax[0].set_ylabel('Ending FRET State')
-		popplot.ax[0].set_title('Transition Count')
+		popplot.ax[0].set_yticklabels(["%.2f"%(mm) for mm in m],fontsize=popplot.prefs['label_ticksize'])
+		popplot.ax[0].set_ylabel('Ending FRET State',fontsize=popplot.prefs['label_fontsize'])
+		popplot.ax[0].set_title('Transition Count',fontsize=popplot.prefs['label_fontsize'])
 		popplot.f.canvas.draw()

@@ -14,8 +14,10 @@ default_prefs = {
 }
 
 def plot(gui):
-	popplot = gui.docks['plot_tdp'][1]
+	popplot = gui.popout_plots['plot_tdp'].ui
 	popplot.ax[0].cla()
+	popplot.resize_fig()
+	gui.app.processEvents()
 
 	if gui.ncolors == 2:
 		fpb = gui.data.get_plot_data()[0]
@@ -82,14 +84,14 @@ def plot(gui):
 
 		popplot.ax[0].set_xlim(rx.min(),rx.max())
 		popplot.ax[0].set_ylim(ry.min(),ry.max())
-		popplot.ax[0].set_xlabel(r'Initial E$_{\rm FRET}$',fontsize=14./gui.plot.canvas.devicePixelRatio())
-		popplot.ax[0].set_ylabel(r'Final E$_{\rm FRET}$',fontsize=14./gui.plot.canvas.devicePixelRatio())
-		popplot.ax[0].set_title('Transition Density (Counts)',fontsize=12/gui.plot.canvas.devicePixelRatio())
+		popplot.ax[0].set_xlabel(r'Initial E$_{\rm FRET}$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
+		popplot.ax[0].set_ylabel(r'Final E$_{\rm FRET}$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
+		popplot.ax[0].set_title('Transition Density (Counts)',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
 		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
-		popplot.ax[0].annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=12./gui.plot.canvas.devicePixelRatio())
+		popplot.ax[0].annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['label_ticksize']/gui.plot.canvas.devicePixelRatio())
 
 		for asp in ['top','bottom','left','right']:
 			popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-		popplot.f.subplots_adjust(left=.18,bottom=.14,top=.92,right=.99)
+		popplot.f.subplots_adjust(left=.05+popplot.prefs['label_padding'],bottom=.05+popplot.prefs['label_padding'],top=.95-popplot.prefs['label_padding'],right=.95)
 
 		popplot.f.canvas.draw()

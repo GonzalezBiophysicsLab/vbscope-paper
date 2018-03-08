@@ -304,50 +304,43 @@ class plotter_gui(ui_general.gui):
 		_make_shortcut(Qt.Key_0,lambda : self.callback_keypress(0))
 
 	def initialize_plot_docks(self):
-		self.add_dock('plot_hist1d', '1D Histogram', popout_plot_container(1), 'lr', 'r')
-		self.add_dock('plot_hist2d', '2D Histogram', popout_plot_container(1), 'lr', 'r')
-		self.add_dock('plot_tdp', 'Transition Density Plot', popout_plot_container(1), 'lr', 'r')
-		self.add_dock('plot_tranM', 'Transition Matrix Plot', popout_plot_container(1), 'lr', 'r')
+		self.popout_plots = {
+			'plot_hist1d':None,
+			'plot_hist2d':None,
+			'plot_tdp':None,
+			'plot_tranM':None
+		}
 
-		self.docks['plot_hist1d'][1]._prefs.combine_prefs(plots.hist_1d.default_prefs)
-		self.docks['plot_hist2d'][1]._prefs.combine_prefs(plots.hist_2d.default_prefs)
-		self.docks['plot_tdp'  ][1]._prefs.combine_prefs(plots.tdp.default_prefs)
-		self.docks['plot_tranM'  ][1]._prefs.combine_prefs(plots.tranM.default_prefs)
-
-		self.docks['plot_hist1d'][1].setcallback(lambda: plots.hist_1d.plot(self))
-		self.docks['plot_hist2d'][1].setcallback(lambda: plots.hist_2d.plot(self))
-		self.docks['plot_tdp'][1].setcallback(lambda: plots.tdp.plot(self))
-		self.docks['plot_tranM'][1].setcallback(lambda: plots.tranM.plot(self))
-
-		self.tabifyDockWidget(self.docks['plot_hist1d'][0],self.docks['plot_hist2d'][0])
-		self.tabifyDockWidget(self.docks['plot_hist2d'][0],self.docks['plot_tdp'][0])
-
-		self.docks['plot_hist1d'][0].hide()
-		self.docks['plot_hist2d'][0].hide()
-		self.docks['plot_tdp'][0].hide()
-		self.docks['plot_tranM'][0].hide()
-		self.ui_update()
-
-	def raise_plot(self,dockstr):
-		if self.docks[dockstr][0].isHidden():
-			self.docks[dockstr][0].show()
-		self.docks[dockstr][0].raise_()
-		self.docks[dockstr][1].clf()
+	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots=1,callback=None,dprefs=None):
+		try:
+			ph = self.popout_plots[plot_handle]
+			if not ph.isVisible():
+				ph.setVisible(True)
+			ph.raise_()
+		except:
+			self.popout_plots[plot_handle] = popout_plot_container(nplots,self)
+			self.popout_plots[plot_handle].setWindowTitle(plot_name_str)
+			if not dprefs is None:
+				self.popout_plots[plot_handle].ui._prefs.combine_prefs(dprefs)
+			if not callback is None:
+				self.popout_plots[plot_handle].ui.setcallback(callback)
+			self.popout_plots[plot_handle].show()
+			self.popout_plots[plot_handle].ui.clf()
 
 	def plot_hist1d(self):
-		self.raise_plot('plot_hist1d')
+		self.raise_plot('plot_hist1d', '1D Histogram', 1, lambda: plots.hist_1d.plot(self), plots.hist_1d.default_prefs)
 		plots.hist_1d.plot(self)
 
 	def plot_hist2d(self):
-		self.raise_plot('plot_hist2d')
+		self.raise_plot('plot_hist2d', '2D Histogram', 1, lambda: plots.hist_2d.plot(self), plots.hist_2d.default_prefs)
 		plots.hist_2d.plot(self)
 
 	def plot_tdp(self):
-		self.raise_plot('plot_tdp')
+		self.raise_plot('plot_tdp', 'Transition Density Plot', 1, lambda: plots.tdp.plot(self), plots.tdp.default_prefs)
 		plots.tdp.plot(self)
 
 	def plot_tranM(self):
-		self.raise_plot('plot_tranM')
+		self.raise_plot('plot_tranM', 'Transition Matrix Plot', 1, lambda: plots.tranM.plot(self), plots.tranM.default_prefs)
 		plots.tranM.plot(self)
 
 	## Callback function for keyboard presses

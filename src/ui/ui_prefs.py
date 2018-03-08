@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QTableWidget,QSizePolicy,QTableWidgetItem
+from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QTableWidget,QSizePolicy,QTableWidgetItem,QHeaderView
 from PyQt5.QtCore import Qt
 
 import numpy as np
@@ -38,9 +38,11 @@ class preferences(QMainWindow):
 
 		self.viewer = QTableWidget()
 		self.viewer.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+		self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+		self.setMinimumWidth(150)
 
 		self.setCentralWidget(self.viewer)
-		self.adjustSize()
+		# self.adjustSize()
 
 	def edit(self,a):
 
@@ -119,12 +121,15 @@ class preferences(QMainWindow):
 		self.viewer.resizeRowsToContents()
 		self.viewer.blockSignals(False)
 		self.viewer.setHorizontalHeaderLabels([ "Value"])
-		self.adjustSize()
+		# self.adjustSize()
+
 
 		try:
 			self.gui.ui_update()
 		except:
 			pass
+
+
 
 	def merge_dictionaries(self,newd,oldd):
 		z = oldd.copy()

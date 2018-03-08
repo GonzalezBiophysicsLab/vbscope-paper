@@ -8,8 +8,10 @@ default_prefs = {
 }
 
 def plot(gui):
-	popplot = gui.docks['plot_hist1d'][1]
+	popplot = gui.popout_plots['plot_hist1d'].ui
 	popplot.ax[0].cla()
+	popplot.resize_fig()
+	gui.app.processEvents()
 
 	if gui.ncolors == 2:
 		fpb = gui.data.get_plot_data()[0]
@@ -33,9 +35,9 @@ def plot(gui):
 			popplot.ax[0].plot(x,tot,color='k',lw=2,alpha=.8)
 
 		popplot.ax[0].set_xlim(popplot.prefs['plotter_min_fret'],popplot.prefs['plotter_max_fret'])
-		popplot.ax[0].set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=14./gui.plot.canvas.devicePixelRatio())
-		popplot.ax[0].set_ylabel('Probability',fontsize=14./gui.plot.canvas.devicePixelRatio())
+		popplot.ax[0].set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
+		popplot.ax[0].set_ylabel('Probability',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
 		for asp in ['top','bottom','left','right']:
 			popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-		popplot.f.subplots_adjust(left=.13,bottom=.15,top=.95,right=.99)
+		popplot.f.subplots_adjust(left=.05+popplot.prefs['label_padding'],bottom=.05+popplot.prefs['label_padding'],top=.95,right=.95)
 		popplot.f.canvas.draw()

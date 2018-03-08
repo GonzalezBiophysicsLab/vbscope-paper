@@ -5,41 +5,73 @@ from matplotlib.patches import RegularPolygon
 from matplotlib.collections import PatchCollection
 from matplotlib.widgets import  RectangleSelector
 
-from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget,QToolBar,QAction,QHBoxLayout,QPushButton
-
+from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget,QToolBar,QAction,QHBoxLayout,QPushButton,QMainWindow,QDockWidget
+from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QTimer
 import numpy as np
 # from ..ui import ui_prefs
 from ..ui.ui_prefs import preferences
 
 
-class popout_plot_container(QWidget):
-	def __init__(self,nplots=1):
+class popout_plot_container(QMainWindow):
+	def __init__(self,nplots=1,parent=None):
+		super(QMainWindow,self).__init__(parent)
+		self.ui = popout_plot_container_widget(nplots,self)
+		self.setCentralWidget(self.ui)
+		# self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+		self.show()
+
+	def closeEvent(self,event):
+		self.parent().activateWindow()
+		self.parent().raise_()
+		self.parent().setFocus()
+
+	def resizeEvent(self,event):
+		pass
+
+
+class popout_plot_container_widget(QWidget):
+	def __init__(self,nplots=1,parent=None):
 		super(QWidget,self).__init__()
 
 		self._prefs = preferences(self)
-		self.prefs = {}
+		self.prefs = {
+			'fig_width':6,
+			'fig_height':4,
+			'label_fontsize':14,
+			'label_ticksize':12,
+			'label_padding':.1
+		}
 		self._prefs.update_table()
 
 		self._prefs.edit_callback = self.replot
 
+		self.qd_prefs = QDockWidget("Preferences",self)
+		self.qd_prefs.setWidget(self._prefs)
+		self.qd_prefs.setAllowedAreas( Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		parent.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
+		# self.qd_prefs.setFloating(True)
+
 		self.nplots = nplots
 
-		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(4,4))
+		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(self.prefs['fig_width'],self.prefs['fig_height']))
 		if not type(self.ax) is np.ndarray:
 			self.ax = np.array([self.ax])
 		self.canvas = FigureCanvas(self.f)
 		self.toolbar = NavigationToolbar(self.canvas,None)
 
-		# sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-		sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+		sp_fixed= QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+		sp_exp = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+		self.canvas.setSizePolicy(sp_fixed)
+		self.setSizePolicy(sp_exp)
 
-		self.canvas.setSizePolicy(sizePolicy)
+		self.timer = None
+
 		self.f.set_dpi(self.f.get_dpi()/self.canvas.devicePixelRatio())
 		self.fix_ax()
 
 		self.canvas.draw()
 		plt.close(self.f)
-
 
 		qw = QWidget()
 		hbox = QHBoxLayout()
@@ -53,36 +85,33 @@ class popout_plot_container(QWidget):
 		hbox.addStretch(1)
 		qw.setLayout(hbox)
 
-		layout = QVBoxLayout()
-		layout.addWidget(self.canvas)
-		layout.addWidget(self.toolbar)
-		layout.addWidget(qw)
-
+		self.vbox = QVBoxLayout()
+		self.vbox.addWidget(self.canvas)
+		self.vbox.addStretch(1)
+		self.vbox.addWidget(self.toolbar)
+		self.vbox.addWidget(qw)
 		# layout.addStretch(1)
-		self.setLayout(layout)
+		self.setLayout(self.vbox)
 		self.f.tight_layout()
 
-	def open_preferences(self):
-		self._open_ui(self._prefs)
 
-	def _open_ui(self,ui):
+	def open_preferences(self):
 		try:
-			if not ui.isVisible():
-				ui.setVisible(True)
-			ui.raise_()
+			if not self.qd_prefs.isVisible():
+				self.qd_prefs.setVisible(True)
+			self.qd_prefs.raise_()
 		except:
-			ui.show()
-		ui.showNormal()
-		ui.activateWindow()
+			self.qd_prefs.show()
+
 
 	def fix_ax(self):
 		offset = .08
 		offset2 = 0.14
 		self.f.subplots_adjust(left=offset2,right=1.-offset,top=1.-offset,bottom=offset2)
 		for aa in self.ax:
-			aa.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
+			aa.tick_params(labelsize=self.prefs['label_ticksize']/self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
 
-			aa.tick_params(axis='both', which='major', labelsize=12./self.canvas.devicePixelRatio())
+			aa.tick_params(axis='both', which='major', labelsize=self.prefs['label_ticksize']/self.canvas.devicePixelRatio())
 			aa.format_coord = lambda x, y: ''
 
 
@@ -92,7 +121,34 @@ class popout_plot_container(QWidget):
 		self.fix_ax()
 
 	def resizeEvent(self,event):
+		if self.timer is None:
+			self.timer = QTimer()
+			self.timer.timeout.connect(self._delayreplot)
+			self.timer.start(1000)
+
+	def _delayreplot(self):
+		self.timer.stop()
+		self.timer = None
+		self.replot()
+
+
+	def resize_fig(self):
+
+		self.f.clf()
+		self.canvas.resize(int(self.prefs['fig_width']*self.f.get_dpi()),int(self.prefs['fig_height']*self.f.get_dpi()))
+		self.f.set_figheight(self.prefs['fig_height'])
+		self.f.set_figwidth(self.prefs['fig_width'])
+		self.f.set_size_inches(self.prefs['fig_width'],self.prefs['fig_height'])
+
+		self.ax = np.array([self.f.add_subplot(self.nplots,1,i+1) for i in range(self.nplots)])
+
 		self.fix_ax()
+		self.canvas.update()
+		self.canvas.flush_events()
+		self.canvas.draw()
+
+
+
 
 	def replot(self):
 		''' overload me '''
@@ -102,3 +158,4 @@ class popout_plot_container(QWidget):
 		self.replot = fxn
 		self._prefs.edit_callback = self.replot
 		self.button_refresh.clicked.connect(self.replot)
+#
