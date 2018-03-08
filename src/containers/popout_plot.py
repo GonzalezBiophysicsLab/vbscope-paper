@@ -140,6 +140,9 @@ class popout_plot_container_widget(QWidget):
 		self.f.set_figwidth(self.prefs['fig_width']/self.canvas.devicePixelRatio())
 		self.f.set_size_inches(self.prefs['fig_width']/self.canvas.devicePixelRatio(),self.prefs['fig_height']/self.canvas.devicePixelRatio())
 
+		self.parent().resize(int(self.prefs['fig_width']*self.f.get_dpi()/self.canvas.devicePixelRatio()),int(self.prefs['fig_height']*self.f.get_dpi()/self.canvas.devicePixelRatio()))
+		self.resize(int(self.prefs['fig_width']*self.f.get_dpi()/self.canvas.devicePixelRatio()),int(self.prefs['fig_height']*self.f.get_dpi()/self.canvas.devicePixelRatio()))
+
 		self.ax = np.array([self.f.add_subplot(self.nplots,1,i+1) for i in range(self.nplots)])
 
 		self.fix_ax()
