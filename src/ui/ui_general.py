@@ -193,3 +193,5 @@ class gui(QMainWindow):
 		if reply == QMessageBox.Yes:
 			# self.app.quit()
 			event.accept()
+		else:
+			event.ignore()
