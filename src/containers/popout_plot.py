@@ -37,8 +37,8 @@ class popout_plot_container_widget(QWidget):
 
 		self._prefs = preferences(self)
 		self.prefs = {
-			'fig_width':6.0,
-			'fig_height':4.0,
+			'fig_width':4.0,
+			'fig_height':3.0,
 			'label_fontsize':14,
 			'label_ticksize':12,
 			'label_padding':.1

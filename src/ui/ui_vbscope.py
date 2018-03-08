@@ -78,25 +78,37 @@ class vbscope_gui(movie_viewer):
 	def setup_vbscope_plots(self):
 		menu_plot = self.menubar.addMenu('Plots')
 		plt_region = QAction('Region plot',self)
-		plt_region.triggered.connect(self.plt_region)
+		plt_region.triggered.connect(self.plot_region)
 
 		for a in [plt_region]:
 			menu_plot.addAction(a)
 
-		self.add_dock('pc_region', 'Region Plot', popout_plot_container(1), 'lr', 'r')
-		self.tabifyDockWidget(self.docks['extract'][0],self.docks['pc_region'][0])
-		self.docks['pc_region'][0].hide()
+		self.popout_plots = {
+			'plot_region':None
+		}
 		self.ui_update()
 
-	def raise_plot(self,dockstr):
-		if self.docks[dockstr][0].isHidden():
-			self.docks[dockstr][0].show()
-		self.docks[dockstr][0].raise_()
-		self.docks[dockstr][1].clf()
+	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots=1,callback=None,dprefs=None):
+		try:
+			ph = self.popout_plots[plot_handle]
+			if not ph.isVisible():
+				ph.setVisible(True)
+			ph.raise_()
+		except:
+			self.popout_plots[plot_handle] = popout_plot_container(nplots,self)
+			self.popout_plots[plot_handle].setWindowTitle(plot_name_str)
+			if not dprefs is None:
+				self.popout_plots[plot_handle].ui._prefs.combine_prefs(dprefs)
+			if not callback is None:
+				self.popout_plots[plot_handle].ui.setcallback(callback)
+			self.popout_plots[plot_handle].show()
+			self.popout_plots[plot_handle].ui.clf()
 
-	def plt_region(self):
-		self.raise_plot('pc_region')
-		plots.region(self)
+	def plot_region(self):
+		pp = plots.region.default_prefs
+		self.raise_plot('plot_region', 'Region Plot', 1, lambda: plots.region.plot(self), pp)
+		plots.region.plot(self)
+
 
 	def load(self):
 		success = super(vbscope_gui, self).load()
