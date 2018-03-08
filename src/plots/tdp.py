@@ -76,7 +76,7 @@ def plot(gui):
 		cz = np.logspace(0,zm,zm+1)
 		cb.set_ticks(cz)
 		# cb.set_ticklabels(cz)
-		cb.ax.yaxis.set_tick_params(labelsize=12./gui.plot.canvas.devicePixelRatio(),direction='in',width=1.0/gui.plot.canvas.devicePixelRatio(),length=4./gui.plot.canvas.devicePixelRatio())
+		cb.ax.yaxis.set_tick_params(labelsize=popplot.prefs['label_ticksize']/gui.plot.canvas.devicePixelRatio(),direction='in',width=1.0/gui.plot.canvas.devicePixelRatio(),length=4./gui.plot.canvas.devicePixelRatio())
 		for asp in ['top','bottom','left','right']:
 			cb.ax.spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
 		cb.solids.set_edgecolor('face')
