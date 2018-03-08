@@ -188,7 +188,8 @@ class gui(QMainWindow):
 			self.showFullScreen()
 
 	def closeEvent(self,event):
-		event.ignore()
+		# event.ignore()
 		reply = QMessageBox.question(self,"Quit?","Are you sure you want to quit?",QMessageBox.Yes | QMessageBox.No)
 		if reply == QMessageBox.Yes:
-			self.app.quit()
+			# self.app.quit()
+			event.accept()
