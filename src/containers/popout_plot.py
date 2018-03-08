@@ -69,7 +69,7 @@ class popout_plot_container_widget(QWidget):
 		self.timer = None
 
 		self.f.set_dpi(self.f.get_dpi()/self.canvas.devicePixelRatio())
-		self.resize_fig()
+		# self.resize_fig()
 
 		self.canvas.draw()
 		plt.close(self.f)
