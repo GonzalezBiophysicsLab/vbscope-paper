@@ -314,4 +314,7 @@ class traj_container():
 		for i in range(self.gui.ncolors):
 			for j in range(self.gui.ncolors):
 				q[:,j] -= bts[i,j]*q[:,i]
-		return q.sum(1)
+		if self.gui.prefs['hmm_bound_dynamics'] == 'True':
+			return q[:,1,:]
+		else:
+			return q.sum(1)

@@ -56,7 +56,8 @@ default_prefs = {
 
 	'hmm_nrestarts':4,
 	'hmm_sigmasmooth':False,
-	'hmm_binding_expt':False
+	'hmm_binding_expt':False,
+	'hmm_bound_dynamics':False
 }
 
 ## GUI for plotting 2D smFRET trajectories
