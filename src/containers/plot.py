@@ -70,7 +70,7 @@ class image_plot_container():
 	def home_fxn(self):
 		self.ax.autoscale()
 		ny,nx = self.image.get_array().shape
-		self.image.set_extent([0,nx,ny,0])
+		self.image.set_extent([0-.5,nx-.5,0-.5,ny-.5])
 		# sizePolicy = QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
 		sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		self.canvas.setSizePolicy(sizePolicy)

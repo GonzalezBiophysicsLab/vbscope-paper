@@ -91,9 +91,9 @@ class movie_viewer(gui):
 				print self.data.total_frames
 
 				y,x = self.data.movie.shape[1:]
-				self.plot.image.set_extent([0,x,0,y])
-				self.plot.ax.set_xlim(0,x)
-				self.plot.ax.set_ylim(0,y)
+				self.plot.image.set_extent([-.5,x-.5,-.5,y-.5])
+				self.plot.ax.set_xlim(-.5,x-.5)
+				self.plot.ax.set_ylim(-.5,y-.5)
 
 				self.plot.ax.set_visible(True) # Turn on the plot -- first initialization
 				self.plot.canvas.draw() # Need to initialize on first showing -- for fast plotting
