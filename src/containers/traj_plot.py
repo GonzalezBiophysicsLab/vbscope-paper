@@ -47,6 +47,8 @@ class traj_plot_container():
 	def update_minmax(self):
 		self.initialize_plots()
 		self.yminmax = np.array((float(self.gui.le_min.text()),float(self.gui.le_max.text())))
+		if not np.all(np.isfinite(self.yminmax)):
+			self.yminmax = np.array((-1000.,10000))
 		self.a[0][0].set_ylim(self.yminmax[0],self.yminmax[1])
 
 		self.canvas.draw()
