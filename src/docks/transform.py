@@ -109,8 +109,11 @@ class dock_transform(QWidget):
 			delim = ' '
 		return np.loadtxt(fname,delimiter=delim)
 
-	def load(self):
-		fname = QFileDialog.getOpenFileName(self,'Choose an alignment file to load','./')#,filter='TIF File (*.tif *.TIF)')
+	def load(self,fname=None):
+		if fname is None:
+			fname = QFileDialog.getOpenFileName(self,'Choose an alignment file to load','./')#,filter='TIF File (*.tif *.TIF)')
+		else:
+			fname = [fname]
 		if fname[0] != "":
 			try:
 				d = self.safeload(fname[0])
