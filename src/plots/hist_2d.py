@@ -22,6 +22,8 @@ default_prefs = {
 	'plotter_timeshift':0,
 	'plotter_nbins_contour':200,
 
+	'hmm_syncstate':0,
+
 	'label_colorbar_nticks':5,
 	'label_y_nticks':7,
 	'label_x_nticks':5,
@@ -51,8 +53,8 @@ def plot(gui):
 					fpb[i,0:post-pre] = y[pre:post]
 
 		elif not gui.data.hmm_result is None:
-			state,success = QInputDialog.getInt(gui,"Pick State","Which State?",min=0,max=gui.data.hmm_result.nstates-1)
-			if success:
+			state = popplot.prefs['hmm_syncstate']
+			if state < gui.data.hmm_result.nstates:	
 				v = gui.data.get_viterbi_data()
 				vv = np.array([[v[i,:-1],v[i,1:]] for i in range(v.shape[0])])
 				oo = []

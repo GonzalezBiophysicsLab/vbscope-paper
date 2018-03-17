@@ -15,9 +15,9 @@ from ..ui.ui_prefs import preferences
 
 
 class popout_plot_container(QMainWindow):
-	def __init__(self,nplots=1,parent=None):
+	def __init__(self,nplots_x=1, nplots_y=1, parent=None):
 		super(QMainWindow,self).__init__(parent)
-		self.ui = popout_plot_container_widget(nplots,self)
+		self.ui = popout_plot_container_widget(nplots_x, nplots_y, self)
 		self.setCentralWidget(self.ui)
 		# self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
 		self.show()
@@ -32,7 +32,7 @@ class popout_plot_container(QMainWindow):
 
 
 class popout_plot_container_widget(QWidget):
-	def __init__(self,nplots=1,parent=None):
+	def __init__(self,nplots_x=1, nplots_y=1, parent=None):
 		super(QWidget,self).__init__()
 
 		self._prefs = preferences(self)
@@ -53,9 +53,11 @@ class popout_plot_container_widget(QWidget):
 		parent.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
 		# self.qd_prefs.setFloating(True)
 
-		self.nplots = nplots
+		self.nplots_x = nplots_x
+		self.nplots_y = nplots_y
 
-		self.f,self.ax = plt.subplots(nplots,sharex=True,figsize=(self.prefs['fig_width']/QPixmap().devicePixelRatio(),self.prefs['fig_height']/QPixmap().devicePixelRatio()))
+		# self.f,self.ax = plt.subplots(nplots_x, nplots_y, sharex=True, figsize=(self.prefs['fig_width']/QPixmap().devicePixelRatio(),self.prefs['fig_height']/QPixmap().devicePixelRatio()))
+		self.f,self.ax = plt.subplots(nplots_x, nplots_y, figsize=(self.prefs['fig_width']/QPixmap().devicePixelRatio(),self.prefs['fig_height']/QPixmap().devicePixelRatio()))
 		if not type(self.ax) is np.ndarray:
 			self.ax = np.array([self.ax])
 		self.canvas = FigureCanvas(self.f)
@@ -118,7 +120,10 @@ class popout_plot_container_widget(QWidget):
 
 	def clf(self):
 		self.f.clf()
-		self.ax = np.array([self.f.add_subplot(self.nplots,1,i+1) for i in range(self.nplots)])
+		# self.ax = np.array([self.f.add_subplot(self.nplots,1,i+1) for i in range(self.nplots)])
+		self.ax = np.array([[self.f.add_subplot(self.nplots_x,self.nplots_y,j*self.nplots_x + i + 1) for i in range(self.nplots_x)] for j in range(self.nplots_y)])
+		if np.any(np.array(self.ax.shape) == 1):
+			self.ax = self.ax.reshape(self.ax.size)
 		self.fix_ax()
 
 	def resizeEvent(self,event):
@@ -143,7 +148,10 @@ class popout_plot_container_widget(QWidget):
 
 		# self.resize(int(self.prefs['fig_width']*self.f.get_dpi()/self.canvas.devicePixelRatio()),int(self.prefs['fig_height']*self.f.get_dpi()/self.canvas.devicePixelRatio()))
 
-		self.ax = np.array([self.f.add_subplot(self.nplots,1,i+1) for i in range(self.nplots)])
+		# self.ax = np.array([self.f.add_subplot(self.nplots,1,i+1) for i in range(self.nplots)])
+		self.ax = np.array([[self.f.add_subplot(self.nplots_x,self.nplots_y,j*self.nplots_x + i + 1) for i in range(self.nplots_x)] for j in range(self.nplots_y)])
+		if np.any(np.array(self.ax.shape) == 1):
+			self.ax = self.ax.reshape(self.ax.size)
 
 		self.fix_ax()
 		self.canvas.update()

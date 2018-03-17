@@ -177,7 +177,7 @@ class traj_container():
 				checked = self.gui.classes_get_checked()
 				ran = []
 				if self.gui.prefs['hmm_binding_expt'] == 'True':
-					z = self.get_sum_fluor()
+					z = self.get_fluor().sum(1)
 				for i in range(self.fret.shape[1]):
 					if checked[i]:
 						if self.gui.prefs['hmm_binding_expt'] == 'True':
@@ -308,7 +308,7 @@ class traj_container():
 			self.gui.log('Automated photobleaching ensemble method ran',True)
 			self.gui.plot.update_plots()
 
-	def get_sum_fluor(self):
+	def get_fluor(self):
 		q = np.copy(self.d)
 		bts = self.gui.prefs['bleedthrough'].reshape((4,4))
 		for i in range(self.gui.ncolors):
@@ -317,4 +317,81 @@ class traj_container():
 		if self.gui.prefs['hmm_bound_dynamics'] == 'True':
 			return q[:,1,:]
 		else:
-			return q.sum(1)
+			return q
+
+	def estimate_mvs(self):
+		m0s = np.array(())
+		v0s = np.array(())
+		m1s = np.array(())
+		v1s = np.array(())
+		fracs = np.array(())
+
+		checked = self.gui.classes_get_checked()
+		data = self.d[checked]
+
+		for i in range(data.shape[1]):
+			dd = data[:,i]
+			## estimate from min
+			from ..supporting.normal_minmax_dist import estimate_from_min
+			m,v = estimate_from_min(dd.min(1),dd.shape[1])
+			## cleanup estimate
+			dr = dd[dd > (m-3.*np.sqrt(v))]
+			dr = dr[dr < (m+3.*np.sqrt(v))]
+			m = np.median(dr)
+			v = np.square(m - np.percentile(dr,50.0 - 68.27/2))
+
+			m1 = np.median(dd[dd > m + 3.*np.sqrt(v)])
+			v1 = np.var(dd[dd > m + 3.*np.sqrt(v)])
+			m0s = np.append(m0s,m)
+			v0s = np.append(v0s,v)
+			m1s = np.append(m1s,m1)
+			v1s = np.append(v1s,v1)
+
+			p = normal(dd[:,None].flatten()[:,None],np.array((m0s[i],m1s[i]))[None,:],np.array((v0s[i],v1s[i]))[None,:])
+			p = p / p.sum(1)[:,None]
+			frac = p.sum(0)/p.sum()
+			fracs = np.append(fracs,frac)
+
+		dd = data.sum(1)
+		m1 = np.mean(dd[dd > m0s.sum() + 3.*np.sqrt(v0s.sum())])
+		v1 = np.var(dd[dd > m0s.sum() + 3.*np.sqrt(v0s.sum())])
+		p = normal(dd[:,None].flatten()[:,None],np.array((m0s.sum(),m1))[None,:],np.array((v0s.sum(),v1))[None,:])
+		p = p / p.sum(1)[:,None]
+		frac = p.sum(0)/p.sum()
+
+		m0s = np.append(m0s,m0s.sum())
+		v0s = np.append(v0s,v0s.sum())
+		m1s = np.append(m1s,m1)
+		v1s = np.append(v1s,v1)
+		fracs = np.append(fracs,frac)
+		return m0s,v0s,m1s,v1s,fracs
+
+	def posterior_sum(self):
+		m0s,v0s,m1s,v1s,fracs = self.estimate_mvs()
+		ms = np.array((m0s[-1],m1s[-1]))
+		vs = np.array((v0s[-1],v1s[-1]))
+		fracs = fracs[-2:]
+
+		checked = self.gui.classes_get_checked()
+		## K,N,(C),T
+		dd = np.sum(self.d[checked],axis=1)
+		p = fracs[:,None,None]*normal(dd[None,:,:],ms[:,None,None],vs[:,None,None])
+		p /= p.sum(0)[None,:,:]
+
+		## number (soft) of datapoints that aren't bg class
+		self.deadprob = p.sum(-1)[1]
+
+	def remove_dead(self):
+		threshold,success2 = QInputDialog.getDouble(self.gui,"Soft Frame Cutoff","Soft number of frames with signal required to keep a trajectory",value=20.,min=0.,max=self.d.shape[2],decimals=3)
+		if success2:
+			self.posterior_sum()
+			keep = self.deadprob > threshold
+			self.gui.plot.index = 0
+			self.gui.initialize_data(self.d[keep])
+			self.gui.plot.initialize_plots()
+			self.gui.initialize_sliders()
+			self.gui.log('Remove Dead Frames: %d traces with less than %d total frames in the summed channel removed'%((keep==0).sum(),threshold),True)
+			self.gui.update_display_traces()
+
+def normal(x,m,v):
+	return 1./np.sqrt(2.*np.pi*v) * np.exp(-.5/v*(x-m)**2.)

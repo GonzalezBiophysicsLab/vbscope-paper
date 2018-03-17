@@ -33,8 +33,8 @@ def sufficient_s2(x,m):
 ################################################################################
 ### \mathcal{N} with an unknown \mu and an unknown \sigma
 ################################################################################
-@nb.jit(nb.types.Tuple((nb.double,nb.double,nb.double))(nb.double[:],nb.double,nb.double,nb.double,nb.double),nopython=True)
-def normal_update(x,m0,k0,a0,b0):
+@nb.jit(nb.types.Tuple((nb.double,nb.double,nb.double,nb.double))(nb.double[:],nb.double,nb.double,nb.double,nb.double),nopython=True)
+def normal_update(x,a0,b0,k0,m0):
 	# sufficient statistics
 	xbar = sufficient_xbar(x)
 	s2 = sufficient_s2(x,xbar)
@@ -44,17 +44,14 @@ def normal_update(x,m0,k0,a0,b0):
 	kn = k0 + n
 	an = a0 + n/2.
 	bn = b0 + .5*s2 + k0*n*(xbar - m0)**2. / (2.*(k0+n))
-	return kn,an,bn
+	mn = (k0*m0 + n*xbar)/kn
+	return an,bn,kn,mn
 
-@nb.jit(nb.double(nb.double[:]),nopython=True)
-def normal_ln_evidence(x):
-	a0 = 1.
-	b0 = 1.
-	k0 = 1.
-	m0 = 1000.
+@nb.jit([nb.double(nb.double[:],nb.double,nb.double,nb.double,nb.double)],nopython=True)
+def normal_ln_evidence(x,a0,b0,k0,m0):
 
 	n = x.size
-	kn,an,bn = normal_update(x,m0,k0,a0,b0)
+	an,bn,kn,mn = normal_update(x,a0,b0,k0,m0)
 	ln_evidence = gammaln(an) - gammaln(a0) + a0*np.log(b0) - an*np.log(bn) +.5*np.log(k0) - .5*np.log(kn) - n/2. * np.log(2.*np.pi)
 
 	return ln_evidence
@@ -74,10 +71,8 @@ def normal_mu_update(x,mu,a0,b0):
 	bn = b0 + .5*s2
 	return an,bn
 
-@nb.jit(nb.double(nb.double[:],nb.double),nopython=True)
-def normal_mu_ln_evidence(x,mu):
-	a0 = 1.
-	b0 = 1.
+@nb.jit(nb.double(nb.double[:],nb.double,nb.double,nb.double),nopython=True)
+def normal_mu_ln_evidence(x,mu,a0,b0):
 	n = x.size
 
 	an,bn = normal_mu_update(x,mu,a0,b0)
@@ -89,18 +84,21 @@ def normal_mu_ln_evidence(x,mu):
 ### Photobleaching model - start w/ N(\mu) go to N(0) at time t
 ################################################################################
 
-@nb.jit(nb.double[:](nb.double[:]),nopython=True)
-def ln_likelihood(d):
+@nb.jit(nb.double[:](nb.double[:],nb.double,nb.double,nb.double,nb.double),nopython=True)
+def ln_likelihood(d,a0,b0,k0,m0):
 	lnl = np.zeros_like(d)
-	lnl[0] = normal_mu_ln_evidence(d,0.)
+
+	lnl[0] = normal_mu_ln_evidence(d,0.,a0,b0)
+
 	for i in range(1,d.shape[0]-1):
-		lnl[i] = normal_ln_evidence(d[:i]) + normal_mu_ln_evidence(d[i:],0.)
-	lnl[-1] = normal_ln_evidence(d)
+		lnl[i] = normal_ln_evidence(d[:i],a0,b0,k0,m0) + normal_mu_ln_evidence(d[i:],0.,a0,b0)
+	lnl[-1] = normal_ln_evidence(d,a0,b0,k0,m0)
 	return lnl
 
-@nb.jit(nb.double(nb.double[:]),nopython=True)
-def ln_evidence(d):
-	lnl  = ln_likelihood(d)
+@nb.jit(nb.double(nb.double[:],nb.double,nb.double,nb.double,nb.double),nopython=True)
+def ln_evidence(d,a0,b0,k0,m0):
+
+	lnl  = ln_likelihood(d,a0,b0,k0,m0)
 	# uniform priors for t
 	lmax = lnl.max()
 	ev = np.log(np.sum(np.exp(lnl-lmax)))+lmax
@@ -108,12 +106,16 @@ def ln_evidence(d):
 
 @nb.jit(nb.double(nb.double[:]))
 def ln_bayes_factor(d):
-	return ln_evidence(d) - normal_ln_evidence(d)
+	a0 = 1.
+	b0 = 1.
+	k0 = 1.
+	m0 = 1000.
+	return ln_evidence(d,a0,b0) - normal_ln_evidence(d,a0,b0,k0,m0)
 
-@nb.jit(nb.double[:](nb.double[:],nb.double),nopython=True)
-def posterior(d,k):
+@nb.jit(nb.double[:](nb.double[:],nb.double,nb.double,nb.double,nb.double,nb.double),nopython=True)
+def posterior(d,k,a0,b0,k0,m0):
 	t = np.arange(d.size)
-	lnp = ln_likelihood(d) + np.log(k) - k*t
+	lnp = ln_likelihood(d,a0,b0,k0,m0) + np.log(k) - k*t
 	return lnp
 
 
@@ -123,7 +125,11 @@ def posterior(d,k):
 
 @nb.jit(nb.int64(nb.double[:]),nopython=True)
 def get_point_pbtime(d):
-	lnl = ln_likelihood(d)
+	a0 = 1.
+	b0 = 1.
+	k0 = 1.
+	m0 = 1000.
+	lnl = ln_likelihood(d,a0,b0,k0,m0)
 	# for i in range(lnl.shape[0]):
 	# 	if np.isnan(lnl[i]):
 	# 		lnl[i] = -np.inf
@@ -133,7 +139,11 @@ def get_point_pbtime(d):
 
 @nb.jit(nb.double(nb.double[:]),nopython=True)
 def get_expectation_pbtime(d):
-	lnl = ln_likelihood(d)
+	a0 = 1.
+	b0 = 1.
+	k0 = 1.
+	m0 = 1000.
+	lnl = ln_likelihood(d,a0,b0,k0,m0)
 	t = np.arange(lnl.size)
 	lmax = np.max(lnl)
 	p = np.exp(lnl-lmax)
@@ -169,12 +179,17 @@ else:
 			* `e_k` is the expectation of the photobleaching time rate constant
 			* `pbt` is a np.ndarray of shape (N) with the photobleaching time
 		'''
+		a0 = 1.
+		b0 = 1.
+		k0 = 1.
+		m0 = 1000.
+
 		pbt = np.zeros(d.shape[0],dtype=nb.int64)
 		for i in nb.prange(d.shape[0]):
 			pbt[i] = get_expectation_pbtime(d[i])
 		e_k = (1.+pbt.size)/(1.+np.sum(pbt))
 		for i in nb.prange(d.shape[0]):
-			pbt[i] = np.argmax(posterior(d[i],e_k))
+			pbt[i] = np.argmax(posterior(d[i],e_k,a0,b0,k0,m0))
 		return e_k,pbt
 
 @nb.jit(nb.double[:](nb.double[:,:]),nopython=True)
@@ -197,9 +212,13 @@ def pb_snr(d):
 @nb.jit(nb.double[:](nb.double[:,:]),nopython=True)
 def model_comparison_signal(x):
 	out = np.zeros(x.shape[0],dtype=nb.double)
+	a0 = 1.
+	b0 = 1.
+	k0 = 1.
+	m0 = 1000.
 	for i in range(out.size):
-		lnp_m2 = normal_mu_ln_evidence(x[i],0.)
-		lnp_m1 = normal_ln_evidence(x[i])
+		lnp_m2 = normal_mu_ln_evidence(x[i],0.,a0,b0)
+		lnp_m1 = normal_ln_evidence(x[i],a0,b0,k0,m0)
 		p = 1./(1.+np.exp(lnp_m2-lnp_m1))
 		out[i] = p
 	return out

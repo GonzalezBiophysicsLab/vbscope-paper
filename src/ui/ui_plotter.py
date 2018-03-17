@@ -178,7 +178,6 @@ class plotter_gui(ui_general.gui):
 		self.data.pre_list = np.zeros(self.data.d.shape[0],dtype='i')
 		self.data.pb_list = self.data.pre_list.copy() + self.data.d.shape[2]
 		self.data.class_list = np.zeros(self.data.d.shape[0])
-
 #
 	## Setup the menu items at the top
 	def initialize_menubar(self):
@@ -233,10 +232,12 @@ class plotter_gui(ui_general.gui):
 		self.pb_remove_check = tools_var
 		tools_remove = QAction('Remove From Beginning',self)
 		tools_remove.triggered.connect(self.data.remove_beginning)
+		tools_dead = QAction('Remove Dead Traces',self)
+		tools_dead.triggered.connect(self.data.remove_dead)
 		tools_hmm = QAction('HMM',self)
 		tools_hmm.triggered.connect(self.data.run_hmm)
 
-		for f in [tools_cullpb,tools_cullphotons,tools_step,tools_var,tools_remove,tools_hmm]:
+		for f in [tools_cullpb,tools_cullphotons,tools_step,tools_var,tools_remove,tools_dead,tools_hmm]:
 			menu_tools.addAction(f)
 #
 		### plots
@@ -250,8 +251,10 @@ class plotter_gui(ui_general.gui):
 		plots_tdp.triggered.connect(self.plot_tdp)
 		plots_tranM = QAction('Transition Matrix Plot', self)
 		plots_tranM.triggered.connect(self.plot_tranM)
+		plots_intensities = QAction('Intensities Plot', self)
+		plots_intensities.triggered.connect(self.plot_intensities)
 
-		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM]:
+		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_intensities]:
 			menu_plots.addAction(f)
 
 		### classes
@@ -309,17 +312,18 @@ class plotter_gui(ui_general.gui):
 			'plot_hist1d':None,
 			'plot_hist2d':None,
 			'plot_tdp':None,
-			'plot_tranM':None
+			'plot_tranM':None,
+			'plot_intensities':None
 		}
 
-	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots=1,callback=None,dprefs=None):
+	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots_x=1, nplots_y=1,callback=None,dprefs=None):
 		try:
 			ph = self.popout_plots[plot_handle]
 			if not ph.isVisible():
 				ph.setVisible(True)
 			ph.raise_()
 		except:
-			self.popout_plots[plot_handle] = popout_plot_container(nplots,self)
+			self.popout_plots[plot_handle] = popout_plot_container(nplots_x, nplots_y,self)
 			self.popout_plots[plot_handle].setWindowTitle(plot_name_str)
 			if not dprefs is None:
 				self.popout_plots[plot_handle].ui._prefs.combine_prefs(dprefs)
@@ -329,20 +333,24 @@ class plotter_gui(ui_general.gui):
 			self.popout_plots[plot_handle].ui.clf()
 
 	def plot_hist1d(self):
-		self.raise_plot('plot_hist1d', '1D Histogram', 1, lambda: plots.hist_1d.plot(self), plots.hist_1d.default_prefs)
+		self.raise_plot('plot_hist1d', '1D Histogram', 1,1, lambda: plots.hist_1d.plot(self), plots.hist_1d.default_prefs)
 		plots.hist_1d.plot(self)
 
 	def plot_hist2d(self):
-		self.raise_plot('plot_hist2d', '2D Histogram', 1, lambda: plots.hist_2d.plot(self), plots.hist_2d.default_prefs)
+		self.raise_plot('plot_hist2d', '2D Histogram', 1,1, lambda: plots.hist_2d.plot(self), plots.hist_2d.default_prefs)
 		plots.hist_2d.plot(self)
 
 	def plot_tdp(self):
-		self.raise_plot('plot_tdp', 'Transition Density Plot', 1, lambda: plots.tdp.plot(self), plots.tdp.default_prefs)
+		self.raise_plot('plot_tdp', 'Transition Density Plot', 1,1, lambda: plots.tdp.plot(self), plots.tdp.default_prefs)
 		plots.tdp.plot(self)
 
 	def plot_tranM(self):
-		self.raise_plot('plot_tranM', 'Transition Matrix Plot', 1, lambda: plots.tranM.plot(self), plots.tranM.default_prefs)
+		self.raise_plot('plot_tranM', 'Transition Matrix Plot', 1,1, lambda: plots.tranM.plot(self), plots.tranM.default_prefs)
 		plots.tranM.plot(self)
+
+	def plot_intensities(self):
+		self.raise_plot('plot_intensities', 'Intensity Plots', 1,3, lambda: plots.intensities.plot(self), plots.intensities.default_prefs)
+		plots.intensities.plot(self)
 
 	## Callback function for keyboard presses
 	def callback_keypress(self,kk):
@@ -406,6 +414,7 @@ class plotter_gui(ui_general.gui):
 					self.plot.update_plots()
 
 ################################################################################
+
 	def update_display_traces(self):
 		self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
 
