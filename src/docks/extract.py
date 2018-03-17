@@ -102,7 +102,7 @@ class dock_extract(QWidget):
 				spots = ts[0][i](spots.T).T
 				spots = avg_close(spots,self.gui.prefs['extract_same_cutoff'])
 
-		print "Total spots: %d"%(spots.shape[1])
+		# print "Total spots: %d"%(spots.shape[1])
 		return spots
 
 	def get_sigma(self,j):

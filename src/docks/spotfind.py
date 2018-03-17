@@ -181,7 +181,6 @@ class dock_spotfind(QWidget):
 		try:
 			s = [self.xys[j].shape[-1] for j in range(self.gui.data.ncolors)]
 			out = 'Spots found '+str(s)
-			print out
 			self.gui.statusbar.showMessage(out)
 		except:
 			pass
@@ -544,7 +543,6 @@ class dock_spotfind(QWidget):
 	def remove_duplicates(self):
 		from .extract import cull_rep_px
 		for i in range(self.gui.data.ncolors):
-			print i
 			self.xys[i] = cull_rep_px(self.xys[i],self.gui.data.movie.shape[1],self.gui.data.movie.shape[2])
 
 def _run(a):

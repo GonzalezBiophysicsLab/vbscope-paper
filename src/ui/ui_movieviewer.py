@@ -79,16 +79,19 @@ class movie_viewer(gui):
 			self.menu_movie.addAction(self.docks[mm][0].toggleViewAction())
 
 
-	def load(self):
+	def load(self,fname=None):
 		self.docks['play'][1].stop_playing()
-		fname = QFileDialog.getOpenFileName(self,'Choose Movie to load','./')
+		if fname is None:
+			fname = QFileDialog.getOpenFileName(self,'Choose Movie to load','./')
+		else:
+			fname = [fname]
 		if fname[0] != "":
 			d = data_container(self)
 			success = d.load(fname[0])
 
 			if success:
 				self.data = d
-				print self.data.total_frames
+				# print self.data.total_frames
 
 				y,x = self.data.movie.shape[1:]
 				self.plot.image.set_extent([-.5,x-.5,-.5,y-.5])

@@ -326,22 +326,25 @@ class traj_container():
 		v1s = np.array(())
 		fracs = np.array(())
 
+		ss = 5.
+
 		checked = self.gui.classes_get_checked()
 		data = self.d[checked]
 
 		for i in range(data.shape[1]):
 			dd = data[:,i]
 			## estimate from min
-			from ..supporting.normal_minmax_dist import estimate_from_min
+			from ..supporting.normal_minmax_dist import estimate_from_min, backout_var_fixed_m
 			m,v = estimate_from_min(dd.min(1),dd.shape[1])
 			## cleanup estimate
-			dr = dd[dd > (m-3.*np.sqrt(v))]
-			dr = dr[dr < (m+3.*np.sqrt(v))]
+			dr = dd[dd > (m-ss*np.sqrt(v))]
+			dr = dr[dr < (m+ss*np.sqrt(v))]
 			m = np.median(dr)
+			# v = backout_var_fixed_m(dd.min(1),dd.shape[1])
 			v = np.square(m - np.percentile(dr,50.0 - 68.27/2))
 
-			m1 = np.median(dd[dd > m + 3.*np.sqrt(v)])
-			v1 = np.var(dd[dd > m + 3.*np.sqrt(v)])
+			m1 = np.median(dd[dd > m + ss*np.sqrt(v)])
+			v1 = np.var(dd[dd > m + ss*np.sqrt(v)])
 			m0s = np.append(m0s,m)
 			v0s = np.append(v0s,v)
 			m1s = np.append(m1s,m1)
@@ -353,8 +356,8 @@ class traj_container():
 			fracs = np.append(fracs,frac)
 
 		dd = data.sum(1)
-		m1 = np.mean(dd[dd > m0s.sum() + 3.*np.sqrt(v0s.sum())])
-		v1 = np.var(dd[dd > m0s.sum() + 3.*np.sqrt(v0s.sum())])
+		m1 = np.mean(dd[dd > m0s.sum() + ss*np.sqrt(v0s.sum())])
+		v1 = np.var(dd[dd > m0s.sum() + ss*np.sqrt(v0s.sum())])
 		p = normal(dd[:,None].flatten()[:,None],np.array((m0s.sum(),m1))[None,:],np.array((v0s.sum(),v1))[None,:])
 		p = p / p.sum(1)[:,None]
 		frac = p.sum(0)/p.sum()
@@ -381,8 +384,11 @@ class traj_container():
 		## number (soft) of datapoints that aren't bg class
 		self.deadprob = p.sum(-1)[1]
 
-	def remove_dead(self):
-		threshold,success2 = QInputDialog.getDouble(self.gui,"Soft Frame Cutoff","Soft number of frames with signal required to keep a trajectory",value=20.,min=0.,max=self.d.shape[2],decimals=3)
+	def remove_dead(self,threshold = None):
+		if threshold is None:
+			threshold,success2 = QInputDialog.getDouble(self.gui,"Soft Frame Cutoff","Soft number of frames with signal required to keep a trajectory",value=20.,min=0.,max=self.d.shape[2],decimals=3)
+		else:
+			success2 = True
 		if success2:
 			self.posterior_sum()
 			keep = self.deadprob > threshold

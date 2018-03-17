@@ -676,7 +676,7 @@ class plotter_gui(ui_general.gui):
 						QMessageBox.critical(self,'Export Processed Traces','There was a problem trying to export the processed traces')
 
 	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)
-	def export_traces(self):
+	def export_traces(self,oname = None):
 		n = self.ncolors
 		if not self.data.d is None:
 			dd = self.data.d.copy()
@@ -689,7 +689,10 @@ class plotter_gui(ui_general.gui):
 			for i in range(n):
 				q[i::n] = dd[:,i]
 
-			oname = QFileDialog.getSaveFileName(self, 'Export Traces', '_traces.dat','*.dat')
+			if oname is None:
+				oname = QFileDialog.getSaveFileName(self, 'Export Traces', '_traces.dat','*.dat')
+			else:
+				oname = [oname]
 			if oname[0] != "":
 				try:
 					np.savetxt(oname[0],q.T,delimiter=',')

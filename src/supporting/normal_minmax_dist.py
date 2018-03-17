@@ -9,37 +9,37 @@ import numba as nb
 ## where F(x) is the CDF,
 ## and f(x) is the PDF of the regular distribution (i.e., Normal here...)
 
-@nb.jit("double[:](double[:],double,double)",nopython=True)
+# @nb.jit("double[:](double[:],double,double)",nopython=True)
 def lnp_normal(x,mu,var):
 	y = np.log(2.*np.pi) + np.log(var) + (x-mu)**2./var
 	return -.5 * y * (var > 0.)
 
-@nb.jit("double[:](double[:],double,double)",nopython=True)
+# @nb.jit("double[:](double[:],double,double)",nopython=True)
 def p_normal(x,mu,var):
 	return np.exp(lnp_normal(x,mu,var))
 
-@nb.jit("double[:](double[:],int32,double,double)",nopython=True)
+# @nb.jit("double[:](double[:],int32,double,double)",nopython=True)
 def lnp_normal_min(x,n,mu,var):
 	prec = 1./var
 	y = .5+.5*erf(-(x-mu)*np.sqrt(prec/2.))
 	return (n-1.)*np.log(y) + np.log(float(n)) + lnp_normal(x,mu,var)
 
-@nb.jit("double[:](double[:],int32,double,double)",nopython=True)
+# @nb.jit(["double[:](double[:],int32,double,double)","float32[:](float32[:],int32,double,double)"],nopython=True)
 def lnp_normal_max(x,n,mu,var):
 	prec = 1./var
 	y = .5+.5*erf((x-mu)*np.sqrt(prec/2.))
 	return (n-1.)*np.log(y) + np.log(float(n)) + lnp_normal(x,mu,var)
 
-@nb.jit("double[:](double[:],int32,double,double)",nopython=True)
+# @nb.jit("double[:](double[:],int32,double,double)",nopython=True)
 def p_normal_max(x,n,mu,var):
 	return np.exp(lnp_normal_max(x,n,mu,var))
 
-@nb.jit("double[:](double[:],int32,double,double)",nopython=True)
+# @nb.jit("double[:](double[:],int32,double,double)",nopython=True)
 def p_normal_min(x,n,mu,var):
 	return np.exp(lnp_normal_min(x,n,mu,var))
 
 ##### Moments
-@nb.jit("double[:](double[:],int32,double,double,double)",nopython=True)
+# @nb.jit("double[:](double[:],int32,double,double,double)",nopython=True)
 def normal_order_stat(r,n,mu,var,alpha=.375):
 	#### Approximate formula is from:
 	# Algorithm AS 177: Expected Normal Order Statistics (Exact and Approximate)
@@ -50,7 +50,7 @@ def normal_order_stat(r,n,mu,var,alpha=.375):
 
 	return mu + ndtri((r-alpha)/(float(n)-2.*alpha+1.))*np.sqrt(var)
 
-@nb.jit(nopython=True)
+# @nb.jit(nopython=True)
 def _get_alpha(n):
 	### Numerical minimization of Monte Carlo samples gave me:
 	##  n | n^2 |  \alpha
@@ -77,13 +77,13 @@ def _get_alpha(n):
 
 #### Estimations
 
-@nb.jit("double(int32,double)",nopython=True)
+# @nb.jit("double(int32,double)",nopython=True)
 def _estimate_mu(n,var):
 	alpha = _get_alpha(float(n))
 	a = np.array((float(n)-alpha)/(float(n)-2.*alpha+1.)).reshape(1)
 	return ndtri(a)[0]*np.sqrt(var)
 
-@nb.jit("double(int32)",nopython=True)
+# @nb.jit("double(int32)",nopython=True)
 def _estimate_var(n):
 	### Parameters from numerical optimization of Monte Carlo Samples
 	# From guessing the form: (a+b/n)/(n*ln(n)), which seems to linearize well
@@ -94,14 +94,24 @@ def _estimate_var(n):
 	return y
 
 
-@nb.jit("double[:](double[:],int32)",nopython=True)
+# @nb.jit(["double[:](double[:],int32)","double[:](float32[:],int64)"],nopython=True)
 def estimate_from_min(d,n):
 	v = np.var(d)  * _estimate_var(n)
 	m = np.mean(d) + _estimate_mu(n,v)
 	return np.array((m,v))
 
-@nb.jit("double[:](double[:],int32)",nopython=True)
+# @nb.jit(["double[:](double[:],int32)","double[:](float32[:],int64)"],nopython=True)
 def estimate_from_max(d,n):
 	v = np.var(d)  * _estimate_var(n)
 	m = np.mean(d) - _estimate_mu(n,v)
 	return np.array((m,v))
+
+
+def backout_var_fixed_m(d,n):
+	m = 0.
+	xbar = np.mean(d)
+
+	alpha = _get_alpha(float(n))
+	a = np.array((float(n)-alpha)/(float(n)-2.*alpha+1.)).reshape(1)
+
+	return (xbar/ndtri(a)[0])**2.

@@ -51,6 +51,8 @@ class gui(QMainWindow):
 		if not main_widget is None:
 			self.setCentralWidget(main_widget)
 
+		self.closeEvent = self.safe_close
+
 		self.init_menus()
 		self.init_docks()
 		self.init_statusbar()
@@ -187,7 +189,10 @@ class gui(QMainWindow):
 		else:
 			self.showFullScreen()
 
-	def closeEvent(self,event):
+	def unsafe_close(self,event):
+		event.accept()
+
+	def safe_close(self,event):
 		# event.ignore()
 		reply = QMessageBox.question(self,"Quit?","Are you sure you want to quit?",QMessageBox.Yes | QMessageBox.No)
 		if reply == QMessageBox.Yes:

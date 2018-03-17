@@ -66,7 +66,6 @@ class dock_transform(QWidget):
 				m = 10
 				gx,gy = np.mgrid[regions[0][0][0]:regions[0][0][1]:m,regions[0][1][0]:regions[0][1][1]:m]
 				g = np.array((gx.flatten(),gy.flatten()))
-				print g.shape
 				out = [g[1],g[0]]
 				for j in range(1,n):
 					o = self.transforms[0][j](g.T).T
