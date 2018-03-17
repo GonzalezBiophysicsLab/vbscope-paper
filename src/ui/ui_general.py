@@ -1,6 +1,10 @@
 from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
+
+def handler(msg_type, msg_log_context, msg_string):
+	pass
+qInstallMessageHandler(handler)
 
 ## Force Qt5 for matplotlib
 try:

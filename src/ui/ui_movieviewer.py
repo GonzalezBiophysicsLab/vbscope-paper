@@ -79,7 +79,7 @@ class movie_viewer(gui):
 			self.menu_movie.addAction(self.docks[mm][0].toggleViewAction())
 
 
-	def load(self,fname=None):
+	def load(self,event=None,fname=None):
 		self.docks['play'][1].stop_playing()
 		if fname is None:
 			fname = QFileDialog.getOpenFileName(self,'Choose Movie to load','./')
