@@ -384,11 +384,14 @@ class traj_container():
 		## number (soft) of datapoints that aren't bg class
 		self.deadprob = p.sum(-1)[1]
 
-	def remove_dead(self,threshold = None):
+	def remove_dead(self,event=None,threshold = None):
+		print threshold
 		if threshold is None:
 			threshold,success2 = QInputDialog.getDouble(self.gui,"Soft Frame Cutoff","Soft number of frames with signal required to keep a trajectory",value=20.,min=0.,max=self.d.shape[2],decimals=3)
+			print '1'
 		else:
 			success2 = True
+			print '2'
 		if success2:
 			self.posterior_sum()
 			keep = self.deadprob > threshold
