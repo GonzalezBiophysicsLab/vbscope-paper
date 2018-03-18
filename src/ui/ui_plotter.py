@@ -165,7 +165,7 @@ class plotter_gui(ui_general.gui):
 		self.data.d = data
 
 		## Guess at good y-limits for the plot
-		self.plot.yminmax = np.percentile(self.data.d.flatten(),[.1,99.9])
+		self.plot.yminmax = np.percentile(self.data.d.flatten()[np.isfinite(self.data.d.flatten())],[.1,99.9])
 		self.le_min.setText(str(self.plot.yminmax[0]))
 		self.le_max.setText(str(self.plot.yminmax[1]))
 
