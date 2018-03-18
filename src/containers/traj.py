@@ -15,6 +15,8 @@ class traj_container():
 		self.class_list = np.array((()))
 		self.fret = np.array(())
 
+		self.deadprob = None
+
 	def cross_corr_order(self):
 
 		x = self.d[:,0] #- self.d[:,0].mean(1)[:,None]
@@ -48,6 +50,27 @@ class traj_container():
 			except:
 				pass
 			self.safe_hmm()
+
+	def cull_min(self):
+		thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Min","Remove traces with values less than:",value=-10000)
+		if success:
+			cut = np.min(self.d,axis=(1,2)) > thresh
+			pbt = self.pb_list.copy()
+			pret = self.pre_list.copy()
+
+			d = self.d[cut]
+			pbt = pbt[cut]
+			pret = pret[cut]
+			self.gui.plot.index = 0
+			self.gui.initialize_data(d,sort=False)
+			self.pb_list = pbt
+			self.pre_list = pret
+			self.gui.plot.initialize_plots()
+			self.gui.initialize_sliders()
+
+			msg = "Cull traces: kept %d out of %d = %f %%, with a value less than %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size),thresh)
+			self.gui.log(msg,True)
+			self.gui.update_display_traces()
 
 	## Remove trajectories with number of kept-frames < threshold
 	def cull_pb(self):
@@ -339,9 +362,10 @@ class traj_container():
 			## cleanup estimate
 			dr = dd[dd > (m-ss*np.sqrt(v))]
 			dr = dr[dr < (m+ss*np.sqrt(v))]
-			m = np.median(dr)
-			# v = backout_var_fixed_m(dd.min(1),dd.shape[1])
-			v = np.square(m - np.percentile(dr,50.0 - 68.27/2))
+			if dr.size > 0:
+				m = np.median(dr)
+				# v = backout_var_fixed_m(dd.min(1),dd.shape[1])
+				v = np.square(m - np.percentile(dr,50.0 - 68.27/2))
 
 			m1 = np.median(dd[dd > m + ss*np.sqrt(v)])
 			v1 = np.var(dd[dd > m + ss*np.sqrt(v)])
@@ -385,18 +409,17 @@ class traj_container():
 		self.deadprob = p.sum(-1)[1]
 
 	def remove_dead(self,event=None,threshold = None):
-		print threshold
 		if threshold is None:
 			threshold,success2 = QInputDialog.getDouble(self.gui,"Soft Frame Cutoff","Soft number of frames with signal required to keep a trajectory",value=20.,min=0.,max=self.d.shape[2],decimals=3)
-			print '1'
 		else:
 			success2 = True
-			print '2'
 		if success2:
 			self.posterior_sum()
+			dp  = self.deadprob.copy()
 			keep = self.deadprob > threshold
 			self.gui.plot.index = 0
 			self.gui.initialize_data(self.d[keep])
+			self.gui.data.deadprob = dp
 			self.gui.plot.initialize_plots()
 			self.gui.initialize_sliders()
 			self.gui.log('Remove Dead Frames: %d traces with less than %d total frames in the summed channel removed'%((keep==0).sum(),threshold),True)

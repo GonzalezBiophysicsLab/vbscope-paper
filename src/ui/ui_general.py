@@ -185,6 +185,27 @@ class gui(QMainWindow):
 		self.resize(self.prefs['ui_width'],self.prefs['ui_height'])
 		self.setWindowTitle(self.app_name)
 
+	def quicksafe_load(self,fname):
+		import numpy as np
+		try:
+			f = open(fname,'r')
+			l = f.readline()
+			f.close()
+			if l.count(',') > 0:
+				delim = ','
+			else:
+				delim = ' '
+
+			f = open(fname,'r')
+			d = []
+			for line in f:
+				d.append([float(n) for n in line.split(delim)])
+			return np.array(d)
+		except:
+			return np.loadtxt(fname)
+
+		# return np.loadtxt(fname,delimiter=delim)
+
 ################################################################################
 
 	def full_screen(self):

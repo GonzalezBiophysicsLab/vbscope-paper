@@ -178,7 +178,10 @@ class plotter_gui(ui_general.gui):
 		self.data.pre_list = np.zeros(self.data.d.shape[0],dtype='i')
 		self.data.pb_list = self.data.pre_list.copy() + self.data.d.shape[2]
 		self.data.class_list = np.zeros(self.data.d.shape[0])
-#
+
+		self.data.deadprob = np.zeros(self.data.pre_list.size)
+
+
 	## Setup the menu items at the top
 	def initialize_menubar(self):
 		## turn off old load action
@@ -222,6 +225,8 @@ class plotter_gui(ui_general.gui):
 		menu_tools = self.menubar.addMenu('Tools')
 		tools_cullpb = QAction('Cull PB', self)
 		tools_cullpb.triggered.connect(self.data.cull_pb)
+		tools_cullmin = QAction('Cull minimums', self)
+		tools_cullmin.triggered.connect(self.data.cull_min)
 		tools_cullphotons = QAction('Cull Photons',self)
 		tools_cullphotons.triggered.connect(self.data.cull_photons)
 		tools_step = QAction('Photobleach - Step',self)
@@ -237,7 +242,7 @@ class plotter_gui(ui_general.gui):
 		tools_hmm = QAction('HMM',self)
 		tools_hmm.triggered.connect(self.data.run_hmm)
 
-		for f in [tools_cullpb,tools_cullphotons,tools_step,tools_var,tools_remove,tools_dead,tools_hmm]:
+		for f in [tools_cullpb,tools_cullmin,tools_cullphotons,tools_step,tools_var,tools_remove,tools_dead,tools_hmm]:
 			menu_tools.addAction(f)
 #
 		### plots
@@ -416,7 +421,7 @@ class plotter_gui(ui_general.gui):
 ################################################################################
 
 	def update_display_traces(self):
-		self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
+		self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} - {n4:2f}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), n4=self.data.deadprob[self.plot.index], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
 
 	def classes_get_checked(self):
 		checked = np.zeros(self.data.d.shape[0],dtype='bool')
@@ -458,12 +463,14 @@ class plotter_gui(ui_general.gui):
 			cs = []
 			for i in range(len(ltraj)):
 				try:
-					d = np.loadtxt(ltraj[i],delimiter=',').T
+					# d = np.loadtxt(ltraj[i],delimiter=',').T
+					d = self.quicksafe_load(ltraj[i]).T
 					dd = np.array([d[j::ncolors] for j in range(ncolors)])
 					d = np.moveaxis(dd,1,0)
 
 					if not lclass[i] is None:
-						c = np.loadtxt(lclass[i],delimiter=',').astype('i')
+						# c = np.loadtxt(lclass[i],delimiter=',').astype('i')
+						c = self.quicksafe_load(lclass[i]).astype('i')
 					else:
 						c = np.zeros((d.shape[0],1+2*ncolors),dtype='i')
 						c[:,2::2] = d.shape[2]
@@ -538,7 +545,8 @@ class plotter_gui(ui_general.gui):
 				ncolors = 2
 
 			try:
-				d = np.loadtxt(fname,delimiter=',').T
+				# d = np.loadtxt(fname,delimiter=',').T
+				d = self.quicksafe_load(fname).T
 				dd = np.array([d[i::ncolors] for i in range(ncolors)])
 				d = np.moveaxis(dd,1,0)
 				success = True
@@ -569,7 +577,8 @@ class plotter_gui(ui_general.gui):
 		if not fname is "":
 			success = False
 			try:
-				d = np.loadtxt(fname,delimiter=',').astype('i')
+				# d = np.loadtxt(fname,delimiter=',').astype('i')
+				d = self.quicksafe_load(fname).astype('i')
 				if d.shape[0] == self.data.d.shape[0]:
 					success = True
 			except:

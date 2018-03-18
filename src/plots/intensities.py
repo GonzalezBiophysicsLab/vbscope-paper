@@ -31,6 +31,7 @@ def plot(gui):
 	loghist = True if (popplot.prefs['hist_logy'] == 'True' or popplot.prefs['hist_logy'] is True) else False
 
 	m0s,v0s,m1s,v1s,fracs = gui.data.estimate_mvs()
+	gui.data.posterior_sum()
 
 	for i in range(gui.ncolors):
 		dd = d[:,i]
@@ -63,6 +64,10 @@ def plot(gui):
 		aa.set_yticks(())
 	for aa in popplot.ax:
 		aa.set_xlim(popplot.prefs['intensity_min'],popplot.prefs['intensity_max'])
+
+
+
+
 
 
 
