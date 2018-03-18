@@ -227,6 +227,8 @@ class plotter_gui(ui_general.gui):
 		tools_cullpb.triggered.connect(self.data.cull_pb)
 		tools_cullmin = QAction('Cull minimums', self)
 		tools_cullmin.triggered.connect(self.data.cull_min)
+		tools_cullmax = QAction('Cull maximums', self)
+		tools_cullmax.triggered.connect(self.data.cull_max)
 		tools_cullphotons = QAction('Cull Photons',self)
 		tools_cullphotons.triggered.connect(self.data.cull_photons)
 		tools_step = QAction('Photobleach - Step',self)
@@ -242,7 +244,7 @@ class plotter_gui(ui_general.gui):
 		tools_hmm = QAction('HMM',self)
 		tools_hmm.triggered.connect(self.data.run_hmm)
 
-		for f in [tools_cullpb,tools_cullmin,tools_cullphotons,tools_step,tools_var,tools_remove,tools_dead,tools_hmm]:
+		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_var,tools_remove,tools_dead,tools_hmm]:
 			menu_tools.addAction(f)
 #
 		### plots

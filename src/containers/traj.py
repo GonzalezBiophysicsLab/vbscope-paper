@@ -72,6 +72,27 @@ class traj_container():
 			self.gui.log(msg,True)
 			self.gui.update_display_traces()
 
+	def cull_max(self):
+		thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Max","Remove traces with values greater than:",value=65535)
+		if success:
+			cut = np.min(self.d,axis=(1,2)) < thresh
+			pbt = self.pb_list.copy()
+			pret = self.pre_list.copy()
+
+			d = self.d[cut]
+			pbt = pbt[cut]
+			pret = pret[cut]
+			self.gui.plot.index = 0
+			self.gui.initialize_data(d,sort=False)
+			self.pb_list = pbt
+			self.pre_list = pret
+			self.gui.plot.initialize_plots()
+			self.gui.initialize_sliders()
+
+			msg = "Cull traces: kept %d out of %d = %f %%, with a value greater than %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size),thresh)
+			self.gui.log(msg,True)
+			self.gui.update_display_traces()
+
 	## Remove trajectories with number of kept-frames < threshold
 	def cull_pb(self):
 		if not self.d is None and self.gui.ncolors == 2:
