@@ -75,7 +75,7 @@ class traj_container():
 	def cull_max(self):
 		thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Max","Remove traces with values greater than:",value=65535)
 		if success:
-			cut = np.min(self.d,axis=(1,2)) < thresh
+			cut = np.max(self.d,axis=(1,2)) < thresh
 			pbt = self.pb_list.copy()
 			pret = self.pre_list.copy()
 
