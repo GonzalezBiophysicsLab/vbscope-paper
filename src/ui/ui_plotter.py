@@ -528,7 +528,7 @@ class plotter_gui(ui_general.gui):
 					self.log("Failed to load HMM result",True)
 
 	## Try to load trajectories from a vbscope style file (commas)
-	def load_traces(self,checked=False,filename=None):
+	def load_traces(self,event = None,checked=False,filename=None):
 		if filename is None:
 			fname,_ = QFileDialog.getOpenFileName(self,'Choose file to load traces','./')#,filter='TIF File (*.tif *.TIF)')
 			if fname is u"":
@@ -685,7 +685,7 @@ class plotter_gui(ui_general.gui):
 						QMessageBox.critical(self,'Export Processed Traces','There was a problem trying to export the processed traces')
 
 	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)
-	def export_traces(self,oname = None):
+	def export_traces(self,event=None,oname = None):
 		n = self.ncolors
 		if not self.data.d is None:
 			dd = self.data.d.copy()
