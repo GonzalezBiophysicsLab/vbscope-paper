@@ -216,8 +216,9 @@ class traj_plot_container():
 		self.canvas.update()
 		self.canvas.flush_events()
 
-		# self.update_axes(t)
-		# self.draw()
+		if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau']:
+			self.update_axes()
+		self.draw()
 
 	## Plot initial data to set aesthetics
 	def initialize_plots(self):

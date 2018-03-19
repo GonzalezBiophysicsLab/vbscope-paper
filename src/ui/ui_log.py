@@ -36,6 +36,7 @@ class logger(QMainWindow):
 		qw.setLayout(vb)
 
 		self.setCentralWidget(qw)
+		self.resize(800,300)
 
 	def log(self,line,timestamp = False):
 		if timestamp:

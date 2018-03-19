@@ -43,6 +43,7 @@ class preferences(QMainWindow):
 
 		self.setCentralWidget(self.viewer)
 		# self.adjustSize()
+		self.resize(300,400)
 
 	def edit(self,a):
 

@@ -332,12 +332,12 @@ class plotter_gui(ui_general.gui):
 			ph.raise_()
 		except:
 			self.popout_plots[plot_handle] = popout_plot_container(nplots_x, nplots_y,self)
-			self.resize(int(dprefs['fig_width']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio()),int(dprefs['fig_height']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio()))
 			self.popout_plots[plot_handle].setWindowTitle(plot_name_str)
 			if not dprefs is None:
 				self.popout_plots[plot_handle].ui._prefs.combine_prefs(dprefs)
 			if not callback is None:
 				self.popout_plots[plot_handle].ui.setcallback(callback)
+			self.popout_plots[plot_handle].resize(int(self.popout_plots[plot_handle].ui.prefs['fig_width']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+150,int(self.popout_plots[plot_handle].ui.prefs['fig_height']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio()))
 			self.popout_plots[plot_handle].show()
 			self.popout_plots[plot_handle].ui.clf()
 
