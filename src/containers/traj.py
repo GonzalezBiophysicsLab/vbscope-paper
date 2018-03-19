@@ -210,7 +210,7 @@ class traj_container():
 		from ..supporting import simul_vbem_hmm as hmm
 
 		if not self.d is None and self.gui.ncolors == 2:
-			if self.gui.prefs['hmm_binding_expt'] == 'True':
+			if self.gui.prefs['hmm_binding_expt'] is True:
 				nstates = 2
 				success = True
 			else:
@@ -220,11 +220,11 @@ class traj_container():
 				y = []
 				checked = self.gui.classes_get_checked()
 				ran = []
-				if self.gui.prefs['hmm_binding_expt'] == 'True':
+				if self.gui.prefs['hmm_binding_expt'] is True:
 					z = self.get_fluor().sum(1)
 				for i in range(self.fret.shape[1]):
 					if checked[i]:
-						if self.gui.prefs['hmm_binding_expt'] == 'True':
+						if self.gui.prefs['hmm_binding_expt'] is True:
 							yy = z[i,self.pre_list[i]:self.pb_list[i]]
 						else:
 							yy = self.fret[0,i,self.pre_list[i]:self.pb_list[i]]
@@ -236,7 +236,7 @@ class traj_container():
 							ran.append(i)
 				nrestarts = self.gui.prefs['hmm_nrestarts']
 				priors = [hmm.initialize_priors(y,nstates,flag_vbfret=False,flag_custom=True) for _ in range(nrestarts)]
-				if self.gui.prefs['hmm_binding_expt'] == 'True':
+				if self.gui.prefs['hmm_binding_expt'] is True:
 					for iii in range(nrestarts):
 						priors[iii][0] = np.array((0,1000.)) ## m
 						priors[iii][1] = np.ones(2) ## beta
@@ -279,7 +279,7 @@ class traj_container():
 						QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
 						self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
 
-				if self.gui.prefs['hmm_binding_expt'] == 'True':
+				if self.gui.prefs['hmm_binding_expt'] is True:
 					oname = QFileDialog.getSaveFileName(self.gui, 'Save Chopped Traces', '_chopped.dat','*.dat')
 					if oname[0] == "":
 						return
@@ -358,7 +358,7 @@ class traj_container():
 		for i in range(self.gui.ncolors):
 			for j in range(self.gui.ncolors):
 				q[:,j] -= bts[i,j]*q[:,i]
-		if self.gui.prefs['hmm_bound_dynamics'] == 'True':
+		if self.gui.prefs['hmm_bound_dynamics'] is True:
 			return q[:,1,:]
 		else:
 			return q

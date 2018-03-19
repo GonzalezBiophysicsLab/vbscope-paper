@@ -28,7 +28,7 @@ def plot(gui):
 
 	d = gui.data.get_fluor() ## N,C,D
 
-	loghist = True if (popplot.prefs['hist_logy'] == 'True' or popplot.prefs['hist_logy'] is True) else False
+	loghist = True if (popplot.prefs['hist_logy'] is True) else False
 
 	m0s,v0s,m1s,v1s,fracs = gui.data.estimate_mvs()
 	gui.data.posterior_sum()

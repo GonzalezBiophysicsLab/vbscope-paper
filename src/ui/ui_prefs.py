@@ -57,10 +57,10 @@ class preferences(QMainWindow):
 			elif type(old) is np.ndarray:
 				self.gui.prefs[pref][a.column()] = float(a.text())
 			elif type(old) is list:
-				self.gui.prefs[pref][a.column()] = a.text()
+				self.gui.prefs[pref][a.column()] = type(old)(a.text())
 
 			else:
-				self.gui.prefs[pref] = a.text()
+				self.gui.prefs[pref] = type(old)(a.text())
 
 			## colormap safety
 			if pref == 'plot_colormap':

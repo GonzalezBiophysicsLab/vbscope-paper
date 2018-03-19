@@ -43,7 +43,7 @@ def plot(gui):
 
 	if gui.ncolors == 2:
 		fpb = gui.data.get_plot_data()[0]
-		if popplot.prefs['synchronize_start_flag'] == 'True':
+		if popplot.prefs['synchronize_start_flag'] is True:
 			for i in range(fpb.shape[0]):
 				y = fpb[i].copy()
 				fpb[i] = np.nan
@@ -54,7 +54,7 @@ def plot(gui):
 
 		elif not gui.data.hmm_result is None:
 			state = popplot.prefs['hmm_syncstate']
-			if state < gui.data.hmm_result.nstates:	
+			if state < gui.data.hmm_result.nstates:
 				v = gui.data.get_viterbi_data()
 				vv = np.array([[v[i,:-1],v[i,1:]] for i in range(v.shape[0])])
 				oo = []
@@ -109,7 +109,7 @@ def plot(gui):
 		vmin = popplot.prefs['color_floor']
 		vmax = popplot.prefs['color_ceiling']
 
-		if popplot.prefs['plotter_2d_normalizecolumn'] == 'True':
+		if popplot.prefs['plotter_2d_normalizecolumn'] is True:
 			z /= np.nanmax(z,axis=1)[:,None]
 		else:
 			z /= np.nanmax(z)

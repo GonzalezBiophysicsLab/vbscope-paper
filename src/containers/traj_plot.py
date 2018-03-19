@@ -9,6 +9,8 @@ from matplotlib.widgets import  RectangleSelector
 from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget
 
 import numpy as np
+from scipy.ndimage import gaussian_filter1d
+from scipy.signal import wiener
 
 class traj_plot_container():
 	'''
@@ -95,6 +97,11 @@ class traj_plot_container():
 			for j in range(self.gui.ncolors):
 				intensities[j] -= bts[i,j]*intensities[i]
 
+		if self.gui.prefs['plotter_wiener_smooth'] is True:
+			for i in range(intensities.shape[0]):
+				intensities[i] = wiener(intensities[i])
+			# intensities = gaussian_filter1d(intensities,self.gui.prefs['plotter_smooth_sigma'],axis=1)
+
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
 
 		downsample = int(self.gui.prefs['downsample'])
@@ -148,7 +155,7 @@ class traj_plot_container():
 		if self.gui.data.hmm_result.ran.count(self.index)>0:
 			ii = self.gui.data.hmm_result.ran.index(self.index)
 			vitpath = self.gui.data.hmm_result.viterbi[ii]
-			if self.gui.prefs['hmm_binding_expt'] == 'True':
+			if self.gui.prefs['hmm_binding_expt'] is True:
 				state_means = np.array((0.,1.))
 			else:
 				state_means = self.gui.data.hmm_result.m
