@@ -314,6 +314,7 @@ class plotter_gui(ui_general.gui):
 		_make_shortcut(Qt.Key_8,lambda : self.callback_keypress(8))
 		_make_shortcut(Qt.Key_9,lambda : self.callback_keypress(9))
 		_make_shortcut(Qt.Key_0,lambda : self.callback_keypress(0))
+		_make_shortcut(Qt.Key_R,lambda : self.callback_keypress('r'))
 
 	def initialize_plot_docks(self):
 		self.popout_plots = {
@@ -373,6 +374,10 @@ class plotter_gui(ui_general.gui):
 			self.plot.index = self.data.d.shape[0]-1
 		self.slider_select.setValue(self.plot.index)
 
+		if kk == 'r':
+			self.data.pre_list[self.plot.index] = 0
+			self.data.pb_list[self.plot.index] = self.data.d.shape[2]-1
+
 		for i in range(10):
 			if i == kk:
 				self.data.class_list[self.plot.index] = kk
@@ -410,7 +415,7 @@ class plotter_gui(ui_general.gui):
 				self.data.safe_hmm()
 				self.plot.update_plots()
 			## Middle click - reset pre and post points to calculated values
-			if event.button == 2 and self.plots.toolbar._active is None:
+			if event.button == 2 and self.plot.toolbar._active is None:
 				if self.ncolors == 2:
 					from ..supporting.photobleaching import get_point_pbtime
 					self.data.pre_list[self.plot.index] = 0
