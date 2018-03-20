@@ -51,8 +51,11 @@ class traj_container():
 				pass
 			self.safe_hmm()
 
-	def cull_min(self):
-		thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Min","Remove traces with values less than:",value=-10000)
+	def cull_min(self,event=None,thresh=None):
+		if thresh is None:
+			thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Min","Remove traces with values less than:",value=-10000)
+		else:
+			success = True
 		if success:
 			cut = np.min(self.d,axis=(1,2)) > thresh
 			pbt = self.pb_list.copy()
@@ -72,8 +75,11 @@ class traj_container():
 			self.gui.log(msg,True)
 			self.gui.update_display_traces()
 
-	def cull_max(self):
-		thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Max","Remove traces with values greater than:",value=65535)
+	def cull_max(self,event=None,thresh=None):
+		if thresh is None:
+			thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Max","Remove traces with values greater than:",value=65535)
+		else:
+			success = True
 		if success:
 			cut = np.max(self.d,axis=(1,2)) < thresh
 			pbt = self.pb_list.copy()
