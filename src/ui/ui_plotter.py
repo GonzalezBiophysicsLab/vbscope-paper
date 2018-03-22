@@ -540,7 +540,7 @@ class plotter_gui(ui_general.gui):
 					self.log("Failed to load HMM result",True)
 
 	## Try to load trajectories from a vbscope style file (commas)
-	def load_traces(self,filename=None,checked=False):
+	def load_traces(self,filename=None,checked=False,ncolors=2):
 		if filename is None:
 			fname,_ = QFileDialog.getOpenFileName(self,'Choose file to load traces','./')#,filter='TIF File (*.tif *.TIF)')
 			if fname is u"":
@@ -554,7 +554,6 @@ class plotter_gui(ui_general.gui):
 				ncolors,success2 = QInputDialog.getInt(self,"Number of Color Channels","Number of Color Channels",value=2,min=1)
 			else:
 				success2 = True
-				ncolors = 2
 
 			try:
 				# d = np.loadtxt(fname,delimiter=',').T
