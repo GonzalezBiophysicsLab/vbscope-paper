@@ -512,7 +512,10 @@ class plotter_gui(ui_general.gui):
 				self.data.pb_list = cc[:,2::2].min(1)
 				self.plot.update_plots()
 
-				self.ui_batch.close()
+				try:
+					self.ui_batch.close()
+				except:
+					pass
 				self.update_display_traces()
 				msg = "Loaded %d pairs of files containing a total of %d trajectories."%(len(ds),dd.shape[0])
 				# QMessageBox.information(self,"Batch Load",msg)
