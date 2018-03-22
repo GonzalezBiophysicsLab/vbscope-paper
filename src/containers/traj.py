@@ -52,12 +52,12 @@ class traj_container():
 			self.safe_hmm()
 
 	def cull_min(self,threshold=None):
-		if thresh is None:
-			thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Min","Remove traces with values less than:",value=-10000)
+		if threshold is None:
+			threshold,success = QInputDialog.getDouble(self.gui,"Remove Traces with Min","Remove traces with values less than:",value=-10000)
 		else:
 			success = True
 		if success:
-			cut = np.min(self.d,axis=(1,2)) > thresh
+			cut = np.min(self.d,axis=(1,2)) > threshold
 			pbt = self.pb_list.copy()
 			pret = self.pre_list.copy()
 
@@ -71,17 +71,17 @@ class traj_container():
 			self.gui.plot.initialize_plots()
 			self.gui.initialize_sliders()
 
-			msg = "Cull traces: kept %d out of %d = %f %%, with a value less than %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size),thresh)
+			msg = "Cull traces: kept %d out of %d = %f %%, with a value less than %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size),threshold)
 			self.gui.log(msg,True)
 			self.gui.update_display_traces()
 
-	def cull_max(self,event=None,thresh=None):
-		if thresh is None:
-			thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Max","Remove traces with values greater than:",value=65535)
+	def cull_max(self,event=None,threshold=None):
+		if threshold is None:
+			threshold,success = QInputDialog.getDouble(self.gui,"Remove Traces with Max","Remove traces with values greater than:",value=65535)
 		else:
 			success = True
 		if success:
-			cut = np.max(self.d,axis=(1,2)) < thresh
+			cut = np.max(self.d,axis=(1,2)) < threshold
 			pbt = self.pb_list.copy()
 			pret = self.pre_list.copy()
 
@@ -95,7 +95,7 @@ class traj_container():
 			self.gui.plot.initialize_plots()
 			self.gui.initialize_sliders()
 
-			msg = "Cull traces: kept %d out of %d = %f %%, with a value greater than %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size),thresh)
+			msg = "Cull traces: kept %d out of %d = %f %%, with a value greater than %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size),threshold)
 			self.gui.log(msg,True)
 			self.gui.update_display_traces()
 
