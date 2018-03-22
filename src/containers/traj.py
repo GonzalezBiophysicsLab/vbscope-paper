@@ -51,7 +51,7 @@ class traj_container():
 				pass
 			self.safe_hmm()
 
-	def cull_min(self,thresh=None):
+	def cull_min(self,threshold=None):
 		if thresh is None:
 			thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Min","Remove traces with values less than:",value=-10000)
 		else:
