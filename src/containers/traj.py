@@ -51,7 +51,7 @@ class traj_container():
 				pass
 			self.safe_hmm()
 
-	def cull_min(self,event=None,thresh=None):
+	def cull_min(self,thresh=None):
 		if thresh is None:
 			thresh,success = QInputDialog.getDouble(self.gui,"Remove Traces with Min","Remove traces with values less than:",value=-10000)
 		else:
@@ -122,11 +122,15 @@ class traj_container():
 			self.gui.log(msg,True)
 			self.gui.update_display_traces()
 
-	def cull_photons(self):
+	def cull_photons(self,color=None,threshold=None):
 		if not self.d is None:
 			combos = ['%d'%(i) for i in range(self.gui.ncolors)]
 			combos.append('0+1')
-			c,success1 = QInputDialog.getItem(self.gui,"Color","Choose Color channel",combos,editable=False)
+			if color is None:
+				c,success1 = QInputDialog.getItem(self.gui,"Color","Choose Color channel",combos,editable=False)
+			else:
+				c = color
+				success1 = True
 			if success1:
 				self.safe_hmm()
 				keep = np.zeros(self.d.shape[0],dtype='bool')
@@ -161,8 +165,10 @@ class traj_container():
 				# popplot.f.tight_layout()
 				# popplot.f.canvas.draw()
 
-
-				threshold,success2 = QInputDialog.getDouble(self.gui,"Photon Cutoff","Total number of photons required to keep a trajectory",value=1000.,min=0.,max=1e10,decimals=3)
+				if threshold is None:
+					threshold,success2 = QInputDialog.getDouble(self.gui,"Photon Cutoff","Total number of photons required to keep a trajectory",value=1000.,min=0.,max=1e10,decimals=3)
+				else:
+					success2 = True
  				if success2:
 					keep = y > threshold
 					d = self.d[keep]
@@ -212,7 +218,7 @@ class traj_container():
 		else:
 			return None
 
-	def run_hmm(self):
+	def run_hmm(self,nstates=None):
 		from ..supporting import simul_vbem_hmm as hmm
 
 		if not self.d is None and self.gui.ncolors == 2:
@@ -220,7 +226,10 @@ class traj_container():
 				nstates = 2
 				success = True
 			else:
-				nstates,success = QInputDialog.getInt(self.gui,"Number of HMM States","Number of HMM States",min=2)
+				if nstates is None:
+					nstates,success = QInputDialog.getInt(self.gui,"Number of HMM States","Number of HMM States",min=2)
+				else:
+					success = True
 			if success and nstates > 1:
 				self.update_fret()
 				y = []
@@ -329,10 +338,13 @@ class traj_container():
 					self.gui.log('Exported chopped traces as %s'%(oname[0]),True)
 
 
-	def remove_beginning(self):
+	def remove_beginning(self,nd=None):
 		if not self.d is None:
 			self.safe_hmm()
-			nd,success = QInputDialog.getInt(self.gui,"Remove Datapoints","Number of datapoints to remove starting from the beginning of the movie")
+			if nd is None:
+				nd,success = QInputDialog.getInt(self.gui,"Remove Datapoints","Number of datapoints to remove starting from the beginning of the movie")
+			else:
+				success = True
 			if success and nd > 1 and nd < self.d.shape[2]:
 
 				self.gui.plot.index = 0
@@ -435,7 +447,7 @@ class traj_container():
 		## number (soft) of datapoints that aren't bg class
 		self.deadprob = p.sum(-1)[1]
 
-	def remove_dead(self,event=None,threshold = None):
+	def remove_dead(self,threshold = None):
 		if threshold is None:
 			threshold,success2 = QInputDialog.getDouble(self.gui,"Soft Frame Cutoff","Soft number of frames with signal required to keep a trajectory",value=20.,min=0.,max=self.d.shape[2],decimals=3)
 		else:

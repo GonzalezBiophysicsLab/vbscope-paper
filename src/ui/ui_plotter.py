@@ -193,13 +193,13 @@ class plotter_gui(ui_general.gui):
 # 		### Load
 		menu_load = self.menubar.addMenu('Load')
 		load_load_traces = QAction('Load Traces', self, shortcut='Ctrl+O')
-		load_load_traces.triggered.connect(self.load_traces)
+		load_load_traces.triggered.connect(lambda event: self.load_traces())
 
 		load_load_classes = QAction('Load Classes', self, shortcut='Ctrl+P')
-		load_load_classes.triggered.connect(self.load_classes)
+		load_load_classes.triggered.connect(lambda event: self.load_classes())
 
 		load_load_hmm = QAction('Load HMM', self)
-		load_load_hmm.triggered.connect(self.load_hmm)
+		load_load_hmm.triggered.connect(lambda event: self.load_hmm())
 
 		load_batch = QAction('Batch Load',self, shortcut='Ctrl+B')
 		load_batch.triggered.connect(self.show_batch_load)
@@ -211,13 +211,13 @@ class plotter_gui(ui_general.gui):
 		menu_save = self.menubar.addMenu('Export')
 
 		export_traces = QAction('Save Traces', self, shortcut='Ctrl+S')
-		export_traces.triggered.connect(self.export_traces)
+		export_traces.triggered.connect(lambda event: self.export_traces())
 
 		export_processed_traces = QAction('Save Processed Traces', self)
-		export_processed_traces.triggered.connect(self.export_processed_traces)
+		export_processed_traces.triggered.connect(lambda event: self.export_processed_traces())
 
 		export_classes = QAction('Save Classes', self, shortcut='Ctrl+D')
-		export_classes.triggered.connect(self.export_classes)
+		export_classes.triggered.connect(lambda event: self.export_classes())
 
 		for f in [export_traces,export_classes,export_processed_traces]:
 			menu_save.addAction(f)
@@ -227,11 +227,11 @@ class plotter_gui(ui_general.gui):
 		tools_cullpb = QAction('Cull PB', self)
 		tools_cullpb.triggered.connect(self.data.cull_pb)
 		tools_cullmin = QAction('Cull minimums', self)
-		tools_cullmin.triggered.connect(self.data.cull_min)
+		tools_cullmin.triggered.connect(lambda event: self.data.cull_min())
 		tools_cullmax = QAction('Cull maximums', self)
-		tools_cullmax.triggered.connect(self.data.cull_max)
+		tools_cullmax.triggered.connect(lambda event: self.data.cull_max())
 		tools_cullphotons = QAction('Cull Photons',self)
-		tools_cullphotons.triggered.connect(self.data.cull_photons)
+		tools_cullphotons.triggered.connect(lambda event: self.data.cull_photons())
 		tools_step = QAction('Photobleach - Step',self)
 		tools_step.triggered.connect(self.data.photobleach_step)
 		tools_var = QAction('Remove all PB - Var',self)
@@ -239,11 +239,11 @@ class plotter_gui(ui_general.gui):
 		tools_var.setChecked(False)
 		self.pb_remove_check = tools_var
 		tools_remove = QAction('Remove From Beginning',self)
-		tools_remove.triggered.connect(self.data.remove_beginning)
+		tools_remove.triggered.connect(lambda event: self.data.remove_beginning())
 		tools_dead = QAction('Remove Dead Traces',self)
 		tools_dead.triggered.connect(self.data.remove_dead)
 		tools_hmm = QAction('HMM',self)
-		tools_hmm.triggered.connect(self.data.run_hmm)
+		tools_hmm.triggered.connect(lambda event: self.data.run_hmm())
 
 		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_var,tools_remove,tools_dead,tools_hmm]:
 			menu_tools.addAction(f)
@@ -465,8 +465,11 @@ class plotter_gui(ui_general.gui):
 
 ################################################################################
 
-	def load_batch(self,ltraj,lclass):
-		ncolors,success = QInputDialog.getInt(self,"Number of Color Channels","Number of Color Channels",value=2,min=1)
+	def load_batch(self,ltraj,lclass,ncolors = None):
+		if ncolors is None:
+			ncolors,success = QInputDialog.getInt(self,"Number of Color Channels","Number of Color Channels",value=2,min=1)
+		else:
+			success = True
 		if success:
 			ds = []
 			cs = []
@@ -512,16 +515,17 @@ class plotter_gui(ui_general.gui):
 				self.ui_batch.close()
 				self.update_display_traces()
 				msg = "Loaded %d pairs of files containing a total of %d trajectories."%(len(ds),dd.shape[0])
-				QMessageBox.information(self,"Batch Load",msg)
+				# QMessageBox.information(self,"Batch Load",msg)
 				self.log(msg,True)
 			else:
 				msg = "Could not find any traces in these files"
-				QMessageBox.critical(self,"Batch Load",msg)
+				# QMessageBox.critical(self,"Batch Load",msg)
 				self.log(msg,True)
 
-	def load_hmm(self):
+	def load_hmm(self, fname=None):
 		if not self.data.d is None:
-			fname,_ = QFileDialog.getOpenFileName(self,'Choose HMM result file','./')
+			if fname is None:
+				fname,_ = QFileDialog.getOpenFileName(self,'Choose HMM result file','./')
 			if fname != "":
 				try:
 				# if 1:
@@ -532,12 +536,11 @@ class plotter_gui(ui_general.gui):
 					self.plot.initialize_hmm_plot()
 					self.plot.update_plots()
 					self.log("Loaded HMM result from %s"%(fname),True)
-
 				except:
 					self.log("Failed to load HMM result",True)
 
 	## Try to load trajectories from a vbscope style file (commas)
-	def load_traces(self,event = None,checked=False,filename=None):
+	def load_traces(self,filename=None,checked=False):
 		if filename is None:
 			fname,_ = QFileDialog.getOpenFileName(self,'Choose file to load traces','./')#,filter='TIF File (*.tif *.TIF)')
 			if fname is u"":
@@ -575,7 +578,7 @@ class plotter_gui(ui_general.gui):
 		self.log("Could not load %s"%(fname),True)
 
 	## Try to load classes/bleach times from a vbscope style file (commas) (Nx5)
-	def load_classes(self,checked=False,filename=None):
+	def load_classes(self,filename=None,checked=False):
 		if filename is None:
 			fname,_ = QFileDialog.getOpenFileName(self,'Choose file to load classes','./')#,filter='TIF File (*.tif *.TIF)')
 			if fname is u"":
@@ -608,7 +611,7 @@ class plotter_gui(ui_general.gui):
 
 
 	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)
-	def export_processed_traces(self):
+	def export_processed_traces(self, format = None, oname = None):
 		n = self.ncolors
 		if not self.data.d is None:
 			dd = np.copy(self.data.d)
@@ -622,7 +625,11 @@ class plotter_gui(ui_general.gui):
 			checked = self.classes_get_checked()
 
 			combos = ['2D','1D','SMD']
-			c,success = QInputDialog.getItem(self,"Format","Choose Format of Exported Data",combos,editable=False)
+			if format is None:
+				c,success = QInputDialog.getItem(self,"Format","Choose Format of Exported Data",combos,editable=False)
+			else:
+				c = format
+				success = True
 			if success:
 					try:
 						if c == '1D':
@@ -638,7 +645,10 @@ class plotter_gui(ui_general.gui):
 										ds[k] = np.append(ds[k],dd[i,k,pre:post])
 									j += 1
 							q = np.vstack((identities,ds)).T
-							oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.dat','*.dat')
+							if oname is None:
+								oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.dat','*.dat')
+							else:
+								oname = [oname]
 							if oname[0] != "":
 								np.savetxt(oname[0],q,delimiter=',')
 								self.log("Exported as 1D",True)
@@ -658,7 +668,10 @@ class plotter_gui(ui_general.gui):
 							for i in range(n):
 								q[i::n] = dd[:,i]
 							q = q.T
-							oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.dat','*.dat')
+							if oname is None:
+								oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.dat','*.dat')
+							else:
+								oname = [oname]
 							if oname[0] != "":
 								np.savetxt(oname[0],q,delimiter=',')
 								self.log("Exported as 2D",True)
@@ -684,7 +697,10 @@ class plotter_gui(ui_general.gui):
 									o = np.array((spoofid,np.arange(post-pre),np.vstack((np.zeros(post-pre),dd[i,:,pre:post])).T,fake_attr),dtype=dt)
 									data.append(o)
 							q['data'] = np.hstack(data)
-							oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.mat','*.mat')
+							if oname is None:
+								oname = QFileDialog.getSaveFileName(self, 'Export Processed Traces', '_processedtraces.mat','*.mat')
+							else:
+								oname = [oname]
 							if oname[0] != "":
 								from scipy.io.matlab import savemat
 								savemat(oname[0],q)
@@ -694,7 +710,7 @@ class plotter_gui(ui_general.gui):
 						QMessageBox.critical(self,'Export Processed Traces','There was a problem trying to export the processed traces')
 
 	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)
-	def export_traces(self,event=None,oname = None):
+	def export_traces(self,oname = None):
 		n = self.ncolors
 		if not self.data.d is None:
 			dd = self.data.d.copy()
@@ -720,7 +736,7 @@ class plotter_gui(ui_general.gui):
 					QMessageBox.critical(self,'Export Traces',msg)
 
 	## Save classes/bleach times in the vbscope format (Nx5) (with commas)
-	def export_classes(self):
+	def export_classes(self,oname=None):
 		n = self.ncolors #number of colors
 		if not self.data.d is None:
 			q = np.zeros((self.data.d.shape[0],1+2*n),dtype='int')
@@ -731,7 +747,10 @@ class plotter_gui(ui_general.gui):
 			checked = self.classes_get_checked()
 			q = q[checked]
 
-			oname = QFileDialog.getSaveFileName(self, 'Export Classes/Cuts', '_classes.dat','*.dat')
+			if oname is None:
+				oname = QFileDialog.getSaveFileName(self, 'Export Classes/Cuts', '_classes.dat','*.dat')
+			else:
+				oname = [oname]
 			if oname[0] != "":
 				try:
 					np.savetxt(oname[0],q.astype('i'),delimiter=',')

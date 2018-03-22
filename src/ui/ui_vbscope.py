@@ -110,7 +110,7 @@ class vbscope_gui(movie_viewer):
 		plots.region.plot(self)
 
 
-	def load(self,event=None,fname=None):
+	def load(self,fname):
 		success = super(vbscope_gui, self).load(fname)
 		if success:
 			self.docks['spotfind'][1].setup_sliders()

@@ -2,9 +2,9 @@ from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProg
 from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
 
-# def handler(msg_type, msg_log_context, msg_string):
-	# pass
-# qInstallMessageHandler(handler)
+def handler(msg_type, msg_log_context, msg_string):
+	pass
+qInstallMessageHandler(handler)
 
 ## Force Qt5 for matplotlib
 try:
@@ -115,7 +115,7 @@ class gui(QMainWindow):
 		self.menu_file = self.menubar.addMenu('File')
 
 		file_load = QAction('Load', self, shortcut='Ctrl+O')
-		file_load.triggered.connect(self.load)
+		file_load.triggered.connect(lambda e: self.load())
 
 		file_log = QAction('Log', self,shortcut='F2')
 		file_log.setShortcutContext(Qt.ApplicationShortcut)
