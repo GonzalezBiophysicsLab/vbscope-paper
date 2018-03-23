@@ -19,7 +19,7 @@ class popout_plot_container(QMainWindow):
 		super(QMainWindow,self).__init__(parent)
 		self.ui = popout_plot_container_widget(nplots_x, nplots_y, self)
 		self.setCentralWidget(self.ui)
-		# self.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Expanding)
+		self.resizeDocks([self.ui.qd_prefs],[200],Qt.Horizontal)
 		self.show()
 
 	def closeEvent(self,event):
@@ -65,8 +65,8 @@ class popout_plot_container_widget(QWidget):
 
 		sp_fixed= QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 		sp_exp = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-		self.canvas.setSizePolicy(sp_fixed)
-		self.setSizePolicy(sp_exp)
+		# self.canvas.setSizePolicy(sp_fixed)
+		# self.setSizePolicy(sp_exp)
 
 		self.timer = None
 
@@ -97,6 +97,10 @@ class popout_plot_container_widget(QWidget):
 		self.setLayout(self.vbox)
 		self.f.tight_layout()
 
+		self.canvas.resizeEvent = lambda e: e.ignore()
+		self.f.resizeEvent = lambda e: e.ignore()
+		self.resizeEvent = lambda e: e.ignore()
+
 
 	def open_preferences(self):
 		try:
@@ -126,16 +130,16 @@ class popout_plot_container_widget(QWidget):
 			self.ax = self.ax.reshape(self.ax.size)
 		self.fix_ax()
 
-	def resizeEvent(self,event):
-		if self.timer is None:
-			self.timer = QTimer()
-			self.timer.timeout.connect(self._delayreplot)
-			self.timer.start(1000)
-
-	def _delayreplot(self):
-		self.timer.stop()
-		self.timer = None
-		self.replot()
+	# def resizeEvent(self,event):
+	# 	if self.timer is None:
+	# 		self.timer = QTimer()
+	# 		self.timer.timeout.connect(self._delayreplot)
+	# 		self.timer.start(1000)
+	#
+	# def _delayreplot(self):
+	# 	self.timer.stop()
+	# 	self.timer = None
+	# 	self.replot()
 
 
 	def resize_fig(self):

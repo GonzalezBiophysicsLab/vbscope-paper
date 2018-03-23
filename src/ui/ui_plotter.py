@@ -338,7 +338,7 @@ class plotter_gui(ui_general.gui):
 				self.popout_plots[plot_handle].ui._prefs.combine_prefs(dprefs)
 			if not callback is None:
 				self.popout_plots[plot_handle].ui.setcallback(callback)
-			self.popout_plots[plot_handle].resize(int(self.popout_plots[plot_handle].ui.prefs['fig_width']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+150,int(self.popout_plots[plot_handle].ui.prefs['fig_height']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio()))
+			self.popout_plots[plot_handle].resize(int(self.popout_plots[plot_handle].ui.prefs['fig_width']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+200,int(self.popout_plots[plot_handle].ui.prefs['fig_height']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+125)
 			self.popout_plots[plot_handle].show()
 			self.popout_plots[plot_handle].ui.clf()
 
