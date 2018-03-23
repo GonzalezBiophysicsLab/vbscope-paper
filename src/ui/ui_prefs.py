@@ -59,7 +59,11 @@ class preferences(QMainWindow):
 				self.gui.prefs[pref][a.column()] = float(a.text())
 			elif type(old) is list:
 				self.gui.prefs[pref][a.column()] = type(old)(a.text())
-
+			elif type(old) is bool:
+				if a.text() == 'True' or a.text() == 'true':
+					self.gui.prefs[pref] = True
+				else:
+					self.gui.prefs[pref] = False
 			else:
 				self.gui.prefs[pref] = type(old)(a.text())
 

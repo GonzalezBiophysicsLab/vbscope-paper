@@ -97,10 +97,16 @@ class traj_plot_container():
 			for j in range(self.gui.ncolors):
 				intensities[j] -= bts[i,j]*intensities[i]
 
-		if self.gui.prefs['plotter_wiener_smooth'] is True:
+		if self.gui.prefs['plotter_wiener_smooth'] != 0:
+			ms = self.gui.prefs['plotter_wiener_smooth']
+			if ms % 2 != 1:
+				ms += 1 ## keep it odd
 			for i in range(intensities.shape[0]):
-				intensities[i] = wiener(intensities[i])
-			# intensities = gaussian_filter1d(intensities,self.gui.prefs['plotter_smooth_sigma'],axis=1)
+				# from scipy.signal import savgol_filter
+				# intensities[i] = savgol_filter(intensities[i],9,5)
+				# intensities[i] = wiener(intensities[i])
+				intensities[i] = wiener(intensities[i],mysize=ms)
+				# # intensities = gaussian_filter1d(intensities,self.gui.prefs['plotter_smooth_sigma'],axis=1)
 
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
 
