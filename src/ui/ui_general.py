@@ -180,7 +180,11 @@ class gui(QMainWindow):
 		# self.menubar.setStyleSheet('background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 lightgray, stop:1 darkgray)')
 
 		for s in [self,self._log,self._prefs]:
-			s.setStyleSheet('color:%s;background-color:%s;'%(self.prefs['ui_fontcolor'],self.prefs['ui_bgcolor']))
+			s.setStyleSheet('''
+			color:%s;
+			background-color:%s;
+			font-size: %spx;
+		'''%(self.prefs['ui_fontcolor'],self.prefs['ui_bgcolor'],self.prefs['ui_fontsize']))
 
 		self.resize(self.prefs['ui_width'],self.prefs['ui_height'])
 		self.setWindowTitle(self.app_name)
@@ -222,6 +226,8 @@ class gui(QMainWindow):
 		reply = QMessageBox.question(self,"Quit?","Are you sure you want to quit?",QMessageBox.Yes | QMessageBox.No)
 		if reply == QMessageBox.Yes:
 			# self.app.quit()
+			self._log.close()
+			self._prefs.close()
 			event.accept()
 		else:
 			event.ignore()

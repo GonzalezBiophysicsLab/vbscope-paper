@@ -12,6 +12,7 @@ default = {
 
 	'ui_bgcolor':'white',
 	'ui_fontcolor':'grey',
+	'ui_fontsize':12,
 	'ui_height':500,
 	'ui_version':0.1,
 	'ui_width':700

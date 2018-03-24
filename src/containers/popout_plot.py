@@ -119,7 +119,7 @@ class popout_plot_container_widget(QWidget):
 			aa.tick_params(labelsize=self.prefs['label_ticksize']/self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
 
 			aa.tick_params(axis='both', which='major', labelsize=self.prefs['label_ticksize']/self.canvas.devicePixelRatio())
-			aa.format_coord = lambda x, y: ''
+			# aa.format_coord = lambda x, y: ''
 
 
 	def clf(self):

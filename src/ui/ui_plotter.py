@@ -359,7 +359,7 @@ class plotter_gui(ui_general.gui):
 		plots.tranM.plot(self)
 
 	def plot_intensities(self):
-		self.raise_plot('plot_intensities', 'Intensity Plots', 1,3, lambda: plots.intensities.plot(self), plots.intensities.default_prefs)
+		self.raise_plot('plot_intensities', 'Cumulative Intensities', 1,3, lambda: plots.intensities.plot(self), plots.intensities.default_prefs)
 		plots.intensities.plot(self)
 
 	## Callback function for keyboard presses
@@ -403,7 +403,7 @@ class plotter_gui(ui_general.gui):
 
 	## Handler for mouse clicks in main plots
 	def callback_mouseclick(self,event):
-		if (event.inaxes == self.plot.a[0][0] or event.inaxes == self.plot.a[1][0]) and not self.data.d is None:
+		if ((event.inaxes == self.plot.a[0][0] or event.inaxes == self.plot.a[1][0])) and not self.data.d is None:
 			## Right click - set photobleaching point
 			if event.button == 3 and self.plot.toolbar._active is None:
 				self.data.pb_list[self.plot.index] = int(np.round(event.xdata/self.prefs['tau']))
