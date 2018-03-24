@@ -6,21 +6,21 @@ default_prefs = {
 	'smooth_frames':.25
 }
 
-@nb.jit("float64[:](uint16[:,:,:],int32[:,:],int32,int32,int32,int32)")
-def average_region(d,bg,xmin,xmax,ymin,ymax):
-	z = np.zeros(d.shape[0],dtype=nb.float64)
-	n = float((xmax-xmin)*(ymax-ymin))
-	if n == 0:
-		n = 1
-	for t in range(d.shape[0]):
-		for i in range(xmin,xmax+1):
-			for j in range(ymin,ymax+1):
-				z[t] += float(d[t,i,j]-bg[i,j])/n
-	return z
-
 
 def region_select(eclick, erelease, gui):
+	@nb.jit("float64[:](uint16[:,:,:],int32[:,:],int32,int32,int32,int32)")
+	def average_region(d,bg,xmin,xmax,ymin,ymax):
+		z = np.zeros(d.shape[0],dtype=nb.float64)
+		n = float((xmax-xmin)*(ymax-ymin))
+		if n == 0:
+			n = 1
+		for t in range(d.shape[0]):
+			for i in range(xmin,xmax+1):
+				for j in range(ymin,ymax+1):
+					z[t] += float(d[t,i,j]-bg[i,j])/n
+		return z
 	# if not gui.popout_plots['plot_region'].isVisible():
+	if 1:
 		e = [int(ee) for ee in gui.plot.rectangle.extents]
 
 		popplot = gui.popout_plots['plot_region'].ui

@@ -32,6 +32,7 @@ def plot(gui):
 	nbins = popplot.prefs['hist_nbins']
 	from scipy.stats import gaussian_kde
 	dd = d.sum(-1)
+
 	x = np.linspace(dd.min(),dd.max(),10000)
 	for i in range(gui.ncolors):
 		# nbins = int(np.ceil(2 * dd.shape[0]**(1./3.)))

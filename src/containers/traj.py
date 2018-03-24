@@ -133,37 +133,12 @@ class traj_container():
 				success1 = True
 			if success1:
 				self.safe_hmm()
-				keep = np.zeros(self.d.shape[0],dtype='bool')
-				y = np.zeros(self.d.shape[0])
-				for ind in range(self.d.shape[0]):
-					intensities = self.d[ind].copy()
-					bts = self.gui.prefs['bleedthrough'].reshape((4,4))
-					for i in range(self.gui.ncolors):
-						for j in range(self.gui.ncolors):
-							intensities[j] -= bts[i,j]*intensities[i]
+				dd = self.get_fluor().sum(-1) ## N,C,D
+				y = np.zeros(dd.shape[0])
 
-					for i in range(self.gui.ncolors):
-						intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*intensities[i]
-					cc = c.split('+')
-					for ccc in cc:
-						y[ind] += intensities[int(ccc)].sum()
-				# x = np.logspace(0,np.log10(y.max()),1000)
-				x = np.linspace(y.min(),y.max(),10000)
-				surv = np.array([(y > x[i]).sum()/float(y.size) for i in range(x.size)])
-
-				# if self.docks['plots_surv'][0].isHidden():
-				# 	self.docks['plots_surv'][0].show()
-				# self.docks['plots_surv'][0].raise_()
-				# popplot = self.docks['plots_surv'][1]
-				# popplot.ax.cla()
-                #
-				# # plt.semilogx(x,surv)
-				# popplot.ax.plot(x,surv)
-				# popplot.ax.set_ylim(0,1)
-				# popplot.ax.set_ylabel('Survival Probability')
-				# popplot.ax.set_xlabel('Total Number of Photons')
-				# popplot.f.tight_layout()
-				# popplot.f.canvas.draw()
+				cc = c.split('+')
+				for ccc in cc:
+					y +=  dd[:,int(ccc)]
 
 				if threshold is None:
 					threshold,success2 = QInputDialog.getDouble(self.gui,"Photon Cutoff","Total number of photons required to keep a trajectory",value=1000.,min=0.,max=1e10,decimals=3)
@@ -176,7 +151,7 @@ class traj_container():
 					self.gui.initialize_data(d)
 					self.gui.plot.initialize_plots()
 					self.gui.initialize_sliders()
-					self.gui.log('Cull Photons: %d traces with less than %d total photons in channel %s removed'%((keep==0).sum(),threshold,c),True)
+					self.gui.log('Cull Photons: %d traces with less than %d total counts in channel %s removed'%((keep==0).sum(),threshold,c),True)
 					self.gui.update_display_traces()
 
 
@@ -237,6 +212,8 @@ class traj_container():
 				ran = []
 				if self.gui.prefs['hmm_binding_expt'] is True:
 					z = self.get_fluor().sum(1)
+				elif self.gui.prefs['hmm_bound_dynamics'] is True:
+					z = self.get_fluor[:,1]
 				for i in range(self.fret.shape[1]):
 					if checked[i]:
 						if self.gui.prefs['hmm_binding_expt'] is True:
@@ -376,10 +353,7 @@ class traj_container():
 		for i in range(self.gui.ncolors):
 			for j in range(self.gui.ncolors):
 				q[:,j] -= bts[i,j]*q[:,i]
-		if self.gui.prefs['hmm_bound_dynamics'] is True:
-			return q[:,1,:]
-		else:
-			return q
+		return q
 
 	def estimate_mvs(self):
 		m0s = np.array(())

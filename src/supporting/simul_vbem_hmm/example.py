@@ -20,8 +20,8 @@ for i in range(n):
 	np.random.seed()
 
 nstates=6
-nrestarts = 8
-priors = [initialize_priors(d,nstates) for _ in range(nrestarts)]
+nrestarts = 4
+priors = [initialize_priors(d,nstates,flag_vbfret=False,flag_custom=True) for _ in range(nrestarts)]
 
 result,lbs = hmm(d,nstates,priors,nrestarts)
 print result.m

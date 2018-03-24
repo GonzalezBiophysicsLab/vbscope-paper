@@ -8,10 +8,6 @@ import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
 
-from ..supporting import minmax
-from ..supporting import normal_minmax_dist as nd
-from ..supporting import vbem_gmm as vb
-
 
 default_prefs = {
 	'spotfind_nsearch':3,
@@ -426,9 +422,12 @@ class dock_spotfind(QWidget):
 		image = dd#-bg
 
 		## Find local mins and local maxes
+		from ..supporting import minmax
 		mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
 
 		## Estimate background distribution from local mins
+		from ..supporting import normal_minmax_dist as nd
+		from ..supporting import vbem_gmm as vb
 		bgfit = nd.estimate_from_min(image[mmin],p['spotfind_nsearch']**2 * max_frames)
 		background = vb.background(p['spotfind_nsearch']**2 * max_frames,*bgfit)
 
@@ -541,7 +540,24 @@ class dock_spotfind(QWidget):
 		return gmms,locs
 
 	def remove_duplicates(self):
-		from .extract import cull_rep_px
+		import numba as nb
+		@nb.jit(["double[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
+		def cull_rep_px(ss,nx,ny):
+			x = ss[0]
+			y = ss[1]
+
+			m = np.zeros((nx,ny))
+			for i in range(x.size):
+				m[int(x[i]),int(y[i])] += 1
+
+			x = []
+			y = []
+			for i in range(nx):
+				for j in range(ny):
+					if m[i,j] > 0:
+						x.append(i)
+						y.append(j)
+			return np.array((x,y),dtype=ss.dtype)
 		for i in range(self.gui.data.ncolors):
 			self.xys[i] = cull_rep_px(self.xys[i],self.gui.data.movie.shape[1],self.gui.data.movie.shape[2])
 

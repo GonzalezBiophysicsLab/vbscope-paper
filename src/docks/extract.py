@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QWidget, QSizePolicy,QLabel,QPushButton,QComboBox,QG
 from PyQt5.QtCore import Qt
 
 import numpy as np
+import numba as nb
 from scipy.ndimage import center_of_mass as com
 from scipy.special import erf
 
@@ -65,6 +66,74 @@ class dock_extract(QWidget):
 	def get_spots(self):
 		self.gui.statusbar.showMessage('Determining which spots')
 		self.gui.app.processEvents()
+
+		@nb.jit(["double[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
+		def cull_rep_px(ss,nx,ny):
+			x = ss[0]
+			y = ss[1]
+
+			m = np.zeros((nx,ny))
+			for i in range(x.size):
+				m[int(x[i]),int(y[i])] += 1
+
+			x = []
+			y = []
+			for i in range(nx):
+				for j in range(ny):
+					if m[i,j] > 0:
+						x.append(i)
+						y.append(j)
+			return np.array((x,y),dtype=ss.dtype)
+
+		@nb.jit('double[:,:](double[:,:],double)',nopython=True)
+		def avg_close(ss,cutoff):
+
+			totalx = []
+			totaly = []
+
+			### AVERAGE
+			# already = []
+			# for j in range(ss[0].size):
+			# 	currentn = 1.
+			# 	currentx = ss[0][j]
+			# 	currenty = ss[1][j]
+			# 	if already.count(j) == 0:
+			# 		for i in range(j+1,ss[0].size):
+			# 			if already.count(i) == 0:
+			# 				r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
+			# 				if r < cutoff:
+			# 					currentx += ss[0][i]
+			# 					currenty += ss[1][i]
+			# 					currentn += 1.
+			# 					already.append(i)
+		    #
+			# 		totalx.append(currentx/currentn)
+			# 		totaly.append(currenty/currentn)
+			# 		already.append(j)
+			# return np.array((totalx,totaly))
+
+			#### FIRST
+			already = []
+			for j in range(ss[0].size):
+				# currentn = 1.
+				# currentx = ss[0][j]
+				# currenty = ss[1][j]
+				if already.count(j) == 0:
+					for i in range(j+1,ss[0].size):
+						if already.count(i) == 0:
+							r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
+							if r < cutoff:
+								# currentx += ss[0][i]
+								# currenty += ss[1][i]
+								# currentn += 1.
+								already.append(i)
+
+					# totalx.append(currentx/currentn)
+					# totaly.append(currenty/currentn)
+					totalx.append(ss[0][j])
+					totaly.append(ss[1][j])
+					already.append(j)
+			return np.array((totalx,totaly))
 
 		s = self.gui.docks['spotfind'][1].xys
 		v = self.combo_reduction.currentIndex()
@@ -260,72 +329,3 @@ class progress(QProgressDialog):
 		self.setWindowTitle("Fitting Spots")
 		self.setLabelText('Fitting %d spots, %d frames\ntime/fit = 0.0 sec'%(nmax,tmax))
 		self.setRange(0,tmax)
-
-import numba as nb
-@nb.jit('double[:,:](double[:,:],double)',nopython=True)
-def avg_close(ss,cutoff):
-
-	totalx = []
-	totaly = []
-
-	### AVERAGE
-	# already = []
-	# for j in range(ss[0].size):
-	# 	currentn = 1.
-	# 	currentx = ss[0][j]
-	# 	currenty = ss[1][j]
-	# 	if already.count(j) == 0:
-	# 		for i in range(j+1,ss[0].size):
-	# 			if already.count(i) == 0:
-	# 				r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
-	# 				if r < cutoff:
-	# 					currentx += ss[0][i]
-	# 					currenty += ss[1][i]
-	# 					currentn += 1.
-	# 					already.append(i)
-    #
-	# 		totalx.append(currentx/currentn)
-	# 		totaly.append(currenty/currentn)
-	# 		already.append(j)
-	# return np.array((totalx,totaly))
-
-	#### FIRST
-	already = []
-	for j in range(ss[0].size):
-		# currentn = 1.
-		# currentx = ss[0][j]
-		# currenty = ss[1][j]
-		if already.count(j) == 0:
-			for i in range(j+1,ss[0].size):
-				if already.count(i) == 0:
-					r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
-					if r < cutoff:
-						# currentx += ss[0][i]
-						# currenty += ss[1][i]
-						# currentn += 1.
-						already.append(i)
-
-			# totalx.append(currentx/currentn)
-			# totaly.append(currenty/currentn)
-			totalx.append(ss[0][j])
-			totaly.append(ss[1][j])
-			already.append(j)
-	return np.array((totalx,totaly))
-
-@nb.jit(["double[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
-def cull_rep_px(ss,nx,ny):
-	x = ss[0]
-	y = ss[1]
-
-	m = np.zeros((nx,ny))
-	for i in range(x.size):
-		m[int(x[i]),int(y[i])] += 1
-
-	x = []
-	y = []
-	for i in range(nx):
-		for j in range(ny):
-			if m[i,j] > 0:
-				x.append(i)
-				y.append(j)
-	return np.array((x,y),dtype=ss.dtype)
