@@ -101,6 +101,7 @@ class traj_plot_container():
 			ms = self.gui.prefs['plotter_wiener_smooth']
 			if ms % 2 != 1:
 				ms += 1 ## keep it odd
+				self.gui.prefs['ploter_wiener_smooth'] = ms
 			for i in range(intensities.shape[0]):
 				# from scipy.signal import savgol_filter
 				# intensities[i] = savgol_filter(intensities[i],9,5)

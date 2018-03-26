@@ -31,7 +31,7 @@ class data_container():
 		try:
 			if filename.endswith('.npy'):
 				data = np.load(filename).astype('uint16')
-			elif filename.endswith('.tif'):
+			elif filename.endswith('.tif') or filename.endswith('.stk'):
 				from ..external import tifffile
 				m = tifffile.TiffFile(filename)
 				data = m.asarray().astype(dtype='uint16')

@@ -188,7 +188,8 @@ class dock_spotfind(QWidget):
 			# self.gmms,self.locs = self.setup_spot_find(self.gui.data.current_frame)
 			self.gmms,self.locs = self.setup_spot_find()
 
-			if self.gui.prefs['computer_ncpu'] > 1:
+			from sys import platform
+			if self.gui.prefs['computer_ncpu'] > 1 and platform != "win32":
 				pool = mp.Pool(self.gui.prefs['computer_ncpu'])
 				self.gmms = pool.map(_run,self.gmms)
 				pool.close()
@@ -473,7 +474,7 @@ class dock_spotfind(QWidget):
 		# dmin = np.min(self.gui.data.movie[start:end+1],axis=0).astype('f')
 
 		bg = self.gui.docks['background'][1].calc_background(d)
-		self.disp_image = d#-bg
+		self.disp_image = d-bg
 		self.gui.plot.image.set_array(self.disp_image)
 		self.gui.docks['contrast'][1].update_image_contrast()
 
