@@ -106,7 +106,10 @@ class traj_plot_container():
 				# from scipy.signal import savgol_filter
 				# intensities[i] = savgol_filter(intensities[i],9,5)
 				# intensities[i] = wiener(intensities[i])
-				intensities[i] = wiener(intensities[i],mysize=ms)
+				try:
+					intensities[i] = wiener(intensities[i],mysize=ms)
+				except:
+					pass
 				# # intensities = gaussian_filter1d(intensities,self.gui.prefs['plotter_smooth_sigma'],axis=1)
 
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
