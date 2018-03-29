@@ -63,7 +63,7 @@ class dock_transform(QWidget):
 			n = self.gui.data.ncolors
 			regions,shifts = self.gui.data.regions_shifts()
 			if n > 1:
-				m = 10
+				m = 5
 				gx,gy = np.mgrid[regions[0][0][0]:regions[0][0][1]:m,regions[0][1][0]:regions[0][1][1]:m]
 				g = np.array((gx.flatten(),gy.flatten()))
 				out = [g[1],g[0]]
@@ -71,7 +71,7 @@ class dock_transform(QWidget):
 					o = self.transforms[0][j](g.T).T
 					out.append(o[1])
 					out.append(o[0])
-				out = np.array((out)).T + 1.
+				out = np.array((out)).T #+ 1.
 
 				oname = QFileDialog.getSaveFileName(self, 'Export vbscope Alignment', self.gui.data.filename[:-4]+'_alignment.dat','*.dat')
 				if oname[0] != "":
@@ -189,6 +189,7 @@ class dock_transform(QWidget):
 						c1 = cs[i].copy()
 						c2 = cs[j].copy()
 						tts[j] = transforms.poly(c1.T.astype('f'),c2.T.astype('f'),order=self.gui.prefs['transform_alignment_order'])
+						print i,j,tts[j].residuals(c1.T.astype('f'),c2.T.astype('f')).mean()
 
 			ts.append(tts)
 		self.transforms = ts

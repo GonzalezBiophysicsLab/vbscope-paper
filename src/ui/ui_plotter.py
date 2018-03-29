@@ -316,6 +316,7 @@ class plotter_gui(ui_general.gui):
 		_make_shortcut(Qt.Key_0,lambda : self.callback_keypress(0))
 		_make_shortcut(Qt.Key_R,lambda : self.callback_keypress('r'))
 		_make_shortcut(Qt.Key_G,lambda : self.callback_keypress('g'))
+		_make_shortcut(Qt.Key_P,lambda : self.callback_keypress('p'))
 
 	def initialize_plot_docks(self):
 		self.popout_plots = {
@@ -383,6 +384,19 @@ class plotter_gui(ui_general.gui):
 			self.plot.a[1,0].grid()
 			self.plot.update_blits()
 			self.plot.update_plots()
+		elif kk == 'p':
+			try:
+				from ..supporting.photobleaching import get_point_pbtime
+				self.data.pre_list[self.plot.index] = 0
+				if self.prefs['photobleaching_flag'] is True:
+					qq = self.data.d[self.plot.index].sum(0)
+				else:
+					qq = self.data.d[self.plot.index,1]
+				self.data.pb_list[self.plot.index] = get_point_pbtime(qq)
+				self.data.safe_hmm()
+				self.plot.update_plots()
+			except:
+				pass
 
 		for i in range(10):
 			if i == kk:
