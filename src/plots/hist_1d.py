@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.signal import wiener
 
 default_prefs = {
 	'fret_min':-.5,
@@ -10,7 +11,8 @@ default_prefs = {
 	'hist_color':'steelblue',
 	'hist_edgecolor':'None',
 
-	'label_x_nticks':5
+	'label_x_nticks':5,
+	'filter':False
 }
 
 def plot(gui):
@@ -21,6 +23,10 @@ def plot(gui):
 
 	if gui.ncolors == 2:
 		fpb = gui.data.get_plot_data()[0]
+		if popplot.prefs['filter'] is True:
+			for i in range(fpb.shape[0]):
+				cut = np.isfinite(fpb[i])
+				fpb[i][cut] = wiener(fpb[i][cut])
 
 		# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
 		try:
