@@ -80,8 +80,8 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,sigma_smooth=False):
 	# 	raise Exception("Data should be Molecules x Time x Dimensionality")
 	nmol = len(data)
 	if not sigma_smooth is False:
-		from scipy.ndimage import gaussian_filter
-		data = [gaussian_filter(dd,sigma_smooth) for dd in data]
+		from scipy.signal import wiener
+		data = [wiener(dd) for dd in data]
 	flaty = np.concatenate(data)
 
 	# Parse Prior
@@ -181,7 +181,7 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,sigma_smooth=False):
 	result.ln_p_x_z = ln_p_x_z
 	return result
 
-def hmm_with_restarts(y,nstates,priors,nrestarts=8,sigma_smooth=False):
+def hmm_with_restarts(y,nstates,priors,nrestarts=8,wiener_smooth=False):
 	import multiprocessing as mp
 	cpus = np.min((nrestarts,mp.cpu_count()))
 

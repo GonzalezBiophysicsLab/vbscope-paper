@@ -28,7 +28,7 @@ default_prefs = {
 
 	'downsample':1,
 	'snr_threshold':.5,
-	'pb_length':10,
+	'min_length':10,
     #
 	# 'plotter_floor':0.2,
 	# 'plotter_nbins_contour':20,
@@ -56,7 +56,7 @@ default_prefs = {
 	'synchronize_start_flag':False,
 
 	'hmm_nrestarts':4,
-	'hmm_sigmasmooth':False,
+	'hmm_wiener_mooth':False,
 	'hmm_binding_expt':False,
 	'hmm_bound_dynamics':False
 }

@@ -106,7 +106,7 @@ class traj_container():
 			pbt = self.pb_list.copy()
 			pret = self.pre_list.copy()
 			dt = pbt-pret
-			cut = dt > self.gui.prefs['pb_length']
+			cut = dt > self.gui.prefs['min_length']
 
 			d = self.d[cut]
 			pbt = pbt[cut]
@@ -352,7 +352,7 @@ class traj_container():
 			from ..supporting.photobleaching import pb_ensemble
 			q = np.copy(self.d)
 			q[:,1] -= self.gui.prefs['bleedthrough'][1]*q[:,0]
-			# l1 = calc_pb_time(self.fret,self.gui.prefs['pb_length_cutoff'])
+			# l1 = calc_pb_time(self.fret,self.gui.prefs['min_length_cutoff'])
 			if self.gui.prefs['photobleaching_flag'] is True:
 				qq = q[:,0] + q[:,1]
 			else:
