@@ -249,11 +249,7 @@ class traj_container():
 						priors[iii][0] = np.array((0,1000.)) ## m
 						priors[iii][1] = np.ones(2) ## beta
 
-				if self.gui.prefs['hmm_sigmasmooth'] == "True":
-					sigma_smooth = 0.5
-				else:
-					sigma_smooth = False
-				result,lbs = hmm.hmm(y,nstates,priors,nrestarts,sigma_smooth)
+				result,lbs = hmm.hmm(y,nstates,priors,nrestarts,self.gui.prefs['hmm_wiener_smooth'])
 				ppi = np.sum([result.gamma[i].sum(0) for i in range(len(result.gamma))],axis=0)
 				ppi /= ppi.sum()
 

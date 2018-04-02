@@ -56,7 +56,7 @@ default_prefs = {
 	'synchronize_start_flag':False,
 
 	'hmm_nrestarts':4,
-	'hmm_wiener_mooth':False,
+	'hmm_wiener_smooth':False,
 	'hmm_binding_expt':False,
 	'hmm_bound_dynamics':False
 }

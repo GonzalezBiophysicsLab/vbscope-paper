@@ -67,7 +67,7 @@ def initialize_priors(data,nstates,flag_vbfret=True,flag_custom=False,flag_user=
 
 	return [m,beta,a,b,alpha,rho]
 
-def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,sigma_smooth=False):
+def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,wiener_smooth=False):
 	'''
 	Format is # NxTxKxD
 	Data should be a list of nmol np.ndarray(npoints) trjectories. If only one trace, try [y]
@@ -79,7 +79,7 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,sigma_smooth=False):
 	# if y.ndim != 3:
 	# 	raise Exception("Data should be Molecules x Time x Dimensionality")
 	nmol = len(data)
-	if not sigma_smooth is False:
+	if not wiener_smooth is False:
 		from scipy.signal import wiener
 		data = [wiener(dd) for dd in data]
 	flaty = np.concatenate(data)
@@ -188,11 +188,11 @@ def hmm_with_restarts(y,nstates,priors,nrestarts=8,wiener_smooth=False):
 	from sys import platform
 	if platform != 'win32':
 		pool = mp.Pool(processes = np.min((nrestarts,mp.cpu_count())))
-		results = [pool.apply_async(simultaneous_vbem_hmm, args=(y,nstates,priors[i],False,sigma_smooth)) for i in xrange(nrestarts)]
+		results = [pool.apply_async(simultaneous_vbem_hmm, args=(y,nstates,priors[i],False,wiener_smooth)) for i in xrange(nrestarts)]
 		results = [p.get() for p in results]
 		pool.close()
 	else:
-		results = [simultaneous_vbem_hmm(y,nstates,priors[i],False,sigma_smooth) for i in xrange(nrestarts)]
+		results = [simultaneous_vbem_hmm(y,nstates,priors[i],False,wiener_smooth) for i in xrange(nrestarts)]
 
 	lbs = [results[i].lowerbounds[-1] for i in xrange(nrestarts)]
 	iters = [results[i].iterations for i in xrange(nrestarts)]
