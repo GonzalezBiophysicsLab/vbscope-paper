@@ -110,6 +110,7 @@ def ln_bayes_factor(d):
 	b0 = 1.
 	k0 = 1.
 	m0 = 1000.
+
 	return ln_evidence(d,a0,b0) - normal_ln_evidence(d,a0,b0,k0,m0)
 
 @nb.jit(nb.double[:](nb.double[:],nb.double,nb.double,nb.double,nb.double,nb.double),nopython=True)
@@ -123,16 +124,12 @@ def posterior(d,k,a0,b0,k0,m0):
 ### Single Step Model
 ################################################################################
 
-@nb.jit(nb.int64(nb.double[:]),nopython=True)
-def get_point_pbtime(d):
-	a0 = 1.
-	b0 = 1.
-	k0 = 1.
-	m0 = 1000.
+@nb.jit(nb.int64(nb.double[:],nb.double,nb.double,nb.double,nb.double),nopython=True)
+def get_point_pbtime(d,a0,b0,k0,m0):
 	lnl = ln_likelihood(d,a0,b0,k0,m0)
-	# for i in range(lnl.shape[0]):
-	# 	if np.isnan(lnl[i]):
-	# 		lnl[i] = -np.inf
+	for i in range(lnl.shape[0]):
+		if np.isnan(lnl[i]):
+			lnl[i] = -np.inf
 	# pbt = lnl.argmax()
 	pbt = np.argmax(lnl)
 	return pbt
@@ -143,6 +140,10 @@ def get_expectation_pbtime(d):
 	b0 = 1.
 	k0 = 1.
 	m0 = 1000.
+	# a0 = 2.5
+	# b0 = .01
+	# k0 = .25
+	# m0 = .5
 	lnl = ln_likelihood(d,a0,b0,k0,m0)
 	t = np.arange(lnl.size)
 	lmax = np.max(lnl)
@@ -221,88 +222,4 @@ def model_comparison_signal(x):
 		lnp_m1 = normal_ln_evidence(x[i],a0,b0,k0,m0)
 		p = 1./(1.+np.exp(lnp_m2-lnp_m1))
 		out[i] = p
-	return out
-
-################################################################################
-######################### Jaewook's variance > 1 model #########################
-################################################################################
-### calc_pb_time will return a list of integers of the photobleaching frame.
-### remove_pb will return a copy of the data with NaN after the photobleachings.
-################################################################################
-################################################################################
-
-@nb.jit(nb.boolean[:](nb.double[:],nb.double),nopython=True)
-def sliding_var_greater(d,l):
-	## Calculate windowed variance for each datapoint
-	## l is the window size
-	out = np.zeros(d.size,dtype=nb.boolean)
-	for i in range(d.size):
-		## Deal with the start and end of the array
-		xmin = np.max(np.array([0,i-l]))
-		xmax = np.min(np.array([i+l,d.size-1]))
-		## Calculate that variance
-		v = np.var(d[xmin:xmax+1])
-		## Find the first time it's above 1.0
-		if v > 1.0:
-			out[i] = True
-	return out
-
-@nb.jit(nb.int64(nb.double[:],nb.double),nopython=True)
-def first_var_greater(d,l):
-	## Calculate windowed variance for each datapoint
-	## l is the window size
-	for i in range(d.size):
-		## Deal with the start and end of the array
-		xmin = np.max(np.array([0,i-l]))
-		xmax = np.min(np.array([i+l,d.size-1]))
-		## Calculate that variance
-		v = np.var(d[xmin:xmax+1])
-		## Find the first time it's above 1.0
-		if v > 1.0:
-			return i
-	## If it's never > 1.0
-	return d.size
-
-
-if _windows:
-	@nb.jit(nb.int64[:](nb.double[:,:],nb.int64),nopython=True)
-	def calc_pb_time(d,l):
-		## Find the first point where the variance is greater than 1.0 for all traces
-		t = np.zeros((d.shape[0]),dtype=nb.int64)
-		for i in range(t.size):
-			t[i] = first_var_greater(d[i],l)
-		return t
-### This problem is embarassingly parallel. Process each trace individual, in parallel
-else:
-	@nb.jit(nb.int64[:](nb.double[:,:],nb.int64),nopython=True,parallel=True)
-	def calc_pb_time(d,l):
-		## Find the first point where the variance is greater than 1.0 for all traces
-		t = np.zeros((d.shape[0]),dtype=nb.int64)
-		for i in nb.prange(t.size):
-			t[i] = first_var_greater(d[i],l)
-		return t
-
-@nb.jit(nb.double[:,:](nb.double[:,:]),nopython=True)
-def remove_pb_first(d):
-	### d should be an np.ndarray of shape (N,T) where N is the number of traces, and T is the length of each trace
-
-	## Find first time when var(x_{i-2}, ..., x{i+2}) > 1.0
-	## This will include photobleaching and Cy3 blinks
-	t = calc_pb_time(d,2)
-
-	## Turn all points after the first bleach/blink point into NaNs
-	out = np.copy(d)
-	for i in range(d.shape[0]):
-		out[i,t[i]:] = np.nan
-	return out
-
-@nb.jit(nb.double[:,:](nb.double[:,:]),nopython=True)
-def remove_pb_all(d):
-	### d should be an np.ndarray of shape (N,T) where N is the number of traces, and T is the length of each trace
-
-	## Turn all points after the first bleach/blink point into NaNs
-	out = np.copy(d)
-	for i in range(d.shape[0]):
-		bad = sliding_var_greater(d[i],5)
-		out[i][bad] = np.nan
 	return out

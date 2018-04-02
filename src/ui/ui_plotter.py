@@ -224,7 +224,9 @@ class plotter_gui(ui_general.gui):
 
 		### tools
 		menu_tools = self.menubar.addMenu('Tools')
-		tools_cullpb = QAction('Cull PB', self)
+		menu_cull = menu_tools.addMenu('Cull')
+		menu_photobleach = menu_tools.addMenu('Photobleach')
+		tools_cullpb = QAction('Cull short', self)
 		tools_cullpb.triggered.connect(self.data.cull_pb)
 		tools_cullmin = QAction('Cull minimums', self)
 		tools_cullmin.triggered.connect(lambda event: self.data.cull_min())
@@ -232,12 +234,10 @@ class plotter_gui(ui_general.gui):
 		tools_cullmax.triggered.connect(lambda event: self.data.cull_max())
 		tools_cullphotons = QAction('Cull Photons',self)
 		tools_cullphotons.triggered.connect(lambda event: self.data.cull_photons())
-		tools_step = QAction('Photobleach - Step',self)
+		tools_step = QAction('Photobleach - Sum Step',self)
 		tools_step.triggered.connect(self.data.photobleach_step)
-		tools_var = QAction('Remove all PB - Var',self)
-		tools_var.setCheckable(True)
-		tools_var.setChecked(False)
-		self.pb_remove_check = tools_var
+		tools_stepfret = QAction('Photobleach - FRET Acceptor',self)
+		tools_stepfret.triggered.connect(self.data.remove_acceptor_bleach_from_fret)
 		tools_remove = QAction('Remove From Beginning',self)
 		tools_remove.triggered.connect(lambda event: self.data.remove_beginning())
 		tools_dead = QAction('Remove Dead Traces',self)
@@ -245,7 +245,14 @@ class plotter_gui(ui_general.gui):
 		tools_hmm = QAction('HMM',self)
 		tools_hmm.triggered.connect(lambda event: self.data.run_hmm())
 
-		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_var,tools_remove,tools_dead,tools_hmm]:
+		# for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_stepfret,tools_remove,tools_dead,tools_hmm]:
+		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons]:
+			menu_cull.addAction(f)
+		for f in [tools_step,tools_stepfret]:
+			menu_photobleach.addAction(f)
+		for f in [menu_cull,menu_photobleach]:
+			menu_tools.addMenu(f)
+		for f in [tools_remove,tools_dead,tools_hmm]:
 			menu_tools.addAction(f)
 #
 		### plots
@@ -392,7 +399,7 @@ class plotter_gui(ui_general.gui):
 					qq = self.data.d[self.plot.index].sum(0)
 				else:
 					qq = self.data.d[self.plot.index,1]
-				self.data.pb_list[self.plot.index] = get_point_pbtime(qq)
+				self.data.pb_list[self.plot.index] = get_point_pbtime(qq,1.,1.,1.,1000.)
 				self.data.safe_hmm()
 				self.plot.update_plots()
 			except:
@@ -444,7 +451,7 @@ class plotter_gui(ui_general.gui):
 							qq = self.data.d[self.plot.index].sum(0)
 						else:
 							qq = self.data.d[self.plot.index,1]
-						self.data.pb_list[self.plot.index] = get_point_pbtime(qq)
+						self.data.pb_list[self.plot.index] = get_point_pbtime(qq,1.,1.,1.,1000.)
 						self.data.safe_hmm()
 						self.plot.update_plots()
 			except:

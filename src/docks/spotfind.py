@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 
 default_prefs = {
 	'spotfind_nsearch':3,
-	'spotfind_clip_border':5,
+	'spotfind_clip_border':8,
 	'spotfind_threshold':1e-10,
-	'spotfind_maxiterations':1000,
-	'spotfind_nstates':4
+	'spotfind_maxiterations':2000,
+	'spotfind_nstates':8
 }
 
 
@@ -149,7 +149,7 @@ class dock_spotfind(QWidget):
 		[s.setMaximum(1000) for s in self.sliders]
 
 		# Initialize thresholds
-		self.sliders[0].setValue(700) # p = .001
+		self.sliders[0].setValue(1000) # p = .001
 		self.sliders[1].setValue(500) # p = .5
 		self.change_slide0(self.sliders[0].value())
 		self.change_slide1(self.sliders[1].value())
@@ -384,14 +384,14 @@ class dock_spotfind(QWidget):
 		factor = 2.
 		self.bb = 10.**(-factor*(10. - float(b)/100.))
 		self.label_bb.setText('%.1E'%self.bb)
-		if not self.gmms is None:
-			self.update_spots()
+		# if not self.gmms is None:
+			# self.update_spots()
 
 	def change_slide1(self,p):
 		self.pp = float(p)/1000.
 		self.label_pp.setText('%.4f'%self.pp)
-		if not self.gmms is None:
-			self.update_spots()
+		# if not self.gmms is None:
+			# self.update_spots()
 
 	def not_background_class(self,gmm,cutoff=.001):
 		l = np.arange(gmm.post.m.size)

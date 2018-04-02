@@ -170,10 +170,26 @@ class traj_container():
 		checked = self.gui.classes_get_checked()
 		fpb = fpb[:,checked]
 
-		if self.gui.pb_remove_check.isChecked() and self.gui.ncolors == 2:
-			from ..supporting.photobleaching import remove_pb_all
-			fpb[0] = remove_pb_all(fpb[0])
 		return fpb
+
+	def remove_acceptor_bleach_from_fret(self):
+		from ..supporting.photobleaching import get_point_pbtime
+
+		self.update_fret()
+		# fpb = self.fret.copy()
+		d = self.get_fluor()
+		checked = self.gui.classes_get_checked()
+		if self.gui.ncolors == 2:
+			# for i in range(fpb.shape[1]):
+			for i in range(d.shape[0]):
+				if checked[i]:
+					# ff = fpb[0][i,self.pre_list[i]:self.pb_list[i]].copy()
+					ff = d[i,1,self.pre_list[i]:self.pb_list[i]]
+					pbt = get_point_pbtime(ff,1.,1.,1.,1000.)
+					self.pb_list[i] = self.pre_list[i]+pbt
+		self.gui.log('Removed acceptor bleaching from FRET range',True)
+
+
 
 	def get_viterbi_data(self):
 		if not self.hmm_result is None:

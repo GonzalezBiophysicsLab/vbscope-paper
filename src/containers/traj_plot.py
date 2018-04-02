@@ -43,7 +43,10 @@ class traj_plot_container():
 	def draw(self):
 		self.canvas.update()
 		self.canvas.flush_events()
-		self.canvas.draw()
+		try:
+			self.canvas.draw()
+		except:
+			pass
 
 	## Read in y-min and y-max values, then update the plot
 	def update_minmax(self):
@@ -85,6 +88,7 @@ class traj_plot_container():
 			self.a[1][0].lines[3*i+1].set_data(t[pretime:pbtime],rel[i,pretime:pbtime])
 			self.a[1][0].lines[3*i+2].set_data(t[pbtime:],rel[i,pbtime:])
 
+
 	def calc_trajectory(self):
 		intensities = self.gui.data.d[self.index].copy()
 
@@ -103,14 +107,10 @@ class traj_plot_container():
 				ms += 1 ## keep it odd
 				self.gui.prefs['ploter_wiener_smooth'] = ms
 			for i in range(intensities.shape[0]):
-				# from scipy.signal import savgol_filter
-				# intensities[i] = savgol_filter(intensities[i],9,5)
-				# intensities[i] = wiener(intensities[i])
 				try:
 					intensities[i] = wiener(intensities[i],mysize=ms)
 				except:
 					pass
-				# # intensities = gaussian_filter1d(intensities,self.gui.prefs['plotter_smooth_sigma'],axis=1)
 
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
 

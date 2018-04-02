@@ -63,6 +63,17 @@ class dock_transform(QWidget):
 			n = self.gui.data.ncolors
 			regions,shifts = self.gui.data.regions_shifts()
 			if n > 1:
+
+				# m = 1000
+				# gx = np.random.uniform(regions[0][0][0],regions[0][0][1],size=m)
+				# gy = np.random.uniform(regions[0][1][0],regions[0][1][1],size=m)
+				# g = np.array((gx,gy))
+				# out = [g[1],g[0]]
+				# for j in range(1,n):
+				# 	o = self.transforms[0][j](g.T).T
+				# 	out.append(o[1])
+				# 	out.append(o[0])
+				# out = np.array((out)).T
 				m = 5
 				gx,gy = np.mgrid[regions[0][0][0]:regions[0][0][1]:m,regions[0][1][0]:regions[0][1][1]:m]
 				g = np.array((gx.flatten(),gy.flatten()))
@@ -128,7 +139,8 @@ class dock_transform(QWidget):
 
 				#### ASSSUME VBSCOPE (MATLAB) FORMAT
 				ncolor = self.gui.data.ncolors
-				dd = [d[:,2*i:2*i+2][:,::-1].T - 1. for i in range(d.shape[1]/2)]
+				# dd = [d[:,2*i:2*i+2][:,::-1].T - 1. for i in range(d.shape[1]/2)]
+				dd = [d[:,2*i:2*i+2][:,::-1].T for i in range(d.shape[1]/2)]
 				self.estimate(dd)
 				self.plot_overlapped(dd)
 
@@ -183,13 +195,18 @@ class dock_transform(QWidget):
 							c1[ii] -= shifts[i][ii]
 							c2[ii] -= shifts[j][ii]
 
-						tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),1e-6,1e-6,maxiters=100)
+						# tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),1e-6,1e-6,maxiters=100)
+						tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),0.,0.,maxiters=100)
+
 
 					else:
 						c1 = cs[i].copy()
 						c2 = cs[j].copy()
-						tts[j] = transforms.poly(c1.T.astype('f'),c2.T.astype('f'),order=self.gui.prefs['transform_alignment_order'])
-						print i,j,tts[j].residuals(c1.T.astype('f'),c2.T.astype('f')).mean()
+						# tts[j] = transforms.poly(c1.T.astype('f'),c2.T.astype('f'),order=self.gui.prefs['transform_alignment_order'])
+						from skimage.transform import AffineTransform,EuclideanTransform,PolynomialTransform
+						tts[j] = EuclideanTransform(translation=np.median(c1,axis=1) - np.median(c2,axis=1))
+						tts[j].estimate(c1.T.astype('f'),c2.T.astype('f'))
+						print np.median(tts[j].residuals(c1.T.astype('f'),c2.T.astype('f')))
 
 			ts.append(tts)
 		self.transforms = ts

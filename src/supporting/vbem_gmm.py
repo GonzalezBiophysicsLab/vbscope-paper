@@ -33,9 +33,13 @@ class theta():
 def initialize_priors(x,k):
 	prior  = theta(k)
 
-	from sklearn.cluster import k_means
-	mu = k_means(x.reshape((x.size,1)),k)[0].flatten()
+	from scipy.stats import gaussian_kde
+	kernel = gaussian_kde(x)
+	mu = kernel.resample(k).flatten()
 	mu.sort()
+	# from sklearn.cluster import k_means
+	# mu = k_means(x.reshape((x.size,1)),k)[0].flatten()
+	# mu.sort()
 
 	# xmin = np.percentile(x,.00001)
 	# xmax = np.percentile(x,99.99999)

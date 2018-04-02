@@ -3,15 +3,15 @@ import matplotlib.pyplot as plt
 from scipy.signal import wiener
 
 default_prefs = {
-	'fret_min':-.5,
-	'fret_max':1.5,
-	'fret_nbins':41,
+	'fret_min':-.25,
+	'fret_max':1.25,
+	'fret_nbins':161,
 
 	'hist_type':'stepfilled',
 	'hist_color':'steelblue',
-	'hist_edgecolor':'None',
+	'hist_edgecolor':'black',
 
-	'label_x_nticks':5,
+	'label_x_nticks':7,
 	'filter':False
 }
 
