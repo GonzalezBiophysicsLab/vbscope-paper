@@ -26,7 +26,10 @@ def plot(gui):
 		if popplot.prefs['filter'] is True:
 			for i in range(fpb.shape[0]):
 				cut = np.isfinite(fpb[i])
-				fpb[i][cut] = wiener(fpb[i][cut])
+				try:
+					fpb[i][cut] = wiener(fpb[i][cut])
+				except:
+					pass
 
 		# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
 		try:
