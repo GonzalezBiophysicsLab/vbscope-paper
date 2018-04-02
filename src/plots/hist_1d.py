@@ -40,13 +40,28 @@ def plot(gui):
 			r = gui.data.hmm_result
 			def norm(x,m,v):
 				return 1./np.sqrt(2.*np.pi*v)*np.exp(-.5/v*(x-m)**2.)
+			def stut(x,a,b,k,m):
+				from scipy.special import gammaln
+				lam = a*k/(b*(k+1.))
+				lny = -.5*np.log(np.pi)
+				lny += gammaln((2.*a+1.)/2.) - gammaln((a))
+				lny += .5*np.log(lam/(2.*a))
+				lny += -.5*(2.*a+1)*np.log(1.+lam*(x-m)**2./(2.*a))
+				return np.exp(lny)
+				# from scipy.special import gammal
+				# v = 2.*a
+				# lam = a*k/(b*(k+1.))
+				# c = gammaln(.5*(v+1.)) - gammaln(v/2.) - .5*np.log(2.*np.pi/lam)
+				# lny = c - .5*(v+1.)*np.log(1.+lam/v*(x-m)**2.)
+				# return np.exp(lny)
 			x = np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],1001)
 			ppi = np.sum([r.gamma[i].sum(0) for i in range(len(r.gamma))],axis=0)
 			ppi /=ppi.sum()
 			v = r.b/r.a
 			tot = np.zeros_like(x)
 			for i in range(r.m.size):
-				y = ppi[i]*norm(x,r.m[i],v[i])
+				# y = ppi[i]*norm(x,r.m[i],v[i])
+				y = ppi[i]*stut(x,r.a[i],r.b[i],r.beta[i],r.m[i])
 				tot += y
 				popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
 			popplot.ax[0].plot(x,tot,color='k',lw=2,alpha=.8)

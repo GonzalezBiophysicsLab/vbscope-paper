@@ -46,16 +46,16 @@ def initialize_priors(data,nstates,flag_vbfret=True,flag_custom=False,flag_user=
 		m.sort()
 
 		# alpha = np.zeros((nstates,nstates)) + .1 + np.identity(nstates)*1.#1.#10.
-		alpha = np.zeros((nstates,nstates)) + .1 + np.identity(nstates)*10.
+		alpha = np.zeros((nstates,nstates)) + .01 + np.identity(nstates)*100.
 		# #.1,.005,.25
-		a = np.zeros(nstates) + 1#2.5#1.
-		b = np.zeros(nstates) + (xmax-xmin)**2./36.#(xmax-xmin)**2./36.
-		beta = np.zeros(nstates) + nstates**2. * 36. / (xmax-xmin)**2.#nstates**2. * 36. / (xmax-xmin)**2.
+		# a = np.zeros(nstates) + 2.5#1.
+		# b = np.zeros(nstates) + (xmax-xmin)**2./36.#(xmax-xmin)**2./36.
+		# beta = np.zeros(nstates) + nstates**2. * 36. / (xmax-xmin)**2.#nstates**2. * 36. / (xmax-xmin)**2.
 
 		# alpha = np.ones((nstates,nstates))
-		# a = np.zeros(nstates) + 2.5
-		# b = np.zeros(nstates) + 0.01
-		# beta = np.zeros(nstates) + 0.25
+		a = np.zeros(nstates) + 2.5
+		b = np.zeros(nstates) + 0.01
+		beta = np.zeros(nstates) + 0.25
 
 	elif flag_vbfret:
 		## vbFRET!!

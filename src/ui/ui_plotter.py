@@ -199,7 +199,7 @@ class plotter_gui(ui_general.gui):
 		load_load_classes.triggered.connect(lambda event: self.load_classes())
 
 		load_load_hmm = QAction('Load HMM', self)
-		load_load_hmm.triggered.connect(lambda event: self.load_hmm())
+		load_load_hmm.triggered.connect(lambda event: self.load_hmm(), shortcut='Ctrl+H')
 
 		load_batch = QAction('Batch Load',self, shortcut='Ctrl+B')
 		load_batch.triggered.connect(self.show_batch_load)
