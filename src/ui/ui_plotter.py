@@ -39,7 +39,7 @@ default_prefs = {
 	# 'plotter_cmap':'rainbow',
 	'plotter_min_fret':-.5,
 	'plotter_max_fret':1.5,
-	'plotter_wiener_smooth':0,
+	'plotter_wiener_smooth':False,
 	# 'plotter_nbins_fret':41,
 	# 'plotter_min_time':0,
 	# 'plotter_max_time':100,
@@ -56,6 +56,8 @@ default_prefs = {
 	'synchronize_start_flag':False,
 
 	'hmm_nrestarts':4,
+	'hmm_threshold':1e-10,
+	'hmm_max_iters':1000,
 	'hmm_wiener_smooth':False,
 	'hmm_binding_expt':False,
 	'hmm_bound_dynamics':False

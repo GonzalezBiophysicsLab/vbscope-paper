@@ -12,7 +12,7 @@ default_prefs = {
 	'hist_edgecolor':'black',
 
 	'label_x_nticks':7,
-	'filter':False
+	'wiener_filter':False
 }
 
 def plot(gui):
@@ -23,7 +23,7 @@ def plot(gui):
 
 	if gui.ncolors == 2:
 		fpb = gui.data.get_plot_data()[0]
-		if popplot.prefs['filter'] is True:
+		if popplot.prefs['wiener_filter'] is True:
 			for i in range(fpb.shape[0]):
 				cut = np.isfinite(fpb[i])
 				try:

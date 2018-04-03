@@ -31,9 +31,9 @@ def initialize_priors(data,nstates,flag_vbfret=True,flag_custom=False,flag_user=
 	# print m
 
 
-	dist = np.sqrt(np.square(y[:,None] - m[None,:]))
-	gamma = (dist == dist.min(1)[:,None]).astype('double') + 0.1
-	gamma /= gamma.sum(1)[:,None]
+	# dist = np.sqrt(np.square(y[:,None] - m[None,:]))
+	# gamma = (dist == dist.min(1)[:,None]).astype('double') + 0.1
+	# gamma /= gamma.sum(1)[:,None]
 	# rho = gamma.sum(0)
 	# rho /= rho.sum()
 	# rho += 1.
@@ -46,16 +46,16 @@ def initialize_priors(data,nstates,flag_vbfret=True,flag_custom=False,flag_user=
 		m.sort()
 
 		# alpha = np.zeros((nstates,nstates)) + .1 + np.identity(nstates)*1.#1.#10.
-		alpha = np.zeros((nstates,nstates)) + .01 + np.identity(nstates)*100.
+		# alpha = np.zeros((nstates,nstates)) + np.identity(nstates)
 		# #.1,.005,.25
 		# a = np.zeros(nstates) + 2.5#1.
 		# b = np.zeros(nstates) + (xmax-xmin)**2./36.#(xmax-xmin)**2./36.
 		# beta = np.zeros(nstates) + nstates**2. * 36. / (xmax-xmin)**2.#nstates**2. * 36. / (xmax-xmin)**2.
 
-		# alpha = np.ones((nstates,nstates))
+		alpha = np.ones((nstates,nstates))
 		a = np.zeros(nstates) + 2.5
-		b = np.zeros(nstates) + 0.01
-		beta = np.zeros(nstates) + 0.25
+		b = np.zeros(nstates) + .01
+		beta = np.zeros(nstates) + .25
 
 	elif flag_vbfret:
 		## vbFRET!!
@@ -67,21 +67,21 @@ def initialize_priors(data,nstates,flag_vbfret=True,flag_custom=False,flag_user=
 
 	return [m,beta,a,b,alpha,rho]
 
-def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,wiener_smooth=False):
+def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,maxiterations=1000,threshold=1e-10,consensus=True):
 	'''
 	Format is # NxTxKxD
 	Data should be a list of nmol np.ndarray(npoints) trjectories. If only one trace, try [y]
 	'''
-	maxiterations = 1000
-	threshold = 1e-16
+	# maxiterations = 1000
+	# threshold = 1e-16
 
 	# Check Data
 	# if y.ndim != 3:
 	# 	raise Exception("Data should be Molecules x Time x Dimensionality")
 	nmol = len(data)
-	if not wiener_smooth is False:
-		from scipy.signal import wiener
-		data = [wiener(dd) for dd in data]
+	# if not wiener_smooth is False:
+	# 	from scipy.signal import wiener
+	# 	data = [wiener(dd) for dd in data]
 	flaty = np.concatenate(data)
 
 	# Parse Prior
@@ -181,18 +181,32 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,wiener_smooth=False):
 	result.ln_p_x_z = ln_p_x_z
 	return result
 
-def hmm_with_restarts(y,nstates,priors,nrestarts=8,wiener_smooth=False):
+def hmm_with_restarts(y,nstates,priors,nrestarts=8,prefs=None):
 	import multiprocessing as mp
-	cpus = np.min((nrestarts,mp.cpu_count()))
+
+	if not prefs is None:
+		wiener_smooth = prefs['hmm_wiener_smooth']
+		threshold = prefs['hmm_threshold']
+		maxiters = prefs['hmm_max_iters']
+		ncpu = prefs['ncpu']
+	else:
+		wiener_smooth = False
+		threshold = 1e-10
+		maxiters = 1000
+		ncpu = np.min((nrestarts,mp.cpu_count()))
+
+	if not wiener_smooth is False:
+		from scipy.signal import wiener
+		y = [wiener(dd) for dd in y]
 
 	from sys import platform
 	if platform != 'win32':
-		pool = mp.Pool(processes = np.min((nrestarts,mp.cpu_count())))
-		results = [pool.apply_async(simultaneous_vbem_hmm, args=(y,nstates,priors[i],False,wiener_smooth)) for i in xrange(nrestarts)]
+		pool = mp.Pool(processes = np.min((ncpu,mp.cpu_count())))
+		results = [pool.apply_async(simultaneous_vbem_hmm, args=(y,nstates,priors[i],False,maxiters,threshold)) for i in xrange(nrestarts)]
 		results = [p.get() for p in results]
 		pool.close()
 	else:
-		results = [simultaneous_vbem_hmm(y,nstates,priors[i],False,wiener_smooth) for i in xrange(nrestarts)]
+		results = [simultaneous_vbem_hmm(y,nstates,priors[i],False,maxiters,threshold) for i in xrange(nrestarts)]
 
 	lbs = [results[i].lowerbounds[-1] for i in xrange(nrestarts)]
 	iters = [results[i].iterations for i in xrange(nrestarts)]

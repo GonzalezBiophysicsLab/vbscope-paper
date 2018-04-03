@@ -101,14 +101,10 @@ class traj_plot_container():
 			for j in range(self.gui.ncolors):
 				intensities[j] -= bts[i,j]*intensities[i]
 
-		if self.gui.prefs['plotter_wiener_smooth'] != 0:
-			ms = self.gui.prefs['plotter_wiener_smooth']
-			if ms % 2 != 1:
-				ms += 1 ## keep it odd
-				self.gui.prefs['ploter_wiener_smooth'] = ms
+		if self.gui.prefs['plotter_wiener_smooth'] is True:
 			for i in range(intensities.shape[0]):
 				try:
-					intensities[i] = wiener(intensities[i],mysize=ms)
+					intensities[i] = wiener(intensities[i],mysize=3)
 				except:
 					pass
 
@@ -226,7 +222,8 @@ class traj_plot_container():
 		self.canvas.update()
 		self.canvas.flush_events()
 
-		if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau']:
+		yl = self.a[1][0].get_ylim()
+		if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plotter_min_fret'] or yl[1] != self.gui.prefs['plotter_max_fret']:
 			self.update_axes()
 		self.draw()
 
