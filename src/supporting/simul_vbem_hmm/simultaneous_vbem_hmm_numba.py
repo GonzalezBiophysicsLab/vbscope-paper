@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numba as nb
 from time import time
 
+np.seterr(divide='ignore')
+
 from forward_backward import numba_forward_backward as forward_backward
 from forward_backward import numba_viterbi as viterbi
 from maths import E_ln_p_x_z, E_ln_pi, E_ln_A, p_normal
@@ -13,6 +15,22 @@ from maths import update_tmatrix, update_rho, update_normals, dkl_normalgamma, d
 class results_hmm:
 	def __init__(self, *args):
 		self.args = args
+
+	def gen_report(self,tau = 1.):
+		try:
+			report = "%s\nHMM - k = %d, iter= %d, lowerbound=%f"%(self.lowerbound,self.m.size,self.iterations,self.lowerbound)
+			report += '\n    f: %s'%(self.ppi)
+			report += '\n    m: %s'%(self.m)
+			report += '\nm_sig: %s'%(1./np.sqrt(self.beta))
+			report += '\n  sig: %s'%((self.b/self.a)**.5)
+			rates = -np.log(1.-self.Astar)/tau
+			for i in range(rates.shape[0]):
+				rates[i,i] = 0.
+			report += '\n   k:\n'
+			report += '%s'%(rates)
+		except:
+			report = "Bad Report"
+		return report
 
 def initialize_priors(data,nstates,flag_vbfret=True,flag_custom=False,flag_user=False):
 	# NxTxKxD
@@ -179,6 +197,10 @@ def simultaneous_vbem_hmm(data,nstates,prior,verbose=False,maxiterations=1000,th
 		# v = viterbi(np.exp(ln_p_x_z[i]),np.exp(ln_A[i]),np.exp(ln_pi[i]))
 		result.viterbi.append(v)
 	result.ln_p_x_z = ln_p_x_z
+
+	result.ppi = np.sum([result.gamma[i].sum(0) for i in range(len(result.gamma))],axis=0)
+	result.ppi /= np.nansum(result.ppi)
+
 	return result
 
 def hmm_with_restarts(y,nstates,priors,nrestarts=8,prefs=None):

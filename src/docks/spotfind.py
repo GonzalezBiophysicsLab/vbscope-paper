@@ -427,8 +427,10 @@ class dock_spotfind(QWidget):
 		mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
 
 		## Estimate background distribution from local mins
+		self.gui.set_status('Compiling...')
 		from ..supporting import normal_minmax_dist as nd
 		from ..supporting import vbem_gmm as vb
+		self.gui.set_status('')
 		bgfit = nd.estimate_from_min(image[mmin],p['spotfind_nsearch']**2 * max_frames)
 		background = vb.background(p['spotfind_nsearch']**2 * max_frames,*bgfit)
 

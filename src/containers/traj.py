@@ -209,39 +209,122 @@ class traj_container():
 		else:
 			return None
 
-	def run_hmm(self,nstates=None):
-		from ..supporting import simul_vbem_hmm as hmm
+	def hmm_get_nstates(self,nstates=None):
+		if nstates is None:
+			nstates,success = QInputDialog.getInt(self.gui,"Number of States","Number of States",min=1)
+		else:
+			success = True
+		return success,nstates
 
-		if not self.d is None and self.gui.ncolors == 2:
-			if self.gui.prefs['hmm_binding_expt'] is True:
-				nstates = 2
-				success = True
-			else:
-				if nstates is None:
-					nstates,success = QInputDialog.getInt(self.gui,"Number of HMM States","Number of HMM States",min=2)
-				else:
-					success = True
-			if success and nstates > 1:
-				self.update_fret()
-				y = []
-				checked = self.gui.classes_get_checked()
-				ran = []
-				if self.gui.prefs['hmm_binding_expt'] is True:
-					z = self.get_fluor().sum(1)
-				elif self.gui.prefs['hmm_bound_dynamics'] is True:
-					z = self.get_fluor[:,1]
-				for i in range(self.fret.shape[1]):
-					if checked[i]:
-						if self.gui.prefs['hmm_binding_expt'] is True:
-							yy = z[i,self.pre_list[i]:self.pb_list[i]]
+	def hmm_get_colorchannel(self,color=None):
+		combos = ['%d'%(i) for i in range(self.gui.ncolors)]
+		combos.append('Sum Intensity')
+		combos.insert(0,'E_FRET')
+		if color is None:
+			color,success = QInputDialog.getItem(self.gui,"Color","Choose Color channel",combos,editable=False,current=0)
+		else:
+			success = True
+		return success,color
+
+	def hmm_get_traces(self,color='0'):
+		if color.isdigit():
+			z = self.get_fluor()[:,int(color)]
+		elif color == 'Sum Intensity':
+			z = self.get_fluor().sum(1)
+		elif color == 'E_FRET':
+			self.update_fret()
+			z = self.fret[0]
+		else:
+			raise Exception('wtf color do you want?')
+
+		y = []
+		ran = []
+		checked = self.gui.classes_get_checked()
+
+		for i in range(z.shape[0]):
+			if checked[i]:
+				yy = z[i,self.pre_list[i]:self.pb_list[i]]
+				if color == 'E_FRET': ## Clip traces and redistribute randomly
+					bad = np.bitwise_or((yy < -1.),np.bitwise_or((yy > 2),np.isnan(yy)))
+					yy[bad] = np.random.uniform(low=-1,high=2,size=int(bad.sum()))
+				if yy.size > 5:
+					y.append(yy)
+					ran.append(i)
+		return y,ran
+
+	def hmm_export(self):
+		import cPickle as pickle
+		oname = QFileDialog.getSaveFileName(self.gui, 'Export HMM results', '_HMM.dat','*.dat')
+		if oname[0] != "":
+			try:
+				f = open(oname[0],'w')
+				pickle.dump(self.hmm_result, f)
+				f.close()
+				self.gui.log('Exported HMM results as %s'%(oname[0]),True)
+			except:
+				QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
+				self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
+
+	def hmm_savechopped(self):
+			oname = QFileDialog.getSaveFileName(self.gui, 'Save Chopped Traces', '_chopped.dat','*.dat')
+			if oname[0] == "":
+				return
+
+			## N,C,T
+			out = None
+
+			from scipy.ndimage import label as ndilabel
+			from scipy.ndimage import find_objects as ndifind
+
+			## If it has an HMM
+			for j in range(len(self.hmm_result.ran)): ## hmm index
+				i = self.hmm_result.ran[j] ## trace index
+
+				v = self.hmm_result.viterbi[j]
+
+				pre = int(self.pre_list[i])
+				post = int(self.pb_list[i])
+				q = self.d[i,:,pre:post]
+
+				labels,numlabels = ndilabel(v)
+				slices = ndifind(labels)
+				if len(slices)>0:
+					for ss in slices:
+						ss = ss[0]
+						tmp = np.zeros((1,self.d.shape[1],self.d.shape[2]))
+						tmp[0,:,:ss.stop-ss.start] = self.d[i,:,pre+ss.start:pre+ss.stop]
+						tmp_cl = np.array((0,0,ss.stop-ss.start,0,ss.stop-ss.start))[None,:]
+						if out is None:
+							out = tmp.copy()
+							classes = tmp_cl.copy()
 						else:
-							yy = self.fret[0,i,self.pre_list[i]:self.pb_list[i]]
-							yy[np.isnan(yy)] = -1.
-							yy[yy < -1.] = -1.
-							yy[yy > 2] = 2.
-						if yy.size > 5:
-							y.append(yy)
-							ran.append(i)
+							out = np.append(out,tmp,axis=0)
+							classes = np.append(classes,tmp_cl,axis=0)
+
+			q = np.zeros((out.shape[0]*out.shape[1],out.shape[2]))
+			for i in range(out.shape[1]):
+				q[i::out.shape[1]] = out[:,i]
+			np.savetxt(oname[0],q.T,delimiter=',')
+			np.savetxt(oname[0][:-4]+"_classes.dat",classes.astype('i'),delimiter=',')
+			self.gui.log('Exported chopped traces as %s'%(oname[0]),True)
+
+	def run_conhmm(self,nstates=None,color=None):
+		self.gui.set_status('Compiling...')
+		from ..supporting import simul_vbem_hmm as hmm
+		self.gui.set_status('')
+
+		if not self.d is None:
+			success1,nstates = self.hmm_get_nstates(nstates)
+			if not success1:
+				return
+			success2,color = self.hmm_get_colorchannel(color)
+
+			if success1 and success2:
+				try:
+					y,ran = self.hmm_get_traces(color)
+				except:
+					return
+
 				nrestarts = self.gui.prefs['hmm_nrestarts']
 				priors = [hmm.initialize_priors(y,nstates,flag_vbfret=False,flag_custom=True) for _ in range(nrestarts)]
 				if self.gui.prefs['hmm_binding_expt'] is True:
@@ -250,82 +333,115 @@ class traj_container():
 						priors[iii][1] = np.ones(2) ## beta
 
 				result,lbs = hmm.hmm(y,nstates,priors,nrestarts,prefs=self.gui.prefs)
-				ppi = np.sum([result.gamma[i].sum(0) for i in range(len(result.gamma))],axis=0)
-				ppi /= ppi.sum()
+				result.type = 'consensus vbfret'
 
-				report = "%s\nHMM - k = %d, iter= %d, lowerbound=%f"%(lbs,nstates,result.iterations,result.lowerbound)
-				report += '\n    f: %s'%(ppi)
-				report += '\n    m: %s'%(result.m)
-				report += '\nm_sig: %s'%(1./np.sqrt(result.beta))
-				report += '\n  sig: %s'%((result.b/result.a)**.5)
-				rates = -np.log(1.-result.Astar)/self.gui.prefs['tau']
-				for i in range(rates.shape[0]):
-					rates[i,i] = 0.
-				report += '\n   k:\n'
-				report += '%s'%(rates)
 				self.gui.log("HMM report - %d states"%(nstates),True)
-				self.gui.log(report)
+				self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
 				self.hmm_result = result
 				self.hmm_result.ran = ran
 				self.gui.plot.initialize_hmm_plot()
 				self.gui.plot.update_plots()
 
-
-				import cPickle as pickle
-				oname = QFileDialog.getSaveFileName(self.gui, 'Export HMM results', '_HMM.dat','*.dat')
-				if oname[0] != "":
-					try:
-						f = open(oname[0],'w')
-						pickle.dump(self.hmm_result, f)
-						f.close()
-						self.gui.log('Exported HMM results as %s'%(oname[0]),True)
-					except:
-						QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
-						self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
-
+				self.hmm_export()
 				if self.gui.prefs['hmm_binding_expt'] is True:
-					oname = QFileDialog.getSaveFileName(self.gui, 'Save Chopped Traces', '_chopped.dat','*.dat')
-					if oname[0] == "":
-						return
+					self.hmm_savechopped()
 
-					## N,C,T
-					out = None
+	def _cancel_run(self):
+		self.flag_running = False
 
-					from scipy.ndimage import label as ndilabel
-					from scipy.ndimage import find_objects as ndifind
+	def run_vbhmm(self,nstates=None,color=None):
+		self.gui.set_status('Compiling...')
+		from ..supporting.hmms.vb_em_hmm import vb_em_hmm
+		from ..supporting.hmms.ml_em_gmm import ml_em_gmm
+		self.gui.set_status('')
 
-					## If it has an HMM
-					for j in range(len(self.hmm_result.ran)): ## hmm index
-						i = self.hmm_result.ran[j] ## trace index
+		if not self.d is None:
+			success1,nstates = self.hmm_get_nstates(nstates)
+			if not success1:
+				return
+			success2,color = self.hmm_get_colorchannel(color)
 
-						v = self.hmm_result.viterbi[j]
+			if success1 and success2:
+				try:
+					y,ran = self.hmm_get_traces(color)
+				except:
+					return
 
-						pre = int(self.pre_list[i])
-						post = int(self.pb_list[i])
-						q = self.d[i,:,pre:post]
+				from ..ui.ui_progressbar import progressbar
+				prog = progressbar()
+				prog.setRange(0,len(y))
+				prog.setWindowTitle('vbFRET HMM Progress')
+				prog.setLabelText('Current Trajectory')
+				self.flag_running = True
+				prog.canceled.connect(self._cancel_run)
+				prog.show()
 
-						labels,numlabels = ndilabel(v)
-						slices = ndifind(labels)
-						if len(slices)>0:
-							for ss in slices:
-								ss = ss[0]
-								tmp = np.zeros((1,self.d.shape[1],self.d.shape[2]))
-								tmp[0,:,:ss.stop-ss.start] = self.d[i,:,pre+ss.start:pre+ss.stop]
-								tmp_cl = np.array((0,0,ss.stop-ss.start,0,ss.stop-ss.start))[None,:]
-								if out is None:
-									out = tmp.copy()
-									classes = tmp_cl.copy()
-								else:
-									out = np.append(out,tmp,axis=0)
-									classes = np.append(classes,tmp_cl,axis=0)
+				self.hmm_result = ensemble_hmm_result()
+				self.hmm_result.type = 'vbfret'
+				for i in range(len(y)):
+					prog.setValue(i)
+					self.gui.app.processEvents()
+					if self.flag_running:
+						self.hmm_result.results.append(vb_em_hmm(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold']))
+				self.hmm_result.ran = ran[:len(self.hmm_result.results)]
 
-					q = np.zeros((out.shape[0]*out.shape[1],out.shape[2]))
-					for i in range(out.shape[1]):
-						q[i::out.shape[1]] = out[:,i]
-					np.savetxt(oname[0],q.T,delimiter=',')
-					np.savetxt(oname[0][:-4]+"_classes.dat",classes.astype('i'),delimiter=',')
-					self.gui.log('Exported chopped traces as %s'%(oname[0]),True)
+				self.gui.log("HMM report - %d states"%(nstates),True)
+				self.gui.log("Finished %d trajectories"%(len(self.hmm_result.results)),True)
+				# self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
 
+				self.gui.plot.initialize_hmm_plot()
+				self.gui.plot.update_plots()
+
+				self.hmm_export()
+				if self.gui.prefs['hmm_binding_expt'] is True:
+					self.hmm_savechopped()
+
+	def run_mlhmm(self,nstates=None,color=None):
+		self.gui.set_status('Compiling...')
+		from ..supporting.hmms.ml_em_hmm import ml_em_hmm
+		from ..supporting.hmms.ml_em_gmm import ml_em_gmm
+		self.gui.set_status('')
+
+		if not self.d is None:
+			success1,nstates = self.hmm_get_nstates(nstates)
+			if not success1:
+				return
+			success2,color = self.hmm_get_colorchannel(color)
+
+			if success1 and success2:
+				try:
+					y,ran = self.hmm_get_traces(color)
+				except:
+					return
+
+				from ..ui.ui_progressbar import progressbar
+				prog = progressbar()
+				prog.setRange(0,len(y))
+				prog.setWindowTitle('ML HMM Progress')
+				prog.setLabelText('Current Trajectory')
+				self.flag_running = True
+				prog.canceled.connect(self._cancel_run)
+				prog.show()
+
+				self.hmm_result = ensemble_hmm_result()
+				self.hmm_result.type = 'ml'
+				for i in range(len(y)):
+					prog.setValue(i)
+					self.gui.app.processEvents()
+					if self.flag_running:
+						self.hmm_result.results.append(ml_em_hmm(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold']))
+				self.hmm_result.ran = ran[:len(self.hmm_result.results)]
+
+				self.gui.log("HMM report - %d states"%(nstates),True)
+				self.gui.log("Finished %d trajectories"%(len(self.hmm_result.results)),True)
+				# self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
+
+				self.gui.plot.initialize_hmm_plot()
+				self.gui.plot.update_plots()
+
+				self.hmm_export()
+				if self.gui.prefs['hmm_binding_expt'] is True:
+					self.hmm_savechopped()
 
 	def remove_beginning(self,nd=None):
 		if not self.d is None:
@@ -452,3 +568,9 @@ class traj_container():
 
 def normal(x,m,v):
 	return 1./np.sqrt(2.*np.pi*v) * np.exp(-.5/v*(x-m)**2.)
+
+
+class ensemble_hmm_result(object):
+	def __init__(self, *args):
+		self.args = args
+		self.results = []

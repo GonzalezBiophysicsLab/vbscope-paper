@@ -9,7 +9,7 @@ from fxns.numba_math import psi,gammaln
 from fxns.gmm_related import initialize_params, result_bayesian_gmm
 from fxns.hmm_related import forward_backward,viterbi,result_bayesian_hmm,initialize_tmatrix
 
-@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:]),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:]),nopython=True)
 def m_sufficient_statistics(x,r):
 	#### M Step
 	## Sufficient Statistics
@@ -29,7 +29,7 @@ def m_sufficient_statistics(x,r):
 		sk[i] /= nk[i]
 	return nk,xbark,sk
 
-@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]),nopython=True)
 def m_updates(x,r,a0,b0,m0,beta0,alpha0):
 	#### M Step
 	## Updates
@@ -51,7 +51,7 @@ def m_updates(x,r,a0,b0,m0,beta0,alpha0):
 	return a,b,m,beta,alpha,nk,xbark,sk
 
 
-@nb.jit(nb.float64[:](nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64),nopython=True,cache=True)
+@nb.jit(nb.float64[:](nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64),nopython=True)
 def calc_lowerbound(r,a,b,m,beta,pik,tm,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta0,pi0,tm0,lnz):
 
 	lt74 = 0.
@@ -79,7 +79,7 @@ def calc_lowerbound(r,a,b,m,beta,pik,tm,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta
 	ll1 = lnz + Fgw + Fpi + Ftm
 	return np.array((ll1,lnz,Fgw,Fpi,Ftm))
 
-@nb.jit(nb.types.Tuple((nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.int64,nb.float64[:,:]))(nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.int64,nb.float64),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.int64,nb.float64[:,:]))(nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.int64,nb.float64),nopython=True)
 def outer_loop(x,mu,var,tm,maxiters,threshold):
 
 	## priors - from vbFRET
@@ -154,7 +154,7 @@ def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10):
 		raise Exception("Input data isn't 1D")
 
 	from ml_em_gmm import ml_em_gmm
-	o = ml_em_gmm(d,nstates)
+	o = ml_em_gmm(x,nstates)
 	mu = o.mu
 	var = o.var
 	ppi = o.ppi
@@ -164,44 +164,6 @@ def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10):
 	r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,iteration,likelihood = outer_loop(x,mu,var,tmatrix,maxiters,threshold)
 
 	result = result_bayesian_hmm(r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,likelihood[:iteration+1],iteration)
-
+	result.viterbi = viterbi(x,result.mu,result.var,result.tmatrix,result.ppi)
 
 	return result
-
-
-
-# ### Examples
-from fxns.fake_data import fake_data
-t,d = fake_data()
-
-# nstates = 2
-lls = []
-for nstates in range(1,11):
-	o = vb_em_hmm(d,nstates)
-	print nstates
-	lls.append(o.likelihood)
-l = [ll[-1,0] for ll in lls]
-import matplotlib.pyplot as plt
-plt.figure()
-plt.plot(range(1,11),l,'-o')
-plt.show()
-#
-# print o.tmatrix
-# print o.mu
-# print o.var**.5
-# print o.r.shape
-#
-# import matplotlib.pyplot as plt
-cm = plt.cm.jet
-v = viterbi(d,o.mu,o.var,o.tmatrix,o.ppi)
-f,a = plt.subplots(1)
-for i in range(nstates):
-	c = cm(float(i)/nstates)
-	# print i,c
-	xcut = v==i
-	a.plot(t[xcut],d[xcut],'o',color=c,alpha=.5)
-	# plt.axhline(y=o.mu[i], color=c)
-a.plot(t,o.mu[v])
-
-# a[1] = plt.plot(o.likelihood[:,0],'k')
-plt.show()

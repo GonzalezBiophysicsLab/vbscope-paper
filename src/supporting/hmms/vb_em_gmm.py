@@ -8,7 +8,7 @@ from fxns.kernel_sample import kernel_sample
 from fxns.numba_math import psi,gammaln
 from fxns.gmm_related import initialize_params, result_bayesian_gmm
 
-@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:]),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:]),nopython=True)
 def m_sufficient_statistics(x,r):
 	#### M Step
 	## Sufficient Statistics
@@ -28,7 +28,7 @@ def m_sufficient_statistics(x,r):
 		sk[i] /= nk[i]
 	return nk,xbark,sk
 
-@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]),nopython=True)
 def m_updates(x,r,a0,b0,m0,beta0,alpha0):
 	#### M Step
 	## Updates
@@ -50,7 +50,7 @@ def m_updates(x,r,a0,b0,m0,beta0,alpha0):
 	return a,b,m,beta,alpha,nk,xbark,sk
 
 
-@nb.jit(nb.float64[:](nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]),nopython=True,cache=True)
+@nb.jit(nb.float64[:](nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]),nopython=True)
 def calc_lowerbound(r,a,b,m,beta,alpha,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta0,alpha0):
 
 	lt71 = 0.
@@ -83,7 +83,7 @@ def calc_lowerbound(r,a,b,m,beta,alpha,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta0
 	ll1 = lt71 + Fgw + Fa + Fpi
 	return np.array((ll1,lt71,Fgw,Fa,Fpi))
 
-@nb.jit(nb.types.Tuple((nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.int64,nb.float64[:,:]))(nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.int64,nb.float64),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.int64,nb.float64[:,:]))(nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.int64,nb.float64),nopython=True)
 def outer_loop(x,mu,var,ppi,maxiters,threshold):
 
 	## priors - from vbFRET
@@ -155,53 +155,10 @@ def vb_em_gmm(x,nstates,maxiters=1000,threshold=1e-6):
 
 	# mu,var,ppi = initialize_params(x,nstates)
 	from ml_em_gmm import ml_em_gmm
-	o_ml = ml_em_gmm(d,nstates)
+	o_ml = ml_em_gmm(x,nstates)
 
 	r,a,b,m,beta,alpha,E_lnlam,E_lnpi,iteration,ll = outer_loop(x,o_ml.mu,o_ml.var,o_ml.ppi,maxiters,threshold)
 
 	result = result_bayesian_gmm(r,a,b,m,beta,alpha,E_lnlam,E_lnpi,ll[:iteration+1],iteration)
 
 	return result
-
-
-
-# ### Examples
-# from fxns.fake_data import fake_data
-# t,d = fake_data()
-#
-# nstates = 3
-#
-# o = vb_em_gmm(d,nstates)
-#
-# # import matplotlib.pyplot as plt
-# # cm = plt.cm.jet
-# # hy,hx = plt.hist(d,bins=300,histtype='stepfilled',alpha=.5)[:2]
-# # for i in range(nstates):
-# # 	c = cm(float(i)/nstates)
-# # 	# print i,c
-# # 	xcut = o.r.argmax(1) == i
-# # 	plt.hist(d[xcut],bins=hx,color=c,alpha=.5)
-# # plt.show()
-# import matplotlib.pyplot as plt
-# cm = plt.cm.jet
-# f,a = plt.subplots(1)
-# hy,hx=a.hist(d,bins=100,histtype='stepfilled',alpha=.5,density=True)[:2]
-# x = np.linspace(hx[0],hx[-1],10000)
-# ytot = np.zeros_like(x)
-# def pp_normal(x,m,v):
-# 	return np.exp(-.5*np.log(2.*np.pi) -.5*np.log(v) - .5/v*(x-m)**2.)
-#
-# for i in range(nstates):
-# 	c = cm(float(i)/nstates)
-# 	# print i,c
-# 	# xcut = o.r.argmax(1) == i
-# 	y = o.ppi[i]*pp_normal(x,np.array((o.mu[i])),np.array((o.var[i])))
-# 	a.plot(x,y,lw=1,label='%d'%(i))
-# 	ytot+=y
-# 	# a[0].plot(t[xcut],d[xcut],'o',color=c,alpha=.5)
-# a.plot(x,ytot,lw=1.5,color='k')
-# a.legend()
-# # for i in range(o.likelihood.shape[1]):
-# 	# a[1].plot(o.likelihood[:,i],label='%d'%(i))
-# # a[1].legend()
-# plt.show()

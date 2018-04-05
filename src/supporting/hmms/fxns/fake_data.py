@@ -5,7 +5,7 @@ def fake_data(tmax=5000,outliers = False):
 
 	## reproducable
 	np.random.seed(20180404)
-	
+
 	tmat = np.array(((.985,.015),(.005,.995)))
 	state = 0
 	m = np.array((-1,1.))

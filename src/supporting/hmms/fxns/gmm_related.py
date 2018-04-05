@@ -1,5 +1,5 @@
 import numpy as np
-from fxns.kernel_sample import kernel_sample
+from kernel_sample import kernel_sample
 
 def initialize_params(x,nstates):
 
@@ -14,7 +14,11 @@ def initialize_params(x,nstates):
 
 	return mu,var,ppi
 
-class result_ml_gmm(object):
+class result(object):
+	def __init__(self, *args):
+		self.args = args
+
+class result_ml_gmm(result):
 	def __init__(self,mu,var,r,ppi,likelihood,iteration):
 		self.mu = mu
 		self.var = var
@@ -23,7 +27,7 @@ class result_ml_gmm(object):
 		self.likelihood = likelihood
 		self.iteration = iteration
 
-class result_bayesian_gmm(object):
+class result_bayesian_gmm(result):
 	def __init__(self,r,a,b,m,beta,alpha,E_lnlam,E_lnpi,likelihood,iteration):
 		self.r = r
 		self.a = a

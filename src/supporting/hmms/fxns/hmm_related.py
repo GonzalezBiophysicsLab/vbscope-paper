@@ -1,9 +1,9 @@
 import numpy as np
 import numba as nb
 
-from .statistics import p_normal
+from statistics import p_normal
 
-@nb.jit(nb.types.Tuple((nb.double[:,:],nb.double[:,:,:],nb.double))(nb.double[:,:],nb.double[:,:],nb.double[:]),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.double[:,:],nb.double[:,:,:],nb.double))(nb.double[:,:],nb.double[:,:],nb.double[:]),nopython=True)
 def forward_backward(p_x_z,A,pi):
 	### Copied and Translated from JWvdM's ebFRET mex file
 
@@ -67,7 +67,7 @@ def forward_backward(p_x_z,A,pi):
 
 	return g,xi,ln_z
 
-@nb.jit("int64[:](float64[:,:],int64[:,:])",nopython=True,cache=True)
+@nb.jit("int64[:](float64[:,:],int64[:,:])",nopython=True)
 def _vit_calc_zhat(omega,zmax):
 	zhat = np.empty(omega.shape[0],dtype=nb.int64)
 	zhat[-1] = np.argmax(omega[-1])
@@ -78,7 +78,7 @@ def _vit_calc_zhat(omega,zmax):
 		zhat[t] = zmax[t+1,zhat[t+1]]
 	return zhat
 
-@nb.jit(nb.types.Tuple((nb.float64[:,:],nb.int64[:,:]))(nb.float64[:,:],nb.float64[:,:],nb.float64[:]),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.float64[:,:],nb.int64[:,:]))(nb.float64[:,:],nb.float64[:,:],nb.float64[:]),nopython=True)
 def _vit_calc_omega(ln_p_x_z,ln_A,ln_ppi):
 	omega = np.empty_like(ln_p_x_z)
 	zmax = np.empty_like(ln_p_x_z,dtype=nb.int64)
@@ -91,7 +91,7 @@ def _vit_calc_omega(ln_p_x_z,ln_A,ln_ppi):
 		# zmax[t] = np.argmax(ln_A + omega[t-1][:,None],axis=0)
 	return omega,zmax
 
-@nb.jit(nb.int64[:](nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:]),nopython=True,cache=True)
+@nb.jit(nb.int64[:](nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:]),nopython=True)
 def viterbi(x,mu,var,tmatrix,ppi):
 	### v is vbhmm_result
 
@@ -105,7 +105,12 @@ def viterbi(x,mu,var,tmatrix,ppi):
 	return zhat
 
 
-class result_ml_hmm(object):
+
+class result(object):
+	def __init__(self, *args):
+		self.args = args
+
+class result_ml_hmm(result):
 	def __init__(self,mu,var,r,ppi,tmatrix,likelihood,iteration):
 		self.mu = mu
 		self.var = var
@@ -115,7 +120,7 @@ class result_ml_hmm(object):
 		self.likelihood = likelihood
 		self.iteration = iteration
 
-class result_bayesian_hmm(object):
+class result_bayesian_hmm(result):
 	def __init__(self,r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,likelihood,iteration):
 		self.r = r
 		self.a = a

@@ -1,1 +1,1 @@
-import background,contrast,extract,play,prefs,rotate,spotfind,transform,mesoscopic,tag_viewer,render
+import background,contrast,extract,play,rotate,spotfind,transform,mesoscopic,tag_viewer,render

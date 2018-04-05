@@ -262,6 +262,9 @@ class dock_extract(QWidget):
 		self.gui.app.processEvents()
 		self.flag_cancel = False
 
+		self.gui.set_status('Compiling...')
+		from ..supporting.ml_fit import fit
+		self.gui.set_status('')
 		for t in range(self.gui.data.movie.shape[0]):
 			z = self.gui.data.movie[t].astype('double')
 			if not self.flag_cancel:
@@ -286,7 +289,9 @@ class dock_extract(QWidget):
 		return out
 
 	def ml_psf(self,xy,sigma,color):
+		self.gui.set_status('Compiling...')
 		from ..supporting.ml_fit import ml_psf
+		self.gui.set_status('')
 		from time import time
 
 		l = (self.gui.prefs['extract_nintegrate']-1)/2

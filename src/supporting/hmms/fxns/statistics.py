@@ -1,8 +1,8 @@
 import numpy as np
 import numba as nb
-from .numba_math import psi,gammaln
+from numba_math import psi,gammaln
 
-@nb.jit(nb.double[:,:](nb.double[:],nb.double[:],nb.double[:]),nopython=True,cache=True)
+@nb.jit(nb.double[:,:](nb.double[:],nb.double[:],nb.double[:]),nopython=True)
 def ln_p_normal(x,mu,var):
 	out = np.zeros((x.size,mu.size))
 	for j in range(mu.size):
@@ -14,12 +14,12 @@ def ln_p_normal(x,mu,var):
 				out[i,j] = -np.inf
 	return out
 
-@nb.jit(nb.double[:,:](nb.double[:],nb.double[:],nb.double[:]),nopython=True,cache=True)
+@nb.jit(nb.double[:,:](nb.double[:],nb.double[:],nb.double[:]),nopython=True)
 def p_normal(x,mu,var):
 	return np.exp(ln_p_normal(x,mu,var))
 
 
-@nb.jit(nb.float64[:,:](nb.float64[:,:]),nopython=True,cache=True)
+@nb.jit(nb.float64[:,:](nb.float64[:,:]),nopython=True)
 def dirichlet_estep(alpha):
 	E_ln_theta = psi(alpha)
 	for i in range(alpha.shape[0]):
@@ -29,7 +29,7 @@ def dirichlet_estep(alpha):
 	# E_ln_theta = psi(alpha) - psi(np.sum(alpha,axis=-1))[...,None]
 	return E_ln_theta
 
-@nb.jit(nb.float64(nb.float64[:],nb.float64[:]),nopython=True,cache=True)
+@nb.jit(nb.float64(nb.float64[:],nb.float64[:]),nopython=True)
 def dkl_dirichlet(p,q):
 	phat = np.sum(p)
 	qhat = np.sum(q)

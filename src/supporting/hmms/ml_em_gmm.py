@@ -7,7 +7,7 @@ from fxns.statistics import p_normal
 from fxns.kernel_sample import kernel_sample
 from fxns.gmm_related import initialize_params, result_ml_gmm
 
-@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:],nb.int64,nb.float64))(nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.int64,nb.float64),nopython=True,cache=True)
+@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:],nb.int64,nb.float64))(nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.int64,nb.float64),nopython=True)
 def outer_loop(x,mu,var,ppi,maxiters,threshold):
 	prob = p_normal(x,mu,var)
 	r = np.zeros_like(prob)
@@ -79,21 +79,3 @@ def ml_em_gmm(x,nstates,maxiters=1000,threshold=1e-6):
 	result = result_ml_gmm(mu,var,r,ppi,ll1,iteration)
 
 	return result
-
-
-
-# ### Examples
-# from fxns.fake_data import fake_data
-# t,d = fake_data(outliers=True)
-#
-# nstates = 5
-# o = ml_em_gmm(d,nstates)
-#
-# import matplotlib.pyplot as plt
-# cm = plt.cm.jet
-# for i in range(nstates):
-# 	c = cm(float(i)/nstates)
-# 	# print i,c
-# 	xcut = o.r.argmax(1) == i
-# 	plt.plot(t[xcut],d[xcut],'o',color=c,alpha=.5)
-# plt.show()

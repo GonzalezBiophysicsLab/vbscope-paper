@@ -1,5 +1,6 @@
 import numpy as np
 import numba as nb
+np.seterr(divide='ignore') ## many divide by zeros in this algorithm
 
 @nb.jit(nb.types.Tuple((nb.double[:,:],nb.double[:,:,:],nb.double))(nb.double[:,:],nb.double[:,:],nb.double[:]),nopython=True)
 def forward_backward(p_x_z,A,pi):

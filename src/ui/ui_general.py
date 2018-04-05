@@ -153,6 +153,7 @@ class gui(QMainWindow):
 
 	def set_status(self,message=""):
 		self.statusbar.showMessage(message)
+		self.app.processEvents()
 
 ################################################################################
 

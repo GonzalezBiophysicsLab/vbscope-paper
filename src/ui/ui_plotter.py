@@ -21,13 +21,13 @@ default_prefs = {
 
 	'channel_colors':['green','red','blue','purple'],
 
-	'tau':0.1,
+	'tau':1.0,
 	'bleedthrough':np.array(((0.,0.05,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.))).flatten(),
 
 	'ncpu':mp.cpu_count(),
 
 	'downsample':1,
-	'snr_threshold':.5,
+	# 'snr_threshold':.5,
 	'min_length':10,
     #
 	# 'plotter_floor':0.2,
@@ -47,10 +47,10 @@ default_prefs = {
 	# 'plotter_2d_syncpreframes':10,
 	# 'plotter_2d_normalizecolumn':False,
 
-	'convert_flag':False,
-	'convert_c_lambda':[11.64,12.75],
-	'convert_em_gain':300,
-	'convert_offset':0,
+	# 'convert_flag':False,
+	# 'convert_c_lambda':[11.64,12.75],
+	# 'convert_em_gain':300,
+	# 'convert_offset':0,
 
 	'photobleaching_flag':True,
 	'synchronize_start_flag':False,
@@ -228,6 +228,7 @@ class plotter_gui(ui_general.gui):
 		menu_tools = self.menubar.addMenu('Tools')
 		menu_cull = menu_tools.addMenu('Cull')
 		menu_photobleach = menu_tools.addMenu('Photobleach')
+		menu_hmm = menu_tools.addMenu('HMM')
 		tools_cullpb = QAction('Cull short', self)
 		tools_cullpb.triggered.connect(self.data.cull_pb)
 		tools_cullmin = QAction('Cull minimums', self)
@@ -244,8 +245,13 @@ class plotter_gui(ui_general.gui):
 		tools_remove.triggered.connect(lambda event: self.data.remove_beginning())
 		tools_dead = QAction('Remove Dead Traces',self)
 		tools_dead.triggered.connect(self.data.remove_dead)
-		tools_hmm = QAction('HMM',self)
-		tools_hmm.triggered.connect(lambda event: self.data.run_hmm())
+
+		tools_conhmm = QAction('Consensus VB',self)
+		tools_conhmm.triggered.connect(lambda event: self.data.run_conhmm())
+		tools_mlhmm = QAction('Max Likelihood',self)
+		tools_mlhmm.triggered.connect(lambda event: self.data.run_mlhmm())
+		tools_vbhmm = QAction('vbFRET',self)
+		tools_vbhmm.triggered.connect(lambda event: self.data.run_vbhmm())
 
 		# for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_stepfret,tools_remove,tools_dead,tools_hmm]:
 		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons]:
@@ -254,8 +260,11 @@ class plotter_gui(ui_general.gui):
 			menu_photobleach.addAction(f)
 		for f in [menu_cull,menu_photobleach]:
 			menu_tools.addMenu(f)
-		for f in [tools_remove,tools_dead,tools_hmm]:
+		for f in [tools_remove,tools_dead]:
 			menu_tools.addAction(f)
+		for f in [tools_vbhmm,tools_conhmm,tools_mlhmm]:
+			menu_hmm.addAction(f)
+		menu_tools.addMenu(menu_hmm)
 #
 		### plots
 		menu_plots = self.menubar.addMenu('Plots')
@@ -420,7 +429,6 @@ class plotter_gui(ui_general.gui):
 			pass
 
 		self.plot.update_plots()
-
 
 
 	## callback function for changing the trajectory using the slider
