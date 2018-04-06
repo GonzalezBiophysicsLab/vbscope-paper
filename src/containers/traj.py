@@ -209,7 +209,7 @@ class traj_container():
 		else:
 			return None
 
-	def hmm_get_nstates(self,nstates=None):
+	def get_nstates(self,nstates=None):
 		if nstates is None:
 			nstates,success = QInputDialog.getInt(self.gui,"Number of States","Number of States",min=1)
 		else:
@@ -308,13 +308,16 @@ class traj_container():
 			np.savetxt(oname[0][:-4]+"_classes.dat",classes.astype('i'),delimiter=',')
 			self.gui.log('Exported chopped traces as %s'%(oname[0]),True)
 
+	def _cancel_run(self):
+		self.flag_running = False
+
 	def run_conhmm(self,nstates=None,color=None):
 		self.gui.set_status('Compiling...')
 		from ..supporting import simul_vbem_hmm as hmm
 		self.gui.set_status('')
 
 		if not self.d is None:
-			success1,nstates = self.hmm_get_nstates(nstates)
+			success1,nstates = self.get_nstates(nstates)
 			if not success1:
 				return
 			success2,color = self.hmm_get_colorchannel(color)
@@ -346,17 +349,14 @@ class traj_container():
 				if self.gui.prefs['hmm_binding_expt'] is True:
 					self.hmm_savechopped()
 
-	def _cancel_run(self):
-		self.flag_running = False
-
 	def run_vbhmm(self,nstates=None,color=None):
 		self.gui.set_status('Compiling...')
-		from ..supporting.hmms.vb_em_hmm import vb_em_hmm
-		from ..supporting.hmms.ml_em_gmm import ml_em_gmm
+		from ..supporting.hmms.vb_em_hmm import vb_em_hmm,vb_em_hmm_parallel
+		# from ..supporting.hmms.ml_em_gmm import ml_em_gmm
 		self.gui.set_status('')
 
 		if not self.d is None:
-			success1,nstates = self.hmm_get_nstates(nstates)
+			success1,nstates = self.get_nstates(nstates)
 			if not success1:
 				return
 			success2,color = self.hmm_get_colorchannel(color)
@@ -376,13 +376,14 @@ class traj_container():
 				prog.canceled.connect(self._cancel_run)
 				prog.show()
 
+				priors = np.array([self.gui.prefs[sss] for sss in ['vb_prior_beta','vb_prior_a','vb_prior_b','vb_prior_pi','vb_prior_alpha']])
 				self.hmm_result = ensemble_hmm_result()
-				self.hmm_result.type = 'vbfret'
+				self.hmm_result.type = 'vb'
 				for i in range(len(y)):
 					prog.setValue(i)
 					self.gui.app.processEvents()
 					if self.flag_running:
-						self.hmm_result.results.append(vb_em_hmm(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold']))
+						self.hmm_result.results.append(vb_em_hmm_parallel(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],prior_strengths=priors,ncpu=self.gui.prefs['ncpu']))
 				self.hmm_result.ran = ran[:len(self.hmm_result.results)]
 
 				self.gui.log("HMM report - %d states"%(nstates),True)
@@ -398,12 +399,12 @@ class traj_container():
 
 	def run_mlhmm(self,nstates=None,color=None):
 		self.gui.set_status('Compiling...')
-		from ..supporting.hmms.ml_em_hmm import ml_em_hmm
-		from ..supporting.hmms.ml_em_gmm import ml_em_gmm
+		from ..supporting.hmms.ml_em_hmm import ml_em_hmm, ml_em_hmm_parallel
+		# from ..supporting.hmms.ml_em_gmm import ml_em_gmm
 		self.gui.set_status('')
 
 		if not self.d is None:
-			success1,nstates = self.hmm_get_nstates(nstates)
+			success1,nstates = self.get_nstates(nstates)
 			if not success1:
 				return
 			success2,color = self.hmm_get_colorchannel(color)
@@ -426,10 +427,10 @@ class traj_container():
 				self.hmm_result = ensemble_hmm_result()
 				self.hmm_result.type = 'ml'
 				for i in range(len(y)):
+					if self.flag_running:
+						self.hmm_result.results.append(ml_em_hmm_parallel(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],ncpu=self.gui.prefs['ncpu']))
 					prog.setValue(i)
 					self.gui.app.processEvents()
-					if self.flag_running:
-						self.hmm_result.results.append(ml_em_hmm(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold']))
 				self.hmm_result.ran = ran[:len(self.hmm_result.results)]
 
 				self.gui.log("HMM report - %d states"%(nstates),True)

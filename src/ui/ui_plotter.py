@@ -60,7 +60,13 @@ default_prefs = {
 	'hmm_max_iters':1000,
 	'hmm_wiener_smooth':False,
 	'hmm_binding_expt':False,
-	'hmm_bound_dynamics':False
+	'hmm_bound_dynamics':False,
+	'vb_prior_beta':0.25,
+	'vb_prior_a':2.5,
+	'vb_prior_b':0.01,
+	'vb_prior_alpha':1.,
+	'vb_prior_pi':1.
+
 }
 
 ## GUI for plotting 2D smFRET trajectories
@@ -345,7 +351,7 @@ class plotter_gui(ui_general.gui):
 			'plot_intensities':None
 		}
 
-	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots_x=1, nplots_y=1,callback=None,dprefs=None):
+	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots_x=1, nplots_y=1,callback=None,dprefs=None,setup=None):
 		try:
 			ph = self.popout_plots[plot_handle]
 			if not ph.isVisible():
@@ -361,9 +367,11 @@ class plotter_gui(ui_general.gui):
 			self.popout_plots[plot_handle].resize(int(self.popout_plots[plot_handle].ui.prefs['fig_width']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+200,int(self.popout_plots[plot_handle].ui.prefs['fig_height']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+125)
 			self.popout_plots[plot_handle].show()
 			self.popout_plots[plot_handle].ui.clf()
+			if not setup is None:
+				setup()
 
 	def plot_hist1d(self):
-		self.raise_plot('plot_hist1d', '1D Histogram', 1,1, lambda: plots.hist_1d.plot(self), plots.hist_1d.default_prefs)
+		self.raise_plot('plot_hist1d', '1D Histogram', 1,1, lambda: plots.hist_1d.plot(self), plots.hist_1d.default_prefs,setup=lambda : plots.hist_1d.setup(self))
 		plots.hist_1d.plot(self)
 
 	def plot_hist2d(self):

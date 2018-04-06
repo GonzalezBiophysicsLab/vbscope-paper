@@ -166,7 +166,7 @@ class traj_plot_container():
 					state_means = np.array((0.,1.))
 				else:
 					state_means = self.gui.data.hmm_result.m
-			elif self.gui.data.hmm_result.type == 'vbfret' or self.gui.data.hmm_result.type == 'ml':
+			elif self.gui.data.hmm_result.type == 'vb' or self.gui.data.hmm_result.type == 'ml':
 				vitpath = self.gui.data.hmm_result.results[ii].viterbi
 				state_means = self.gui.data.hmm_result.results[ii].mu
 

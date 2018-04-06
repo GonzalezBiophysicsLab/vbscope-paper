@@ -127,5 +127,5 @@ def test_vb_em_hmm():
 
 test_ml_em_gmm()
 test_ml_em_hmm()
-test_vb_em_gmm()
-test_vb_em_hmm()
+# test_vb_em_gmm()
+# test_vb_em_hmm()

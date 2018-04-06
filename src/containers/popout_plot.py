@@ -7,10 +7,8 @@ from matplotlib.widgets import  RectangleSelector
 
 from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget,QToolBar,QAction,QHBoxLayout,QPushButton,QMainWindow,QDockWidget
 from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QPixmap
 import numpy as np
-# from ..ui import ui_prefs
 from ..ui.ui_prefs import preferences
 
 
@@ -77,16 +75,16 @@ class popout_plot_container_widget(QWidget):
 		plt.close(self.f)
 
 		qw = QWidget()
-		hbox = QHBoxLayout()
+		self.buttonbox = QHBoxLayout()
 		self.button_refresh = QPushButton("Refresh")
 		button_prefs = QPushButton("Preferences")
 		self.button_refresh.clicked.connect(self.replot)
 		button_prefs.clicked.connect(self.open_preferences)
-		hbox.addWidget(self.button_refresh)
-		hbox.addWidget(button_prefs)
+		self.buttonbox.addWidget(self.button_refresh)
+		self.buttonbox.addWidget(button_prefs)
 
-		hbox.addStretch(1)
-		qw.setLayout(hbox)
+		self.buttonbox.addStretch(1)
+		qw.setLayout(self.buttonbox)
 
 		self.vbox = QVBoxLayout()
 		self.vbox.addWidget(self.canvas)

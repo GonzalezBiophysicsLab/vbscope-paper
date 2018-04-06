@@ -46,6 +46,7 @@ def outer_loop(x,mu,var,ppi,maxiters,threshold):
 		## M Step
 		nk = np.sum(r,axis=0) + 1e-300
 		for i in range(nk.size-1): ## ignore the outlier class
+		# for i in range(nk.size):
 			mu[i] = 0.
 			for j in range(r.shape[0]):
 				mu[i] += r[j,i]*x[j]
@@ -55,6 +56,8 @@ def outer_loop(x,mu,var,ppi,maxiters,threshold):
 			for j in range(r.shape[0]):
 				var[i] += r[j,i]*(x[j] - mu[i])**2.
 			var[i] /= nk[i]
+		mu[-1] = p_unif ## info for outlier class
+		var[-1] = 0. ## info for outlier class
 		ppi = nk/np.sum(nk)
 
 		iteration += 1

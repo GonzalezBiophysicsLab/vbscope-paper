@@ -1,10 +1,11 @@
 import numpy as np
 from kernel_sample import kernel_sample
+import time
 
 def initialize_params(x,nstates):
 
 	# x = xx[np.random.randint(low=0,high=xx.size,size=np.min((xx.size,100)),dtype='i')]
-
+	np.random.seed()
 	mu = kernel_sample(x,nstates)
 
 	distinv = 1./np.sqrt((x[:,None] - mu[None,:])**2.)

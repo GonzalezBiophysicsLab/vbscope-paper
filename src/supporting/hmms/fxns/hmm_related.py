@@ -137,7 +137,7 @@ class result_bayesian_hmm(result):
 
 		self.mu = m
 		self.var = 1./np.exp(E_lnlam)
-		self.ppi = np.exp(E_lnpi)
+		self.ppi = self.r.sum(0) / self.r.sum()
 		self.tmstar = np.exp(E_lntm)
 
 
