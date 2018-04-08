@@ -120,6 +120,22 @@ class result_ml_hmm(result):
 		self.likelihood = likelihood
 		self.iteration = iteration
 
+	def report(self):
+		s = 'VB HMM\n-----------\n'
+		s += 'N States: %d\n'%(self.mu.size)
+		s += 'ln l: %f\niters: %d\n'%(self.likelihood,self.iteration)
+		s += 'mu:  %s\n'%(self.mu)
+		s += 'var: %s\n'%(self.var)
+		s += 'f:   %s\n'%(self.ppi)
+
+		rates = -np.log(1.-self.tmatrix)/1.
+		for i in range(rates.shape[0]):
+			rates[i,i] = 0.
+		s += 'k (per frame):\n'
+		s += '%s'%(rates)
+		return s
+
+
 class result_bayesian_hmm(result):
 	def __init__(self,r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,likelihood,iteration):
 		self.r = r
@@ -138,7 +154,27 @@ class result_bayesian_hmm(result):
 		self.mu = m
 		self.var = 1./np.exp(E_lnlam)
 		self.ppi = self.r.sum(0) / self.r.sum()
-		self.tmstar = np.exp(E_lntm)
+		self.tmstar = self.tmatrix.copy()
+		for i in range(self.tmstar.shape[0]):
+			self.tmstar[i] /= self.tmstar[i].sum()
+		# self.tmstar = np.exp(E_lntm)
+
+	def report(self):
+		s = 'VB HMM\n-----------\n'
+		s += 'N States: %d\n'%(self.mu.size)
+		s += 'ln l: %f\niters: %d\n'%(self.likelihood[-1,0],self.iteration)
+		s += 'mu:  %s\n'%(self.mu)
+		s += '+/-: %s\n'%(1./np.sqrt(self.beta))
+		s += 'var: %s\n'%(self.var)
+		s += 'f:   %s\n'%(self.ppi)
+
+		rates = -np.log(1.-self.tmstar)/1.
+		for i in range(rates.shape[0]):
+			rates[i,i] = 0.
+		s += 'k (per frame):\n'
+		s += '%s'%(rates)
+		return s
+
 
 class result_consensus_bayesian_hmm(result):
 	def __init__(self,r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,likelihood,iteration):
@@ -160,7 +196,26 @@ class result_consensus_bayesian_hmm(result):
 		self.ppi = np.sum([np.sum(ri,axis=0) for ri in self.r],axis=0)
 		self.ppi /= self.ppi.sum()
 
-		self.tmstar = np.exp(E_lntm)
+		self.tmstar = self.tmatrix.copy()
+		for i in range(self.tmstar.shape[0]):
+			self.tmstar[i] /= self.tmstar[i].sum()
+		# self.tmstar = np.exp(E_lntm)
+
+	def report(self):
+		s = 'Consensus VB HMM\n-----------\n'
+		s += 'N States: %d\n'%(self.mu.size)
+		s += 'ln l: %f\niters: %d\n'%(self.likelihood[-1,0],self.iteration)
+		s += 'mu:  %s\n'%(self.mu)
+		s += '+/-: %s\n'%(1./np.sqrt(self.beta))
+		s += 'var: %s\n'%(self.var)
+		s += 'f:   %s\n'%(self.ppi)
+
+		rates = -np.log(1.-self.tmstar)/1.
+		for i in range(rates.shape[0]):
+			rates[i,i] = 0.
+		s += 'k (per frame):\n'
+		s += '%s'%(rates)
+		return s
 
 
 

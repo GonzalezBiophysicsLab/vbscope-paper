@@ -28,6 +28,16 @@ class result_ml_gmm(result):
 		self.likelihood = likelihood
 		self.iteration = iteration
 
+	def report(self):
+		s = 'ML GMM\n-----------\n'
+		s += 'N States: %d\n'%(self.mu.size)
+		s += 'ln l: %f\niters: %d\n'%(self.likelihood,self.iteration)
+		s += 'mu:  %s\n'%(self.mu)
+		s += 'var: %s\n'%(self.var)
+		s += 'f:   %s\n'%(self.ppi)
+		return s
+
+
 class result_bayesian_gmm(result):
 	def __init__(self,r,a,b,m,beta,alpha,E_lnlam,E_lnpi,likelihood,iteration):
 		self.r = r
@@ -43,4 +53,15 @@ class result_bayesian_gmm(result):
 
 		self.mu = m
 		self.var = 1./np.exp(E_lnlam)
-		self.ppi = np.exp(E_lnpi)
+		self.ppi = self.r.sum(0) / self.r.sum()
+		# self.ppi = np.exp(E_lnpi)
+
+	def report(self):
+		s = 'VB GMM\n-----------\n'
+		s += 'N States: %d\n'%(self.mu.size)
+		s += 'ln l: %f\niters: %d\n'%(self.likelihood[-1,0],self.iteration)
+		s += 'mu:  %s\n'%(self.mu)
+		s += '+/-: %s\n'%(1./np.sqrt(self.beta))
+		s += 'var: %s\n'%(self.var)
+		s += 'f:   %s\n'%(self.ppi)
+		return s

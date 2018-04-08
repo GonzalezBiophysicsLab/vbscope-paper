@@ -345,7 +345,7 @@ class traj_container():
 				self.gui.set_status('Running...')
 				self.hmm_result.result = consensus_vb_em_hmm_parallel(y,nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],prior_strengths=priors,ncpu=self.gui.prefs['ncpu'])
 
-				self.gui.log("HMM report - %d states"%(nstates),True)
+				self.gui.log(self.hmm_result.result.report(),True)
 				# self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
 				self.hmm_result.ran = ran
 				self.gui.plot.initialize_hmm_plot()

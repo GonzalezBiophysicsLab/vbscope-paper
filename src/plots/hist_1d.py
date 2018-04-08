@@ -96,7 +96,7 @@ def fit_vb(gui):
 
 			plot(gui)
 
-			gui.log("VB GMM\n------\nN States: %d\nmu: %s\nvar: %s\nfrac: %s"%(r.mu.size,r.mu,r.var,r.ppi),True)
+			gui.log(r.report(),True)
 
 def fit_ml(gui):
 	if not gui.data.d is None:
@@ -118,7 +118,7 @@ def fit_ml(gui):
 
 			plot(gui)
 
-			gui.log("ML GMM\n------\nN States: %d\nmu: %s\nvar: %s\nfrac: %s"%(r.mu.size,r.mu,r.var,r.ppi),True)
+			gui.log(r.report(),True)
 
 def draw_gmm(gui):
 	popplot = gui.popout_plots['plot_hist1d'].ui
