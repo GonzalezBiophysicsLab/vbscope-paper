@@ -12,7 +12,7 @@ default_prefs = {
 	'hist_type':'stepfilled',
 	'hist_color':'steelblue',
 	'hist_edgecolor':'black',
-	'hist_log_y':True,
+	'hist_log_y':False,
 
 	'label_x_nticks':7,
 
@@ -30,7 +30,11 @@ default_prefs = {
 	'gmm_threshold':1e-10,
 	'gmm_maxiters':1000,
 
-	'wiener_filter':False
+	'wiener_filter':False,
+	'textbox_x':0.95,
+	'textbox_y':0.93,
+	'textbox_fontsize':8,
+	'textbox_nmol':True
 }
 
 def setup(gui):
@@ -148,9 +152,10 @@ def draw_hmm(gui):
 
 	x = np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],1001)
 	tot = np.zeros_like(x)
-	if r.type == 'consensus':
-		for i in range(r.m.size):
-			y = ppi[i]*studentt(x,r.a[i],r.b[i],r.beta[i],r.m[i])
+	if r.type == 'consensus vbfret':
+		rr = r.result
+		for i in range(rr.m.size):
+			y = rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i])
 			tot += y
 			popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
 	elif r.type == 'vb':
@@ -227,5 +232,10 @@ def plot(gui):
 		for asp in ['top','bottom','left','right']:
 			popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
 		popplot.f.subplots_adjust(left=.05+popplot.prefs['label_padding'],bottom=.05+popplot.prefs['label_padding'],top=.95,right=.95)
+
+		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
+		lstr = 'N = %d'%(fpb.shape[0])
+
+		popplot.ax[0].annotate(lstr,xy=(popplot.prefs['textbox_x'],popplot.prefs['textbox_y']),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['textbox_fontsize']/gui.plot.canvas.devicePixelRatio())
 
 		popplot.f.canvas.draw()

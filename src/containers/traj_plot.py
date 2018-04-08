@@ -161,11 +161,11 @@ class traj_plot_container():
 		if self.gui.data.hmm_result.ran.count(self.index)>0:
 			ii = self.gui.data.hmm_result.ran.index(self.index)
 			if self.gui.data.hmm_result.type == 'consensus vbfret':
-				vitpath = self.gui.data.hmm_result.viterbi[ii]
+				vitpath = self.gui.data.hmm_result.result.viterbi[ii]
 				if self.gui.prefs['hmm_binding_expt'] is True:
 					state_means = np.array((0.,1.))
 				else:
-					state_means = self.gui.data.hmm_result.m
+					state_means = self.gui.data.hmm_result.result.m
 			elif self.gui.data.hmm_result.type == 'vb' or self.gui.data.hmm_result.type == 'ml':
 				vitpath = self.gui.data.hmm_result.results[ii].viterbi
 				state_means = self.gui.data.hmm_result.results[ii].mu

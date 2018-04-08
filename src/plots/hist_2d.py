@@ -19,7 +19,7 @@ default_prefs = {
 	'color_floor':0.05,
 	'color_ceiling':0.95,
 	'plotter_2d_normalizecolumn':False,
-	'plotter_timeshift':0,
+	'plotter_timeshift':0.0,
 	'plotter_nbins_contour':200,
 
 	'hmm_syncstate':0,

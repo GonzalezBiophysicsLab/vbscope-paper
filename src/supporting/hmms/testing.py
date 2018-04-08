@@ -52,8 +52,11 @@ def test_vb_em_gmm():
 	t,d = fake_data()
 
 	nstates = 3
-
 	o = vb_em_gmm(d,nstates)
+
+	# for nstates in range(1,5):
+		# o = vb_em_gmm(d,nstates)
+		# print nstates,o.likelihood[-1]
 
 	# import matplotlib.pyplot as plt
 	# cm = plt.cm.jet
@@ -124,8 +127,48 @@ def test_vb_em_hmm():
 	# a[1] = plt.plot(o.likelihood[:,0],'k')
 	plt.show()
 
+def test_consensus_vb_em_hmm():
 
-test_ml_em_gmm()
-test_ml_em_hmm()
+	from consensus_vb_em_hmm import consensus_vb_em_hmm,consensus_vb_em_hmm_parallel
+	t,d = fake_data()
+	tt,dd = fake_data()
+	ddd = [d,dd[:-10]]
+
+	# nstates = 2
+	lls = []
+	for nstates in range(1,5):
+		o = consensus_vb_em_hmm_parallel(ddd,nstates,nrestarts=4,ncpu=4)
+		# o = consensus_vb_em_hmm(ddd,nstates)
+		print nstates
+		lls.append(o.likelihood)
+	l = [ll[-1,0] for ll in lls]
+	plt.figure()
+	plt.plot(range(1,len(lls)+1),l,'-o')
+	plt.show()
+	#
+	# print o.tmatrix
+	# print o.mu
+	# print o.var**.5
+	# print o.r.shape
+	#
+	# import matplotlib.pyplot as plt
+	cm = plt.cm.jet
+	o = consensus_vb_em_hmm_parallel(ddd,2,nrestarts=4,ncpu=4)
+
+	f,a = plt.subplots(1)
+	for i in range(nstates):
+		c = cm(float(i)/nstates)
+		# print i,c
+		xcut = o.viterbi[0]==i
+		a.plot(t[xcut],d[xcut],'o',color=c,alpha=.5)
+		# plt.axhline(y=o.mu[i], color=c)
+	a.plot(t,o.mu[o.viterbi[0]])
+
+	# a[1] = plt.plot(o.likelihood[:,0],'k')
+	plt.show()
+
+# test_ml_em_gmm()
+# test_ml_em_hmm()
 # test_vb_em_gmm()
 # test_vb_em_hmm()
+test_consensus_vb_em_hmm()

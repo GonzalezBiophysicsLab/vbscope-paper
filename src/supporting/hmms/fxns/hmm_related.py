@@ -140,6 +140,29 @@ class result_bayesian_hmm(result):
 		self.ppi = self.r.sum(0) / self.r.sum()
 		self.tmstar = np.exp(E_lntm)
 
+class result_consensus_bayesian_hmm(result):
+	def __init__(self,r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,likelihood,iteration):
+		self.r = r
+		self.a = a
+		self.b = b
+		self.m = m
+		self.beta = beta
+		self.pi = pi
+		self.tmatrix = tmatrix
+		self.E_lnlam = E_lnlam
+		self.E_lnpi = E_lnpi
+		self.E_lntm = E_lntm
+		self.likelihood = likelihood
+		self.iteration = iteration
+
+		self.mu = m
+		self.var = 1./np.exp(E_lnlam)
+		self.ppi = np.sum([np.sum(ri,axis=0) for ri in self.r],axis=0)
+		self.ppi /= self.ppi.sum()
+
+		self.tmstar = np.exp(E_lntm)
+
+
 
 def initialize_tmatrix(nstates):
 	if nstates > 1:

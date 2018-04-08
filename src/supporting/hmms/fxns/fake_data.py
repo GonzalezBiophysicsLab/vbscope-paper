@@ -9,7 +9,7 @@ def fake_data(tmax=5000,outliers = False):
 	tmat = np.array(((.985,.015),(.005,.995)))
 	state = 0
 	m = np.array((-1,1.))
-	s = np.array((2.,2.))*.25
+	s = np.array((2.,2.))*.025
 
 	d = np.empty((tmax))
 	for i in range(d.shape[0]):
@@ -24,6 +24,9 @@ def fake_data(tmax=5000,outliers = False):
 		xx = np.random.randint(low=0,high=d.size/10,size=1)
 		x = np.random.randint(low=0,high=d.size,size=xx)
 		d[x] = np.random.uniform(-10,10,size=xx)
+
+
+	# d = np.append(d,np.random.normal(size=100)*.025+2.)
 
 	t = np.arange(d.size)
 

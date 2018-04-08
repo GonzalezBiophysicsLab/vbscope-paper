@@ -191,13 +191,23 @@ class traj_container():
 
 
 
-	def get_viterbi_data(self):
+	def get_viterbi_data(self,signal=False):
 		if not self.hmm_result is None:
 			v = np.empty_like(self.fret[0]) + np.nan
 			for i in range(v.shape[0]):
 				if self.hmm_result.ran.count(i) > 0:
 					ii = self.hmm_result.ran.index(i)
-					v[i,self.pre_list[i]:self.pb_list[i]] = self.hmm_result.viterbi[ii]
+					if self.hmm_result.type == 'consensus vbfret':
+						vi = self.hmm_result.result.viterbi[ii]
+						if signal:
+							vi = self.hmm_result.result.m[vi]
+						v[i,self.pre_list[i]:self.pb_list[i]] = vi
+					elif self.hmm_result.type == 'vb' or self.hmm_result.type == 'ml':
+						r = self.hmm_result.results[ii]
+						vi = r.viterbi
+						if signal:
+							vi = r.mu[vi]
+						v[i,self.pre_list[i]:self.pb_list[i]] = vi
 
 			# if self.gui.prefs['synchronize_start_flag'] != 'True':
 			# 	v[i,:self.gui.prefs['plotter_min_time']] = np.nan
@@ -313,7 +323,7 @@ class traj_container():
 
 	def run_conhmm(self,nstates=None,color=None):
 		self.gui.set_status('Compiling...')
-		from ..supporting import simul_vbem_hmm as hmm
+		from ..supporting.hmms.consensus_vb_em_hmm import consensus_vb_em_hmm,consensus_vb_em_hmm_parallel
 		self.gui.set_status('')
 
 		if not self.d is None:
@@ -328,19 +338,15 @@ class traj_container():
 				except:
 					return
 
-				nrestarts = self.gui.prefs['hmm_nrestarts']
-				priors = [hmm.initialize_priors(y,nstates,flag_vbfret=False,flag_custom=True) for _ in range(nrestarts)]
-				if self.gui.prefs['hmm_binding_expt'] is True:
-					for iii in range(nrestarts):
-						priors[iii][0] = np.array((0,1000.)) ## m
-						priors[iii][1] = np.ones(2) ## beta
 
-				result,lbs = hmm.hmm(y,nstates,priors,nrestarts,prefs=self.gui.prefs)
-				result.type = 'consensus vbfret'
+				priors = np.array([self.gui.prefs[sss] for sss in ['vb_prior_beta','vb_prior_a','vb_prior_b','vb_prior_pi','vb_prior_alpha']])
+				self.hmm_result = consensus_hmm_result()
+				self.hmm_result.type = 'consensus vbfret'
+				self.gui.set_status('Running...')
+				self.hmm_result.result = consensus_vb_em_hmm_parallel(y,nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],prior_strengths=priors,ncpu=self.gui.prefs['ncpu'])
 
 				self.gui.log("HMM report - %d states"%(nstates),True)
-				self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
-				self.hmm_result = result
+				# self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
 				self.hmm_result.ran = ran
 				self.gui.plot.initialize_hmm_plot()
 				self.gui.plot.update_plots()
@@ -575,3 +581,8 @@ class ensemble_hmm_result(object):
 	def __init__(self, *args):
 		self.args = args
 		self.results = []
+
+class consensus_hmm_result(object):
+	def __init__(self, *args):
+		self.args = args
+		self.result = None
