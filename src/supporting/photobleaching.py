@@ -162,12 +162,16 @@ if _windows:
 			* `e_k` is the expectation of the photobleaching time rate constant
 			* `pbt` is a np.ndarray of shape (N) with the photobleaching time
 		'''
+		a0 = 1.
+		b0 = 1.
+		k0 = 1.
+		m0 = 1000.
 		pbt = np.zeros(d.shape[0],dtype=nb.int64)
 		for i in range(d.shape[0]):
 			pbt[i] = get_expectation_pbtime(d[i])
 		e_k = (1.+pbt.size)/(1.+np.sum(pbt))
 		for i in range(d.shape[0]):
-			pbt[i] = np.argmax(posterior(d[i],e_k))
+			pbt[i] = np.argmax(posterior(d[i],e_k,a0,b0,k0,m0))
 		return e_k,pbt
 
 else:
