@@ -96,17 +96,19 @@ class traj_plot_container():
 		# 	for i in range(self.gui.ncolors):
 		# 		intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*(intensities[i] - self.gui.prefs['convert_offset'])
 
-		bts = self.gui.prefs['bleedthrough'].reshape((4,4))
-		for i in range(self.gui.ncolors):
-			for j in range(self.gui.ncolors):
-				intensities[j] -= bts[i,j]*intensities[i]
-
-		if self.gui.prefs['plotter_wiener_smooth'] is True:
+		if self.gui.prefs['wiener_smooth'] is True:
 			for i in range(intensities.shape[0]):
 				try:
 					intensities[i] = wiener(intensities[i],mysize=3)
 				except:
 					pass
+
+		bts = self.gui.prefs['bleedthrough'].reshape((4,4))
+		for i in range(self.gui.ncolors):
+			for j in range(self.gui.ncolors):
+				intensities[j] -= bts[i,j]*intensities[i]
+
+
 
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
 

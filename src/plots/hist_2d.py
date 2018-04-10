@@ -126,7 +126,14 @@ def get_data(gui):
 
 	else:
 		state = popplot.prefs['sync_hmmstate']
-		if state < gui.data.hmm_result.result.mu.shape[0]:
+		flag = False
+		if gui.data.hmm_result.type == 'consensus vbfret':
+			if state < gui.data.hmm_result.result.mu.size:
+				flag = True
+		elif gui.data.hmm_result.type == 'vb' or gui.data.hmm_result.type == 'ml':
+			if state < gui.data.hmm_result.results[0].mu.size:
+				flag = True
+		if flag:
 			v = gui.data.get_viterbi_data()
 			vv = np.array([[v[i,:-1],v[i,1:]] for i in range(v.shape[0])])
 			oo = []

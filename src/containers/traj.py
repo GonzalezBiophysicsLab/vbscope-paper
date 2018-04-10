@@ -35,6 +35,13 @@ class traj_container():
 
 	def update_fret(self):
 		q = np.copy(self.d)
+		if self.gui.prefs['wiener_smooth']:
+			for i in range(q.shape[1]):
+				for j in range(q.shape[0]):
+					try:
+						q[j,i] = wiener(q[j,i])
+					except:
+						pass
 		bts = self.gui.prefs['bleedthrough'].reshape((4,4))
 		for i in range(self.gui.ncolors):
 			for j in range(self.gui.ncolors):
@@ -258,8 +265,6 @@ class traj_container():
 				if color == 'E_FRET': ## Clip traces and redistribute randomly
 					bad = np.bitwise_or((yy < -1.),np.bitwise_or((yy > 2),np.isnan(yy)))
 					yy[bad] = np.random.uniform(low=-1,high=2,size=int(bad.sum()))
-				if self.gui.prefs['hmm_wiener_smooth']:
-					yy = wiener(yy)
 				if yy.size > 5:
 					y.append(yy)
 					ran.append(i)
