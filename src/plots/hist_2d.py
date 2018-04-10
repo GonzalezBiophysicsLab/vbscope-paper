@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QInputDialog
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.signal import wiener
 
 default_prefs = {
 	'sync_start':True,
@@ -38,6 +39,7 @@ default_prefs = {
 	'hist_smoothx':2.,
 	'hist_smoothy':2.,
 	'hist_normalize':True,
+	'hist_filter':False,
 
 	'hist_inerp_res':800,
 
@@ -115,7 +117,10 @@ def get_data(gui):
 				pre = gui.data.pre_list[i]
 				post = gui.data.pb_list[i]
 				if pre < post:
-					fpb[i,0:post-pre] = y[pre:post]
+					yy = y[pre:post]
+					if popplot.prefs['hist_filter']:
+						yy = wiener(yy)
+					fpb[i,0:post-pre] = yy
 
 	else:
 		state = popplot.prefs['sync_hmmstate']
@@ -133,6 +138,8 @@ def get_data(gui):
 					o = fpb[i].copy()
 					ox = int(np.max((0,ms[j]-popplot.prefs['sync_preframe'])))
 					o = o[ox:ms[j+1]]
+					if popplot.prefs['hist_filter']:
+						o = wiener(o)
 					ooo = np.empty(v.shape[1]) + np.nan
 					ooo[:o.size] = o
 					oo.append(ooo)
