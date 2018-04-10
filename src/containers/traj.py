@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QInputDialog,QFileDialog
 
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.signal import wiener
 
 
 class traj_container():
@@ -253,10 +254,12 @@ class traj_container():
 
 		for i in range(z.shape[0]):
 			if checked[i]:
-				yy = z[i,self.pre_list[i]:self.pb_list[i]]
+				yy = z[i,self.pre_list[i]:self.pb_list[i]].copy()
 				if color == 'E_FRET': ## Clip traces and redistribute randomly
 					bad = np.bitwise_or((yy < -1.),np.bitwise_or((yy > 2),np.isnan(yy)))
 					yy[bad] = np.random.uniform(low=-1,high=2,size=int(bad.sum()))
+				if self.gui.prefs['hmm_wiener_smooth']:
+					yy = wiener(yy)
 				if yy.size > 5:
 					y.append(yy)
 					ran.append(i)

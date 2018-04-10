@@ -8,6 +8,8 @@ default_prefs = {
 	'fret_min':-.25,
 	'fret_max':1.25,
 	'fret_nbins':161,
+	'fret_clip_low':-1.,
+	'fret_clip_high':2.,
 
 	'hist_type':'stepfilled',
 	'hist_color':'steelblue',
@@ -24,7 +26,6 @@ default_prefs = {
 	'vb_prior_a':2.5,
 	'vb_prior_b':0.01,
 	'vb_prior_alpha':1.,
-	'vb_prior_pi':1.,
 	'gmm_nrestarts':4,
 	'ncpu':mp.cpu_count(),
 	'gmm_threshold':1e-10,
@@ -61,8 +62,8 @@ def fit_vb(gui):
 
 		fpb = get_data(gui).flatten()
 		fpb = fpb[np.isfinite(fpb)]
-		bad = np.bitwise_or((fpb < -1.),(fpb > 2))
-		fpb[bad] = np.random.uniform(low=-1,high=2,size=int(bad.sum())) ## clip
+		bad = np.bitwise_or((fpb < prefs['fret_clip_low']),(fpb > prefs['fret_clip_high']))
+		fpb[bad] = np.random.uniform(low=prefs['fret_clip_low'],high=prefs['fret_clip_high'],size=int(bad.sum())) ## clip
 
 		ll = np.zeros(prefs['vb_maxstates'])
 		rs = [None for _ in range(ll.size)]
@@ -109,8 +110,8 @@ def fit_ml(gui):
 		if success:
 			fpb = get_data(gui).flatten()
 			fpb = fpb[np.isfinite(fpb)]
-			bad = np.bitwise_or((fpb < -1.),(fpb > 2))
-			fpb[bad] = np.random.uniform(low=-1,high=2,size=int(bad.sum())) ## clip
+			bad = np.bitwise_or((fpb < prefs['fret_clip_low']),(fpb > prefs['fret_clip_high']))
+			fpb[bad] = np.random.uniform(low=prefs['fret_clip_low'],high=prefs['fret_clip_high'],size=int(bad.sum())) ## clip
 
 			r = ml_em_gmm(fpb,nstates+1,maxiters=1000,threshold=1e-6)
 			r.type = 'ml'
