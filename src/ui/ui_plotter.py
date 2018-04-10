@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog, QDockWidget, QMessageBox, QTabWidget, QListWidget, QAbstractItemView
 from PyQt5.QtCore import Qt
+from PyQt5.Qt import QFont
 from PyQt5.QtGui import QDoubleValidator, QKeySequence
 
 import multiprocessing as mp
@@ -113,6 +114,7 @@ class plotter_gui(ui_general.gui):
 		qw = QWidget()
 		hbox = QHBoxLayout()
 		self.label_current = QLabel("0 / 0 - 0")
+		self.label_current.setFont(QFont('monospace'))
 
 		hbox.addWidget(self.slider_select)
 		hbox.addWidget(self.label_current)
@@ -159,6 +161,7 @@ class plotter_gui(ui_general.gui):
 			le.editingFinished.connect(self.plot.update_minmax)
 		self.slider_select.valueChanged.connect(self.callback_sliders)
 		self.plot.f.canvas.mpl_connect('button_press_event', self.callback_mouseclick)
+
 
 	## Set the trajectory selection limits
 	def initialize_sliders(self):
@@ -251,6 +254,8 @@ class plotter_gui(ui_general.gui):
 		tools_remove.triggered.connect(lambda event: self.data.remove_beginning())
 		tools_dead = QAction('Remove Dead Traces',self)
 		tools_dead.triggered.connect(self.data.remove_dead)
+		tools_order = QAction('Order by Cross Correlation',self)
+		tools_order.triggered.connect(lambda event: self.data.cross_corr_order())
 
 		tools_conhmm = QAction('Consensus VB',self)
 		tools_conhmm.triggered.connect(lambda event: self.data.run_conhmm())
@@ -266,7 +271,7 @@ class plotter_gui(ui_general.gui):
 			menu_photobleach.addAction(f)
 		for f in [menu_cull,menu_photobleach]:
 			menu_tools.addMenu(f)
-		for f in [tools_remove,tools_dead]:
+		for f in [tools_remove,tools_dead,tools_order]:
 			menu_tools.addAction(f)
 		for f in [tools_vbhmm,tools_conhmm,tools_mlhmm]:
 			menu_hmm.addAction(f)
@@ -285,8 +290,10 @@ class plotter_gui(ui_general.gui):
 		plots_tranM.triggered.connect(self.plot_tranM)
 		plots_intensities = QAction('Intensities Plot', self)
 		plots_intensities.triggered.connect(self.plot_intensities)
+		plots_crosscorr = QAction('Cross Correlation Plot', self)
+		plots_crosscorr.triggered.connect(self.plot_crosscorr)
 
-		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_intensities]:
+		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_intensities,plots_crosscorr]:
 			menu_plots.addAction(f)
 
 		### classes
@@ -348,7 +355,8 @@ class plotter_gui(ui_general.gui):
 			'plot_hist2d':None,
 			'plot_tdp':None,
 			'plot_tranM':None,
-			'plot_intensities':None
+			'plot_intensities':None,
+			'crosscorr':None
 		}
 
 	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots_x=1, nplots_y=1,callback=None,dprefs=None,setup=None):
@@ -389,6 +397,10 @@ class plotter_gui(ui_general.gui):
 	def plot_intensities(self):
 		self.raise_plot('plot_intensities', 'Cumulative Intensities', 1,3, lambda: plots.intensities.plot(self), plots.intensities.default_prefs)
 		plots.intensities.plot(self)
+
+	def plot_crosscorr(self):
+		self.raise_plot('crosscorr', 'Cross Correlation', 1,1, lambda: plots.crosscorr.plot(self), plots.crosscorr.default_prefs)
+		plots.crosscorr.plot(self)
 
 	## Callback function for keyboard presses
 	def callback_keypress(self,kk):
@@ -478,7 +490,13 @@ class plotter_gui(ui_general.gui):
 ################################################################################
 
 	def update_display_traces(self):
-		self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} - {n4:2f}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), n4=self.data.deadprob[self.plot.index], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
+		# try:
+			# self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} - {n4:2f}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), n4=self.data.deadprob[self.plot.index], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
+			i = self.plot.index
+			dd = self.data.d[i,:,self.data.pre_list[i]:self.data.pb_list[i]]
+			self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:.2e}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=self.data.calc_cross_corr(dd)[0], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
+		# except:
+			# pass
 
 	def classes_get_checked(self):
 		checked = np.zeros(self.data.d.shape[0],dtype='bool')

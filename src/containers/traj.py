@@ -18,19 +18,30 @@ class traj_container():
 
 		self.deadprob = None
 
-	def cross_corr_order(self):
-
-		x = self.d[:,0] #- self.d[:,0].mean(1)[:,None]
-		y = self.d[:,1] #- self.d[:,1].mean(1)[:,None]
+	def calc_cross_corr(self,d=None): ## of gradient
+		if d is None:
+			x = self.d[:,0] #- self.d[:,0].mean(1)[:,None]
+			y = self.d[:,1] #- self.d[:,1].mean(1)[:,None]
+		else:
+			x = d[0].reshape((1,-1))
+			y = d[1].reshape((1,-1))
 		x = np.gradient(x,axis=1)
 		y = np.gradient(y,axis=1)
 
 		a = np.fft.fft(x,axis=1)
 		b = np.conjugate(np.fft.fft(y,axis=1))
-		order = np.fft.ifft((a*b),axis=1)
-		order = order[:,0].real.argsort()
+		cc = np.fft.ifft((a*b),axis=1)
+		cc = cc[:,0].real
+		return cc
+		# return np.abs(cc)
+		#return cc.argsort()
 
+	def cross_corr_order(self):
+		order = self.calc_cross_corr().argsort()
 		self.d = self.d[order]
+		self.safe_hmm()
+		self.update_fret()
+		self.gui.plot.update_plots()
 		self.gui.log('Trajectories sorted by cross correlation',True)
 
 	def update_fret(self):
