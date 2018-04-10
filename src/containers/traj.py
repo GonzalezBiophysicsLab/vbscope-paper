@@ -36,8 +36,12 @@ class traj_container():
 		# return np.abs(cc)
 		#return cc.argsort()
 
+	def calc_all_cc(self):
+		self.cc_list = np.array([self.calc_cross_corr(self.d[j,:,self.pre_list[j]:self.pb_list[j]])[0] for j in range(self.d.shape[0])])
+
 	def cross_corr_order(self):
-		order = self.calc_cross_corr().argsort()
+		self.calc_all_cc()
+		order = self.cc_list.argsort()
 		self.d = self.d[order]
 		self.pre_list = self.pre_list[order]
 		self.pb_list = self.pb_list[order]
@@ -51,9 +55,10 @@ class traj_container():
 				self.hmm_result.results = self.hmm_result.results[order]
 				self.hmm_result.ran = self.hmm_result.ran[order]
 
-		# self.safe_hmm()
+		self.safe_hmm()
 		self.update_fret()
 		self.gui.plot.update_plots()
+		self.gui.update_display_traces()
 		self.gui.log('Trajectories sorted by cross correlation',True)
 
 	def update_fret(self):
@@ -73,11 +78,13 @@ class traj_container():
 		self.fret = np.array([q[:,i]/q.sum(1) for i in range(1,self.gui.ncolors)])
 
 	def safe_hmm(self):
+		self.calc_all_cc()
 		if not self.hmm_result is None:
 			self.hmm_result = None
 			try:
 				self.gui.plot.plot_no_hmm()
 				self.gui.plot.update_blits()
+
 			except:
 				pass
 			self.safe_hmm()

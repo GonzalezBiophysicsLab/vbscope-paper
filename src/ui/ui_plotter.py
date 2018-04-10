@@ -191,7 +191,7 @@ class plotter_gui(ui_general.gui):
 		self.data.pb_list = self.data.pre_list.copy() + self.data.d.shape[2]
 		self.data.class_list = np.zeros(self.data.d.shape[0])
 
-		self.data.deadprob = np.zeros(self.data.pre_list.size)
+		self.data.calc_all_cc()
 
 
 	## Setup the menu items at the top
@@ -417,6 +417,7 @@ class plotter_gui(ui_general.gui):
 		if kk == 'r':
 			self.data.pre_list[self.plot.index] = 0
 			self.data.pb_list[self.plot.index] = self.data.d.shape[2]-1
+			self.data.safe_hmm()
 		elif kk == 'g':
 			self.plot.a[0,0].grid()
 			self.plot.a[1,0].grid()
@@ -493,8 +494,8 @@ class plotter_gui(ui_general.gui):
 		# try:
 			# self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} - {n4:2f}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), n4=self.data.deadprob[self.plot.index], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
 			i = self.plot.index
-			dd = self.data.d[i,:,self.data.pre_list[i]:self.data.pb_list[i]]
-			self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:.2e}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=self.data.calc_cross_corr(dd)[0], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
+			# dd = self.data.d[i,:,self.data.pre_list[i]:self.data.pb_list[i]]
+			self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:.2e}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=self.data.cc_list[i], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
 		# except:
 			# pass
 
@@ -668,6 +669,7 @@ class plotter_gui(ui_general.gui):
 				self.data.class_list = d[:,0]
 				self.data.pre_list = d[:,1::2].max(1)
 				self.data.pb_list = d[:,2::2].min(1)
+				self.data.calc_all_cc()
 				if filename is None:
 					self.plot.update_plots()
 					self.update_display_traces()

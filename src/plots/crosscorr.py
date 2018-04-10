@@ -37,7 +37,7 @@ def plot(gui):
 	if gui.ncolors == 2:
 		n,q = get_data(gui)
 
-		popplot.ax[0].plot(n,q,'o',color='k')
+		popplot.ax[0].plot(n,q,'o',color='k',alpha=.3)
 		popplot.ax[0].set_yscale('symlog')
 		popplot.ax[0].set_xlim(0,n.size)
 
@@ -51,16 +51,16 @@ def plot(gui):
 
 
 
-		qmin = np.sign(q.min())*10.**(np.floor(np.log10(np.abs(q.min()))))
-		qmax = np.sign(q.max())*10.**(np.ceil(np.log10(np.abs(q.max()))))
-		if qmin == qmax:
-			qmin /= 10.
-		if qmin > qmax:
-			tmp = qmin
-			qmin = qmax
-			qmax = tmp
-
-		popplot.ax[0].set_ylim(qmin,qmax)
+		# qmin = np.sign(q.min())*10.**(np.floor(np.log10(np.abs(q.min()))))
+		# qmax = np.sign(q.max())*10.**(np.ceil(np.log10(np.abs(q.max()))))
+		# if qmin == qmax:
+		# 	qmin /= 10.
+		# if qmin > qmax:
+		# 	tmp = qmin
+		# 	qmin = qmax
+		# 	qmax = tmp
+		#
+		# popplot.ax[0].set_ylim(qmin,qmax)
 
 		yticks = popplot.ax[0].get_yticks()
 		popplot.ax[0].set_yticklabels(["%.1e"%(tt) for tt in yticks])
