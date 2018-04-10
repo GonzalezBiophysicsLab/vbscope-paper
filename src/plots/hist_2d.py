@@ -110,17 +110,19 @@ def get_data(gui):
 
 	fpb = gui.data.get_plot_data()[0]
 	if gui.data.hmm_result is None:
-		if popplot.prefs['sync_start'] is True:
-			for i in range(fpb.shape[0]):
-				y = fpb[i].copy()
-				fpb[i] = np.nan
-				pre = gui.data.pre_list[i]
-				post = gui.data.pb_list[i]
-				if pre < post:
-					yy = y[pre:post]
-					if popplot.prefs['hist_filter']:
-						yy = wiener(yy)
+		for i in range(fpb.shape[0]):
+			y = fpb[i].copy()
+			fpb[i] = np.nan
+			pre = gui.data.pre_list[i]
+			post = gui.data.pb_list[i]
+			if pre < post:
+				yy = y[pre:post]
+				if popplot.prefs['hist_filter']:
+					yy = wiener(yy)
+				if popplot.prefs['sync_start'] is True:
 					fpb[i,0:post-pre] = yy
+				else:
+					fpb[i,pre:post] = yy
 
 	else:
 		state = popplot.prefs['sync_hmmstate']
