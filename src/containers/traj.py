@@ -39,7 +39,19 @@ class traj_container():
 	def cross_corr_order(self):
 		order = self.calc_cross_corr().argsort()
 		self.d = self.d[order]
-		self.safe_hmm()
+		self.pre_list = self.pre_list[order]
+		self.pb_list = self.pb_list[order]
+		self.class_list = self.class_list[order]
+		if not self.hmm_result is None:
+			if self.hmm_result.type is 'consensus vbfret':
+				self.hmm_result.result.r = self.hmm_result.result.r[order]
+				self.hmm_result.result.viterbi = self.hmm_result.result.viterbi[order]
+				self.hmm_result.ran = self.hmm_result.ran[order]
+			else:
+				self.hmm_result.results = self.hmm_result.results[order]
+				self.hmm_result.ran = self.hmm_result.ran[order]
+
+		# self.safe_hmm()
 		self.update_fret()
 		self.gui.plot.update_plots()
 		self.gui.log('Trajectories sorted by cross correlation',True)
