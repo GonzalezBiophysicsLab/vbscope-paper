@@ -181,9 +181,7 @@ class plotter_gui(ui_general.gui):
 		self.le_min.setText(str(self.plot.yminmax[0]))
 		self.le_max.setText(str(self.plot.yminmax[1]))
 
-		## Sort trajectories based on anti-correlation (most is first, least is last)
-		if sort:
-			self.data.cross_corr_order()
+
 
 		## Calculate/set photobleaching, initialize class list
 		self.data.update_fret()
@@ -192,6 +190,10 @@ class plotter_gui(ui_general.gui):
 		self.data.class_list = np.zeros(self.data.d.shape[0])
 
 		self.data.calc_all_cc()
+
+		## Sort trajectories based on anti-correlation (most is first, least is last)
+		if sort:
+			self.data.cross_corr_order()
 
 
 	## Setup the menu items at the top
