@@ -79,10 +79,10 @@ class dock_transform(QWidget):
 				g = np.array((gx.flatten(),gy.flatten()))
 				out = [g[1],g[0]]
 				for j in range(1,n):
-					o = self.transforms[0][j](g.T).T
+					o = self.transforms[j][0](g.T).T
 					out.append(o[1])
 					out.append(o[0])
-				out = np.array((out)).T #+ 1.
+				out = np.array((out)).T + 1.
 
 				oname = QFileDialog.getSaveFileName(self, 'Export vbscope Alignment', self.gui.data.filename[:-4]+'_alignment.dat','*.dat')
 				if oname[0] != "":
@@ -139,8 +139,7 @@ class dock_transform(QWidget):
 
 				#### ASSSUME VBSCOPE (MATLAB) FORMAT
 				ncolor = self.gui.data.ncolors
-				# dd = [d[:,2*i:2*i+2][:,::-1].T - 1. for i in range(d.shape[1]/2)]
-				dd = [d[:,2*i:2*i+2][:,::-1].T for i in range(d.shape[1]/2)]
+				dd = [d[:,2*i:2*i+2][:,::-1].T - 1. for i in range(d.shape[1]/2)]
 				self.estimate(dd)
 				self.plot_overlapped(dd)
 
@@ -197,7 +196,7 @@ class dock_transform(QWidget):
 
 						# tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),1e-6,1e-6,maxiters=100)
 						tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),0.,0.,maxiters=100)
-
+						self.gui.log("Alignment Loaded - ICP")
 
 					else:
 						c1 = cs[i].copy()
@@ -205,10 +204,13 @@ class dock_transform(QWidget):
 						tts[j] = transforms.poly(c1.T.astype('f'),c2.T.astype('f'),order=self.gui.prefs['transform_alignment_order'])
 						# from skimage.transform import AffineTransform,EuclideanTransform,PolynomialTransform
 						# tts[j] = EuclideanTransform(translation=np.median(c1,axis=1) - np.median(c2,axis=1))
-						tts[j].estimate(c1.T.astype('f'),c2.T.astype('f'))
-						print np.median(tts[j].residuals(c1.T.astype('f'),c2.T.astype('f')))
+						# tts[j].estimate(c1.T.astype('f'),c2.T.astype('f'))
+						if j == 0 and i == 1:
+							self.gui.log("Alignment Loaded - order=%d polynomial, residual: %0.3f"%(self.gui.prefs['transform_alignment_order'],np.median(tts[0].residuals(c2.T.astype('f'),c1.T.astype('f')))))
 
 			ts.append(tts)
+
+
 		self.transforms = ts
 		self.flag_transforms = True
 		self.gui.statusbar.showMessage('Finished Finding Transforms')
