@@ -202,9 +202,9 @@ class dock_transform(QWidget):
 					else:
 						c1 = cs[i].copy()
 						c2 = cs[j].copy()
-						# tts[j] = transforms.poly(c1.T.astype('f'),c2.T.astype('f'),order=self.gui.prefs['transform_alignment_order'])
-						from skimage.transform import AffineTransform,EuclideanTransform,PolynomialTransform
-						tts[j] = EuclideanTransform(translation=np.median(c1,axis=1) - np.median(c2,axis=1))
+						tts[j] = transforms.poly(c1.T.astype('f'),c2.T.astype('f'),order=self.gui.prefs['transform_alignment_order'])
+						# from skimage.transform import AffineTransform,EuclideanTransform,PolynomialTransform
+						# tts[j] = EuclideanTransform(translation=np.median(c1,axis=1) - np.median(c2,axis=1))
 						tts[j].estimate(c1.T.astype('f'),c2.T.astype('f'))
 						print np.median(tts[j].residuals(c1.T.astype('f'),c2.T.astype('f')))
 
