@@ -430,7 +430,7 @@ class dock_spotfind(QWidget):
 		self.gui.set_status('Compiling...')
 		from ..supporting import normal_minmax_dist as nd
 		from ..supporting import vbem_gmm as vb
-		self.gui.set_status('')
+		self.gui.set_status('Finding spots...')
 		bgfit = nd.estimate_from_min(image[mmin],p['spotfind_nsearch']**2 * max_frames)
 		background = vb.background(p['spotfind_nsearch']**2 * max_frames,*bgfit)
 

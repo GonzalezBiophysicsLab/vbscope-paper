@@ -78,7 +78,6 @@ class traj_container():
 		self.fret = np.array([q[:,i]/q.sum(1) for i in range(1,self.gui.ncolors)])
 
 	def safe_hmm(self):
-		self.calc_all_cc()
 		if not self.hmm_result is None:
 			self.hmm_result = None
 			try:
