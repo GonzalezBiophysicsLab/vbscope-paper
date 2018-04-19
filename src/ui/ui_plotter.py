@@ -191,11 +191,6 @@ class plotter_gui(ui_general.gui):
 
 		self.data.calc_all_cc()
 
-		## Sort trajectories based on anti-correlation (most is first, least is last)
-		if sort:
-			self.data.cross_corr_order()
-
-
 	## Setup the menu items at the top
 	def initialize_menubar(self):
 		## turn off old load action
