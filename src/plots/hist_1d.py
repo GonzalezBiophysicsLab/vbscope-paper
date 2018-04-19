@@ -106,6 +106,8 @@ def fit_ml(gui):
 		from ..supporting.hmms.ml_em_gmm import ml_em_gmm
 		gui.set_status('')
 
+		prefs = gui.popout_plots['plot_hist1d'].ui.prefs
+
 		success,nstates = gui.data.get_nstates()
 		if success:
 			fpb = get_data(gui).flatten()
