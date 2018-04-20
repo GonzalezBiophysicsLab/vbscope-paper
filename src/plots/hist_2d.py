@@ -28,7 +28,10 @@ default_prefs = {
 	'label_y_nticks':7,
 	'label_x_nticks':5,
 	'label_ticksize':8,
-	'label_padding':.12,
+	'label_padding_left':.25,
+	'label_padding_bottom':.15,
+	'label_padding_top':.05,
+	'label_padding_right':.05,
 	'textbox_x':0.95,
 	'textbox_y':0.93,
 	'textbox_fontsize':8,
@@ -238,7 +241,7 @@ def plot(gui):
 
 	for asp in ['top','bottom','left','right']:
 		popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-	popplot.f.subplots_adjust(left=.05+popplot.prefs['label_padding'],bottom=.05+popplot.prefs['label_padding'],top=.95-popplot.prefs['label_padding'],right=.95)
+	popplot.f.subplots_adjust(left=popplot.prefs['label_padding_left'],bottom=popplot.prefs['label_padding_bottom'],top=1.-popplot.prefs['label_padding_top'],right=1.-popplot.prefs['label_padding_right'])
 
 	popplot.f.canvas.draw()
 	# cm = colormap(gui)
