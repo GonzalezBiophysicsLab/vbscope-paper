@@ -5,21 +5,33 @@ from PyQt5.QtWidgets import QPushButton
 import multiprocessing as mp
 
 default_prefs = {
-	'fret_min':-.25,
-	'fret_max':1.25,
+	'fret_min':-.2,
+	'fret_max':1.2,
 	'fret_nbins':161,
 	'fret_clip_low':-1.,
 	'fret_clip_high':2.,
+	'label_padding_left':.15,
+	'label_padding_bottom':.15,
+	'label_padding_top':.05,
+	'label_padding_right':.05,
+	'label_space':5.,
 
 	'hist_type':'stepfilled',
 	'hist_color':'steelblue',
 	'hist_edgecolor':'black',
 	'hist_log_y':False,
+	'hist_force_ymax':False,
+	'hist_ymax':2.0,
+	'hist_ymin':0.0,
 
-	'label_x_nticks':7,
+	'label_x_nticks':8,
+	'label_y_nticks':4,
 
-	'overlay_GMM':True,
-	'overlay_HMM':True,
+	'gmm_on':True,
+	'hmm_on':True,
+	'hmm_peaklocation':False,
+	'hist_on':True,
+
 
 	'vb_maxstates':8,
 	'vb_prior_beta':0.25,
@@ -40,11 +52,11 @@ default_prefs = {
 
 def setup(gui):
 
-	fitvbbutton = QPushButton("VB GMM Fit")
+	fitvbbutton = QPushButton("VB gmm Fit")
 	gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(2,fitvbbutton)
 	fitvbbutton.clicked.connect(lambda x: fit_vb(gui))
 
-	fitmlbutton = QPushButton("ML GMM Fit")
+	fitmlbutton = QPushButton("ML gmm Fit")
 	gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(3,fitmlbutton)
 	fitmlbutton.clicked.connect(lambda x: fit_ml(gui))
 
@@ -71,7 +83,7 @@ def fit_vb(gui):
 		from ..ui.ui_progressbar import progressbar
 		prog = progressbar()
 		prog.setRange(0,ll.size)
-		prog.setWindowTitle('VB GMM Progress')
+		prog.setWindowTitle('VB gmm Progress')
 		prog.setLabelText('Number of States')
 		# self.flag_running = True
 		# prog.canceled.connect(self._cancel_run)
@@ -88,7 +100,7 @@ def fit_vb(gui):
 
 		if np.all(np.isnan(ll)):
 			gui.popout_plots['plot_hist1d'].ui.gmm_result = None
-			gui.log("VB GMM failed: all lowerbounds are NaNs")
+			gui.log("VB gmm failed: all lowerbounds are NaNs")
 		else:
 			n = np.nanargmax(ll)
 			r = rs[n]
@@ -167,7 +179,11 @@ def draw_hmm(gui):
 			rr = r.results[j]
 			nn += rr.r.shape[0]
 			for i in range(rr.m.size):
-				tot += rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i]) * rr.r.shape[0]
+
+				if popplot.prefs['hmm_peaklocation'] is True:
+					tot += rr.ppi[i]*normal(x,rr.m[i],1./rr.beta[i]) * rr.r.shape[0]
+				else:
+					tot += rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i]) * rr.r.shape[0]
 		tot /= nn
 	elif r.type == 'ml':
 		nn = 0.
@@ -175,7 +191,11 @@ def draw_hmm(gui):
 			rr = r.results[j]
 			nn += rr.r.shape[0]
 			for i in range(rr.mu.size):
-				tot += rr.ppi[i]*normal(x,rr.mu[i],rr.var[i]) * rr.r.shape[0]
+				if popplot.prefs['hmm_peaklocation'] is True:
+					tot += rr.ppi[i]*normal(x,rr.mu[i],rr.var[i]/np.sqrt(rr.ppi[i]*rr.r.shape[0])) * rr.r.shape[0]
+				else:
+					tot += rr.ppi[i]*normal(x,rr.mu[i],rr.var[i]) * rr.r.shape[0]
+
 		tot /= nn
 	popplot.ax[0].plot(x,tot,color='k',lw=2,alpha=.8)
 	popplot.f.canvas.draw()
@@ -213,28 +233,37 @@ def plot(gui):
 		fpb = get_data(gui)
 
 		# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
-		try:
-			popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['fret_nbins'],range=(popplot.prefs['fret_min'],popplot.prefs['fret_max']),histtype=popplot.prefs['hist_type'],alpha=.8,density=True,color=popplot.prefs['hist_color'],edgecolor=popplot.prefs['hist_edgecolor'],log=popplot.prefs['hist_log_y'])
-		except:
-			popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['fret_nbins'],range=(popplot.prefs['fret_min'],popplot.prefs['fret_max']),histtype='stepfilled',alpha=.8,density=True,color='steelblue',log=popplot.prefs['hist_log_y'])
+		if popplot.prefs['hist_on']:
+			try:
+				popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['fret_nbins'],range=(popplot.prefs['fret_min'],popplot.prefs['fret_max']),histtype=popplot.prefs['hist_type'],alpha=.8,density=True,color=popplot.prefs['hist_color'],edgecolor=popplot.prefs['hist_edgecolor'],log=popplot.prefs['hist_log_y'])
+			except:
+				popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['fret_nbins'],range=(popplot.prefs['fret_min'],popplot.prefs['fret_max']),histtype='stepfilled',alpha=.8,density=True,color='steelblue',log=popplot.prefs['hist_log_y'])
+		else:
+			if popplot.prefs['hist_log_y']:
+				popplot.ax[0].set_yscale('log')
 
 		ylim = popplot.ax[0].get_ylim()
-		if popplot.prefs['overlay_HMM'] and not gui.data.hmm_result is None:
+		if popplot.prefs['hmm_on'] and not gui.data.hmm_result is None:
 			draw_hmm(gui)
-		if popplot.prefs['overlay_GMM'] and not popplot.gmm_result is None:
+		if popplot.prefs['gmm_on'] and not popplot.gmm_result is None:
 			draw_gmm(gui)
 
 		popplot.ax[0].set_xlim(popplot.prefs['fret_min'],popplot.prefs['fret_max'])
-		popplot.ax[0].set_ylim(*ylim)
+		if not popplot.prefs['hist_on']:
+			popplot.ax[0].set_ylim(*ylim)
+
+		if popplot.prefs['hist_force_ymax']:
+			popplot.ax[0].set_ylim(popplot.prefs['hist_ymin'],popplot.prefs['hist_ymax'])
+			popplot.ax[0].set_yticks(np.linspace(popplot.prefs['hist_ymin'],popplot.prefs['hist_ymax'],popplot.prefs['label_y_nticks']))
 
 		popplot.ax[0].set_xticks(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_x_nticks']))
 
-		popplot.ax[0].set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
-		popplot.ax[0].set_ylabel('Probability',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
+		popplot.ax[0].set_xlabel(r'$\rm E_{\rm FRET}(t)$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio(),labelpad=popplot.prefs['label_space'])
+		popplot.ax[0].set_ylabel('Probability',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio(),labelpad=popplot.prefs['label_space'])
 
 		for asp in ['top','bottom','left','right']:
 			popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-		popplot.f.subplots_adjust(left=.05+popplot.prefs['label_padding'],bottom=.05+popplot.prefs['label_padding'],top=.95,right=.95)
+		popplot.f.subplots_adjust(left=popplot.prefs['label_padding_left'],bottom=popplot.prefs['label_padding_bottom'],top=1.-popplot.prefs['label_padding_top'],right=1.-popplot.prefs['label_padding_right'])
 
 		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
 		lstr = 'N = %d'%(fpb.shape[0])
