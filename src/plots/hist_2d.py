@@ -24,25 +24,28 @@ default_prefs = {
 	# 'plotter_nbins_contour':200,
 
 	'sync_hmmstate':0,
-
-	'label_y_nticks':7,
+	'fig_height':4.,
+	'fig_width':4.,
+	'label_y_nticks':8,
 	'label_x_nticks':5,
 	'label_ticksize':8,
-	'label_padding_left':.25,
+	'label_padding_left':.2,
 	'label_padding_bottom':.15,
 	'label_padding_top':.05,
 	'label_padding_right':.05,
+	'label_fontsize':12.,
+	'label_ticksize':10.,
 	'textbox_x':0.95,
 	'textbox_y':0.93,
-	'textbox_fontsize':8,
+	'textbox_fontsize':10.,
 	'textbox_nmol':True,
-	'fret_min':-.25,
-	'fret_max':1.25,
+	'fret_min':-.2,
+	'fret_max':1.2,
 	'fret_nbins':151,
 	'hist_smoothx':2.,
 	'hist_smoothy':2.,
 	'hist_normalize':True,
-	'hist_filter':False,
+	'wiener_filter':False,
 
 	'hist_inerp_res':800,
 
@@ -120,7 +123,7 @@ def get_data(gui):
 			post = gui.data.pb_list[i]
 			if pre < post:
 				yy = y[pre:post]
-				if popplot.prefs['hist_filter']:
+				if popplot.prefs['wiener_filter']:
 					yy = wiener(yy)
 				if popplot.prefs['sync_start'] is True:
 					fpb[i,0:post-pre] = yy
@@ -150,7 +153,7 @@ def get_data(gui):
 					o = fpb[i].copy()
 					ox = int(np.max((0,ms[j]-popplot.prefs['sync_preframe'])))
 					o = o[ox:ms[j+1]]
-					if popplot.prefs['hist_filter']:
+					if popplot.prefs['wiener_filter']:
 						o = wiener(o)
 					ooo = np.empty(v.shape[1]) + np.nan
 					ooo[:o.size] = o
