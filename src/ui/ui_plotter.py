@@ -261,6 +261,8 @@ class plotter_gui(ui_general.gui):
 		tools_mlhmm.triggered.connect(lambda event: self.data.run_mlhmm())
 		tools_vbhmm = QAction('vbFRET',self)
 		tools_vbhmm.triggered.connect(lambda event: self.data.run_vbhmm())
+		tools_vbhmmmodel = QAction('vbFRET + Model Selection',self)
+		tools_vbhmmmodel.triggered.connect(lambda event: self.data.run_vbhmm_model())
 
 		# for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_stepfret,tools_remove,tools_dead,tools_hmm]:
 		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons]:
@@ -271,7 +273,7 @@ class plotter_gui(ui_general.gui):
 			menu_tools.addMenu(f)
 		for f in [tools_remove,tools_dead,tools_order]:
 			menu_tools.addAction(f)
-		for f in [tools_vbhmm,tools_conhmm,tools_mlhmm]:
+		for f in [tools_vbhmm,tools_vbhmmmodel,tools_conhmm,tools_mlhmm]:
 			menu_hmm.addAction(f)
 		menu_tools.addMenu(menu_hmm)
 #
@@ -290,8 +292,10 @@ class plotter_gui(ui_general.gui):
 		plots_intensities.triggered.connect(self.plot_intensities)
 		plots_crosscorr = QAction('Cross Correlation Plot', self)
 		plots_crosscorr.triggered.connect(self.plot_crosscorr)
+		plots_vb_states = QAction('VB States', self)
+		plots_vb_states.triggered.connect(self.plot_vb_states)
 
-		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_intensities,plots_crosscorr]:
+		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_intensities,plots_crosscorr,plots_vb_states]:
 			menu_plots.addAction(f)
 
 		### classes
@@ -400,6 +404,10 @@ class plotter_gui(ui_general.gui):
 		self.raise_plot('crosscorr', 'Cross Correlation', 1,1, lambda: plots.crosscorr.plot(self), plots.crosscorr.default_prefs)
 		plots.crosscorr.plot(self)
 
+	def plot_vb_states(self):
+		self.raise_plot('vb_states', 'VB States', 1,1, lambda: plots.vb_states.plot(self), plots.vb_states.default_prefs)
+		plots.vb_states.plot(self)
+
 	## Callback function for keyboard presses
 	def callback_keypress(self,kk):
 		if kk == 'right':
@@ -489,13 +497,21 @@ class plotter_gui(ui_general.gui):
 ################################################################################
 
 	def update_display_traces(self):
-		# try:
-			# self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} - {n4:2f}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), n4=self.data.deadprob[self.plot.index], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
-			i = self.plot.index
-			# dd = self.data.d[i,:,self.data.pre_list[i]:self.data.pb_list[i]]
-			self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:.2e}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=self.data.cc_list[i], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
-		# except:
-			# pass
+		# # try:
+		# 	# self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} - {n4:2f}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), n4=self.data.deadprob[self.plot.index], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
+		# 	i = self.plot.index
+		# 	# dd = self.data.d[i,:,self.data.pre_list[i]:self.data.pb_list[i]]
+		# 	self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:.2e}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=self.data.cc_list[i], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
+		# # except:
+		# 	# pass
+		i = self.plot.index
+		n = 0
+		if not self.data.hmm_result is None:
+			if self.data.hmm_result.type == 'consensus vbfret':
+				n = self.data.hmm_result.result.mu.size
+			elif self.data.hmm_result.type =='vb' or self.data.hmm_result.type == 'ml':
+				n = self.data.hmm_result.results[i].mu.size
+			self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:1d}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=n, w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
 
 	def classes_get_checked(self):
 		checked = np.zeros(self.data.d.shape[0],dtype='bool')

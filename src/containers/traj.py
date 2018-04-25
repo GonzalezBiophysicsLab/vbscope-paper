@@ -263,6 +263,15 @@ class traj_container():
 			success = True
 		return success,nstates
 
+	def get_nstate_range(self,nmin=None,nmax=None):
+		if nmin is None or nmax is None:
+			nmin,success1 = QInputDialog.getInt(self.gui,"Number of States","Minimum Number of States",min=1,value=1)
+			nmax,success2 = QInputDialog.getInt(self.gui,"Number of States","Maximum Number of States",min=1,value=6)
+		else:
+			success1 = True
+			success2 = True
+		return success1,success2,nmin,nmax
+
 	def hmm_get_colorchannel(self,color=None):
 		combos = ['%d'%(i) for i in range(self.gui.ncolors)]
 		combos.append('Sum Intensity')
@@ -385,6 +394,61 @@ class traj_container():
 				self.gui.log(self.hmm_result.result.report(),True)
 				# self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
 				self.hmm_result.ran = ran
+				self.gui.plot.initialize_hmm_plot()
+				self.gui.plot.update_plots()
+
+				self.hmm_export()
+				if self.gui.prefs['hmm_binding_expt'] is True:
+					self.hmm_savechopped()
+
+	def run_vbhmm_model(self,nmin=None,nmax=None,color=None):
+		self.gui.set_status('Compiling...')
+		from ..supporting.hmms.vb_em_hmm import vb_em_hmm,vb_em_hmm_parallel,vb_em_hmm_model_selection_parallel
+		# from ..supporting.hmms.ml_em_gmm import ml_em_gmm
+		self.gui.set_status('')
+
+		if not self.d is None:
+			success1,success2,nmin,nmax = self.get_nstate_range(nmin,nmax)
+			if not success1 or not success2:
+				return
+			success3,color = self.hmm_get_colorchannel(color)
+
+			if success1 and success2 and success3:
+				try:
+					y,ran = self.hmm_get_traces(color)
+				except:
+					return
+
+				from ..ui.ui_progressbar import progressbar
+				prog = progressbar()
+				prog.setRange(0,len(y))
+				prog.setWindowTitle('vbFRET HMM Progress')
+				self.flag_running = True
+				prog.canceled.connect(self._cancel_run)
+				prog.show()
+
+				priors = np.array([self.gui.prefs[sss] for sss in ['vb_prior_beta','vb_prior_a','vb_prior_b','vb_prior_pi','vb_prior_alpha']])
+				self.hmm_result = ensemble_hmm_result()
+				self.hmm_result.type = 'vb'
+				self.hmm_result.models = []
+				self.hmm_result.likelihoods = []
+				for i in range(len(y)):
+					prog.setValue(i)
+					prog.setLabelText('Current Trajectory: %d/%d'%(i,len(y)))
+					self.gui.app.processEvents()
+
+					if self.flag_running:
+						rs,ls = vb_em_hmm_model_selection_parallel(y[i],nmin=nmin,nmax=nmax,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],prior_strengths=priors,ncpu=self.gui.prefs['ncpu'])
+						self.hmm_result.models.append(rs)
+						self.hmm_result.likelihoods.append(ls)
+						modelmax = np.argmax(ls)
+						self.hmm_result.results.append(rs[modelmax])
+				self.hmm_result.ran = ran[:len(self.hmm_result.results)]
+
+				self.gui.log("HMM report - %d to %d model selection"%(nmin,nmax),True)
+				self.gui.log("Finished %d trajectories"%(len(self.hmm_result.results)),True)
+				# self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
+
 				self.gui.plot.initialize_hmm_plot()
 				self.gui.plot.update_plots()
 

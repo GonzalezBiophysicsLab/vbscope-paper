@@ -313,6 +313,7 @@ class traj_plot_container():
 		[[[l.set_visible(True) for l in aaa.lines] for aaa in aa] for aa in self.a]
 
 	def initialize_hmm_plot(self):
+		self.gui.update_display_traces()
 		if len(self.a[1,0].lines) < 4:
 			self.a[1,0].plot(np.random.rand(100),np.random.rand(100),color='k',lw=1.,alpha=.8)
 

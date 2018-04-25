@@ -173,6 +173,20 @@ def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None):
 
 	return result
 
+def vb_em_hmm_model_selection_parallel(x, nmin=1, nmax=6, maxiters=1000, threshold=1e-10, nrestarts=1, prior_strengths=None, ncpu=1):
+	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
+		pool = mp.Pool(processes = ncpu)
+		results = [pool.apply_async(vb_em_hmm, args=(x,i,maxiters,threshold,prior_strengths)) for i in xrange(nmin,nmax)]
+		results = [p.get() for p in results]
+		pool.close()
+	else:
+		results = [vb_em_hmm(x,i,maxiters,threshold,prior_strengths) for i in xrange(nmin,nmax)]
+	results = [results[i] for i in np.argsort([r.mu.size for r in results])] # sort back into order
+	likelihoods = np.array([r.likelihood[-1,0] for r in results])
+
+	return results,likelihoods
+
+
 
 def vb_em_hmm_parallel(x,nstates,maxiters=1000,threshold=1e-10,nrestarts=1,prior_strengths=None,ncpu=1):
 
