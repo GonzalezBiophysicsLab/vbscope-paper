@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import cnames
 
 default_prefs = {
 	'fig_height':4.0,
@@ -38,9 +39,17 @@ def plot(gui):
 			nstates = np.array([r.mu.size for r in gui.data.hmm_result.results])
 			y = np.array([np.sum(nstates == i) for i in ns])
 
-
-			popplot.ax[0].bar(ns,y,width=1.0,color=popplot.prefs['bar_color'],edgecolor=popplot.prefs['bar_edgecolor'])
-
+			try:
+				bcolor = 'steelblue'
+				ecolor = 'black'
+				if cnames.keys().count(popplot.prefs['bar_color']) > 0:
+					bcolor = popplot.prefs['bar_color']
+				if cnames.keys().count(popplot.prefs['bar_edgecolor']) > 0:
+					ecolor = popplot.prefs['bar_edgecolor']
+				popplot.ax[0].bar(ns,y,width=1.0,color=bcolor,edgecolor=ecolor)
+			except:
+				pass
+				
 		popplot.ax[0].set_xticks(ns)
 
 		popplot.ax[0].set_xlabel(r'$N_{\rm states}$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio(),labelpad=popplot.prefs['label_space'])
