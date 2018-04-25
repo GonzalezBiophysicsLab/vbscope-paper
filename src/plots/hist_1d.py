@@ -185,6 +185,17 @@ def draw_hmm(gui):
 				else:
 					tot += rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i]) * rr.r.shape[0]
 		tot /= nn
+
+		if popplot.prefs['hmm_peaklocation'] is True:
+			v = gui.data.get_viterbi_data(signal=True).flatten()
+			v = v[np.isfinite(v)]
+			from scipy.stats import gaussian_kde
+			# hy,hx = np.histogram(v,density=True)
+			# x = .5*(hx[1:]+hx[:-1])
+			# tot = hy
+			kernel = gaussian_kde(v)
+			tot = kernel(x)
+
 	elif r.type == 'ml':
 		nn = 0.
 		for j in range(len(r.results)):
@@ -201,7 +212,7 @@ def draw_hmm(gui):
 	popplot.f.canvas.draw()
 
 def get_data(gui):
-	fpb = gui.data.get_plot_data()[0]
+	fpb = gui.data.get_plot_data()[0].copy()
 	if gui.popout_plots['plot_hist1d'].ui.prefs['wiener_filter'] is True:
 		for i in range(fpb.shape[0]):
 			cut = np.isfinite(fpb[i])
