@@ -524,7 +524,7 @@ class plotter_gui(ui_general.gui):
 				n = self.data.hmm_result.result.mu.size
 			elif self.data.hmm_result.type =='vb' or self.data.hmm_result.type == 'ml':
 				n = self.data.hmm_result.results[i].mu.size
-			self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:1d}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=n, w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
+		self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:1d}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=n, w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
 
 	def classes_get_checked(self):
 		checked = np.zeros(self.data.d.shape[0],dtype='bool')
