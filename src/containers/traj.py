@@ -308,18 +308,19 @@ class traj_container():
 					ran.append(i)
 		return y,ran
 
-	def hmm_export(self):
-		import cPickle as pickle
-		oname = QFileDialog.getSaveFileName(self.gui, 'Export HMM results', '_HMM.dat','*.dat')
-		if oname[0] != "":
-			try:
-				f = open(oname[0],'w')
-				pickle.dump(self.hmm_result, f)
-				f.close()
-				self.gui.log('Exported HMM results as %s'%(oname[0]),True)
-			except:
-				QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
-				self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
+	def hmm_export(self,prompt_export=True):
+		if prompt_export:
+			import cPickle as pickle
+			oname = QFileDialog.getSaveFileName(self.gui, 'Export HMM results', '_HMM.dat','*.dat')
+			if oname[0] != "":
+				try:
+					f = open(oname[0],'w')
+					pickle.dump(self.hmm_result, f)
+					f.close()
+					self.gui.log('Exported HMM results as %s'%(oname[0]),True)
+				except:
+					QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
+					self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
 
 	def hmm_savechopped(self):
 			oname = QFileDialog.getSaveFileName(self.gui, 'Save Chopped Traces', '_chopped.dat','*.dat')
@@ -367,7 +368,7 @@ class traj_container():
 	def _cancel_run(self):
 		self.flag_running = False
 
-	def run_conhmm(self,nstates=None,color=None):
+	def run_conhmm(self,nstates=None,color=None,prompt_export=True):
 		self.gui.set_status('Compiling...')
 		from ..supporting.hmms.consensus_vb_em_hmm import consensus_vb_em_hmm,consensus_vb_em_hmm_parallel
 		self.gui.set_status('')
@@ -397,11 +398,11 @@ class traj_container():
 				self.gui.plot.initialize_hmm_plot()
 				self.gui.plot.update_plots()
 
-				self.hmm_export()
+				self.hmm_export(prompt_export)
 				if self.gui.prefs['hmm_binding_expt'] is True:
 					self.hmm_savechopped()
 
-	def run_vbhmm_model(self,nmin=None,nmax=None,color=None):
+	def run_vbhmm_model(self,nmin=None,nmax=None,color=None,prompt_export=True):
 		self.gui.set_status('Compiling...')
 		from ..supporting.hmms.vb_em_hmm import vb_em_hmm,vb_em_hmm_parallel,vb_em_hmm_model_selection_parallel
 		# from ..supporting.hmms.ml_em_gmm import ml_em_gmm
@@ -452,11 +453,11 @@ class traj_container():
 				self.gui.plot.initialize_hmm_plot()
 				self.gui.plot.update_plots()
 
-				self.hmm_export()
+				self.hmm_export(prompt_export)
 				if self.gui.prefs['hmm_binding_expt'] is True:
 					self.hmm_savechopped()
 
-	def run_vbhmm(self,nstates=None,color=None):
+	def run_vbhmm(self,nstates=None,color=None,prompt_export=True):
 		self.gui.set_status('Compiling...')
 		from ..supporting.hmms.vb_em_hmm import vb_em_hmm,vb_em_hmm_parallel
 		# from ..supporting.hmms.ml_em_gmm import ml_em_gmm
@@ -488,6 +489,7 @@ class traj_container():
 				self.hmm_result.type = 'vb'
 				for i in range(len(y)):
 					prog.setValue(i)
+					prog.setLabelText('Current Trajectory: %d/%d'%(i,len(y)))
 					self.gui.app.processEvents()
 					if self.flag_running:
 						self.hmm_result.results.append(vb_em_hmm_parallel(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],prior_strengths=priors,ncpu=self.gui.prefs['ncpu']))
@@ -500,11 +502,11 @@ class traj_container():
 				self.gui.plot.initialize_hmm_plot()
 				self.gui.plot.update_plots()
 
-				self.hmm_export()
+				self.hmm_export(prompt_export)
 				if self.gui.prefs['hmm_binding_expt'] is True:
 					self.hmm_savechopped()
 
-	def run_mlhmm(self,nstates=None,color=None):
+	def run_mlhmm(self,nstates=None,color=None,prompt_export=True):
 		self.gui.set_status('Compiling...')
 		from ..supporting.hmms.ml_em_hmm import ml_em_hmm, ml_em_hmm_parallel
 		# from ..supporting.hmms.ml_em_gmm import ml_em_gmm
@@ -537,6 +539,7 @@ class traj_container():
 					if self.flag_running:
 						self.hmm_result.results.append(ml_em_hmm_parallel(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],ncpu=self.gui.prefs['ncpu']))
 					prog.setValue(i)
+					prog.setLabelText('Current Trajectory: %d/%d'%(i,len(y)))
 					self.gui.app.processEvents()
 				self.hmm_result.ran = ran[:len(self.hmm_result.results)]
 
@@ -547,7 +550,7 @@ class traj_container():
 				self.gui.plot.initialize_hmm_plot()
 				self.gui.plot.update_plots()
 
-				self.hmm_export()
+				self.hmm_export(prompt_export)
 				if self.gui.prefs['hmm_binding_expt'] is True:
 					self.hmm_savechopped()
 
