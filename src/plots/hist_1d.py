@@ -29,7 +29,8 @@ default_prefs = {
 
 	'gmm_on':True,
 	'hmm_on':True,
-	'hmm_peaklocation':False,
+	'hmm_viterbi':False,
+	'hmm_states':False,
 	'hist_on':True,
 
 
@@ -50,6 +51,8 @@ default_prefs = {
 	'textbox_nmol':True
 }
 
+
+
 def setup(gui):
 
 	fitvbbutton = QPushButton("VB gmm Fit")
@@ -60,7 +63,14 @@ def setup(gui):
 	gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(3,fitmlbutton)
 	fitmlbutton.clicked.connect(lambda x: fit_ml(gui))
 
+	recalcbutton = QPushButton("Recalculate")
+	gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(1,recalcbutton)
+	recalcbutton.clicked.connect(lambda x: recalc(gui))
+
 	gui.popout_plots['plot_hist1d'].ui.gmm_result = None
+	recalc(gui)
+
+
 
 
 def fit_vb(gui):
@@ -72,7 +82,7 @@ def fit_vb(gui):
 
 		prefs = gui.popout_plots['plot_hist1d'].ui.prefs
 
-		fpb = get_data(gui).flatten()
+		fpb = gui.popout_plots['plot_hist1d'].ui.fpb.flatten()
 		fpb = fpb[np.isfinite(fpb)]
 		bad = np.bitwise_or((fpb < prefs['fret_clip_low']),(fpb > prefs['fret_clip_high']))
 		fpb[bad] = np.random.uniform(low=prefs['fret_clip_low'],high=prefs['fret_clip_high'],size=int(bad.sum())) ## clip
@@ -107,7 +117,8 @@ def fit_vb(gui):
 			r.type = 'vb'
 			gui.popout_plots['plot_hist1d'].ui.gmm_result = r
 
-			plot(gui)
+			recalc(gui)
+			# plot(gui)
 
 			gui.log(r.report(),True)
 
@@ -122,7 +133,7 @@ def fit_ml(gui):
 
 		success,nstates = gui.data.get_nstates()
 		if success:
-			fpb = get_data(gui).flatten()
+			fpb = gui.popout_plots['plot_hist1d'].ui.fpb.flatten()
 			fpb = fpb[np.isfinite(fpb)]
 			bad = np.bitwise_or((fpb < prefs['fret_clip_low']),(fpb > prefs['fret_clip_high']))
 			fpb[bad] = np.random.uniform(low=prefs['fret_clip_low'],high=prefs['fret_clip_high'],size=int(bad.sum())) ## clip
@@ -131,96 +142,53 @@ def fit_ml(gui):
 			r.type = 'ml'
 			gui.popout_plots['plot_hist1d'].ui.gmm_result = r
 
-			plot(gui)
+			recalc(gui)
+			# plot(gui)
 
 			gui.log(r.report(),True)
 
 def draw_gmm(gui):
-	popplot = gui.popout_plots['plot_hist1d'].ui
-	r = popplot.gmm_result
+	try:
+		popplot = gui.popout_plots['plot_hist1d'].ui
 
-	x = np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],1001)
+		r = popplot.gmm_result
+		x = popplot.gmm_x
+		tot = popplot.gmm_tot
+		ys = popplot.gmm_ys
 
-	tot = np.zeros_like(x)
-	if r.type == 'vb':
-		for i in range(r.mu.size):
-			y = r.ppi[i]*studentt(x,r.a[i],r.b[i],r.beta[i],r.m[i])
-			tot += y
+		if r.type == 'vb':
+			for i in range(len(ys)):
+				y = ys[i]
+				popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
+		elif r.type == 'ml':
+			for i in range(len(ys) - 1): ## ignore the outlier class
+				y = ys[i]
+				popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
+			y = ys[-1]
 			popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
-	elif r.type == 'ml':
-		for i in range(r.mu.size - 1): ## ignore the outlier class
-			y = r.ppi[i]*normal(x,r.mu[i],r.var[i])
-			tot += y
-			popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
-		y = r.ppi[-1]*(x*0. + r.mu[-1])
-		tot += y
-		popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
 
-
-	popplot.ax[0].plot(x,tot,color='k',lw=2,alpha=.8)
-	popplot.f.canvas.draw()
+		popplot.ax[0].plot(x,tot,color='k',lw=2,alpha=.8)
+		popplot.f.canvas.draw()
+	except:
+		pass
 
 def draw_hmm(gui):
-	popplot = gui.popout_plots['plot_hist1d'].ui
+	try:
+		popplot = gui.popout_plots['plot_hist1d'].ui
 
-	r = gui.data.hmm_result
+		r = gui.data.hmm_result
+		x = popplot.hmm_x
+		tot = popplot.hmm_tot
+		ys = popplot.hmm_ys
 
-	x = np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],1001)
-	tot = np.zeros_like(x)
-	if r.type == 'consensus vbfret':
-		rr = r.result
-		for i in range(rr.m.size):
-			y = rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i])
-			tot += y
-			popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
-	elif r.type == 'vb':
-		nn = 0.
-		for j in range(len(r.results)):
-			rr = r.results[j]
-			nn += rr.r.shape[0]
-			for i in range(rr.m.size):
+		if r.type == 'consensus vbfret':
+			for y in ys:
+				popplot.ax[0].plot(x,y,color='k',lw=1,alpha=.8,ls='--')
 
-				if popplot.prefs['hmm_peaklocation'] is True:
-					tot += rr.ppi[i]*normal(x,rr.m[i],1./rr.beta[i]) * rr.r.shape[0]
-				else:
-					tot += rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i]) * rr.r.shape[0]
-		tot /= nn
-
-		if popplot.prefs['hmm_peaklocation'] is True:
-			v = gui.data.get_viterbi_data(signal=True).flatten()
-			v = v[np.isfinite(v)]
-			from scipy.stats import gaussian_kde
-			# hy,hx = np.histogram(v,density=True)
-			# x = .5*(hx[1:]+hx[:-1])
-			# tot = hy
-			kernel = gaussian_kde(v)
-			tot = kernel(x)
-
-	elif r.type == 'ml':
-		nn = 0.
-		for j in range(len(r.results)):
-			rr = r.results[j]
-			nn += rr.r.shape[0]
-			for i in range(rr.mu.size):
-				if popplot.prefs['hmm_peaklocation'] is True:
-					tot += rr.ppi[i]*normal(x,rr.mu[i],rr.var[i]/np.sqrt(rr.ppi[i]*rr.r.shape[0])) * rr.r.shape[0]
-				else:
-					tot += rr.ppi[i]*normal(x,rr.mu[i],rr.var[i]) * rr.r.shape[0]
-
-		tot /= nn
-	popplot.ax[0].plot(x,tot,color='k',lw=2,alpha=.8)
-	popplot.f.canvas.draw()
-
-def get_data(gui):
-	fpb = gui.data.get_plot_data()[0].copy()
-	if gui.popout_plots['plot_hist1d'].ui.prefs['wiener_filter'] is True:
-		for i in range(fpb.shape[0]):
-			cut = np.isfinite(fpb[i])
-			try:
-				fpb[i][cut] = wiener(fpb[i][cut])
-			except:
-				pass
-	return fpb
+		popplot.ax[0].plot(x,tot,color='k',lw=2,alpha=.8)
+		popplot.f.canvas.draw()
+	except:
+		pass
 
 def normal(x,m,v):
 	return 1./np.sqrt(2.*np.pi*v)*np.exp(-.5/v*(x-m)**2.)
@@ -234,6 +202,95 @@ def studentt(x,a,b,k,m):
 	lny += -.5*(2.*a+1)*np.log(1.+lam*(x-m)**2./(2.*a))
 	return np.exp(lny)
 
+
+def recalc(gui):
+	popplot = gui.popout_plots['plot_hist1d'].ui
+
+	## Data
+	fpb = gui.data.get_plot_data()[0].copy()
+	if popplot.prefs['wiener_filter'] is True:
+		for i in range(fpb.shape[0]):
+			cut = np.isfinite(fpb[i])
+		try:
+			fpb[i][cut] = wiener(fpb[i][cut])
+		except:
+			pass
+	gui.popout_plots['plot_hist1d'].ui.fpb = fpb
+
+	## GMM
+	if not popplot.gmm_result is None:
+		r = popplot.gmm_result
+		x = np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],1001)
+
+		tot = np.zeros_like(x)
+		ys = []
+		if r.type == 'vb':
+			for i in range(r.mu.size):
+				y = r.ppi[i]*studentt(x,r.a[i],r.b[i],r.beta[i],r.m[i])
+				tot += y
+				ys.append(y)
+		elif r.type == 'ml':
+			for i in range(r.mu.size - 1): ## ignore the outlier class
+				y = r.ppi[i]*normal(x,r.mu[i],r.var[i])
+				tot += y
+				ys.append(y)
+			y = r.ppi[-1]*(x*0. + r.mu[-1])
+			tot += y
+			ys.append(y)
+
+		gui.popout_plots['plot_hist1d'].ui.gmm_x = x
+		gui.popout_plots['plot_hist1d'].ui.gmm_tot = tot
+		gui.popout_plots['plot_hist1d'].ui.gmm_ys = ys
+
+	## HMM -- this needs to be standardized... kind of a mess
+	if not gui.data.hmm_result is None:
+		r = gui.data.hmm_result
+
+		x = np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],1001)
+		tot = np.zeros_like(x)
+		ys = []
+		if r.type == 'consensus vbfret':
+			rr = r.result
+			for i in range(rr.m.size):
+				y = rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i])
+				tot += y
+				ys.append(y)
+		elif r.type == 'vb' or r.type == 'ml':
+			nn = 0.
+			if not popplot.prefs['hmm_states']:
+				for j in range(len(r.results)):
+					rr = r.results[j]
+					nn += rr.r.shape[0]
+					for i in range(rr.mu.size):
+						if r.type == 'ml':
+							tot += rr.ppi[i]*normal(x,rr.mu[i],rr.var[i]) * rr.r.shape[0]
+						else:
+							tot += rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i]) * rr.r.shape[0]
+				tot /= nn
+			else:
+				if popplot.prefs['hmm_viterbi']:
+					v = gui.data.get_viterbi_data(signal=True).flatten()
+					v = v[np.isfinite(v)]
+					from scipy.stats import gaussian_kde
+					kernel = gaussian_kde(v)
+					tot = kernel(x)
+				else:
+					for j in range(len(r.results)):
+						rr = r.results[j]
+						nn += rr.r.shape[0]
+						for i in range(rr.mu.size):
+							if r.type == 'ml':
+								tot += rr.ppi[i]*normal(x,rr.mu[i],rr.var[i]/np.sqrt(rr.ppi[i]*rr.r.shape[0])) * rr.r.shape[0]
+							else:
+								tot += rr.ppi[i]*normal(x,rr.m[i],1./rr.beta[i]) * rr.r.shape[0]
+					tot /= nn
+
+		gui.popout_plots['plot_hist1d'].ui.hmm_x = x
+		gui.popout_plots['plot_hist1d'].ui.hmm_tot = tot
+		gui.popout_plots['plot_hist1d'].ui.hmm_ys = ys
+	plot(gui)
+
+
 def plot(gui):
 	popplot = gui.popout_plots['plot_hist1d'].ui
 	popplot.ax[0].cla()
@@ -241,14 +298,13 @@ def plot(gui):
 	gui.app.processEvents()
 
 	if gui.ncolors == 2:
-		fpb = get_data(gui)
+		fpb = gui.popout_plots['plot_hist1d'].ui.fpb
 
-		# plt.hist(f.flatten(),bins=181,range=(-.4,1.4),histtype='stepfilled',alpha=.8,normed=True)
 		if popplot.prefs['hist_on']:
 			try:
-				popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['fret_nbins'],range=(popplot.prefs['fret_min'],popplot.prefs['fret_max']),histtype=popplot.prefs['hist_type'],alpha=.8,density=True,color=popplot.prefs['hist_color'],edgecolor=popplot.prefs['hist_edgecolor'],log=popplot.prefs['hist_log_y'])
+				popplot.ax[0].hist(popplot.fpb.flatten(),bins=popplot.prefs['fret_nbins'],range=(popplot.prefs['fret_min'],popplot.prefs['fret_max']),histtype=popplot.prefs['hist_type'],alpha=.8,density=True,color=popplot.prefs['hist_color'],edgecolor=popplot.prefs['hist_edgecolor'],log=popplot.prefs['hist_log_y'])
 			except:
-				popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['fret_nbins'],range=(popplot.prefs['fret_min'],popplot.prefs['fret_max']),histtype='stepfilled',alpha=.8,density=True,color='steelblue',log=popplot.prefs['hist_log_y'])
+				popplot.ax[0].hist(fpb.flatten(),bins=popplot.prefs['fret_nbins'],range=(popplot.prefs['fret_min'],popplot.prefs['fret_max']),histtype='stepfilled',alpha=.8,density=True,color='steelblue',edgecolor='k',log=popplot.prefs['hist_log_y'])
 		else:
 			if popplot.prefs['hist_log_y']:
 				popplot.ax[0].set_yscale('log')
@@ -277,7 +333,7 @@ def plot(gui):
 		popplot.f.subplots_adjust(left=popplot.prefs['label_padding_left'],bottom=popplot.prefs['label_padding_bottom'],top=1.-popplot.prefs['label_padding_top'],right=1.-popplot.prefs['label_padding_right'])
 
 		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
-		lstr = 'N = %d'%(fpb.shape[0])
+		lstr = 'N = %d'%(popplot.fpb.shape[0])
 
 		popplot.ax[0].annotate(lstr,xy=(popplot.prefs['textbox_x'],popplot.prefs['textbox_y']),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['textbox_fontsize']/gui.plot.canvas.devicePixelRatio())
 
