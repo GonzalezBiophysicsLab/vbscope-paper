@@ -2,12 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 default_prefs = {
-	# 'fret_min':-.2,
-	# 'fret_max':1.2,
-	# 'fret_nbins':161,
-	# 'fret_clip_low':-1.,
-	# 'fret_clip_high':2.,
-	'label_padding_left':.15,
+	'fig_height':4.0,
+	'fig_width':4.0,
+	'label_padding_left':.20,
 	'label_padding_bottom':.15,
 	'label_padding_top':.05,
 	'label_padding_right':.05,
@@ -15,19 +12,15 @@ default_prefs = {
 
 	'bar_color':'steelblue',
 	'bar_edgecolor':'black',
-	# 'hist_force_ymax':False,
-	# 'hist_ymax':2.0,
-	# 'hist_ymin':0.0,
 
 	'states_low':1,
-	'states_high':6,
+	'states_high':10,
 
 	'label_y_nticks':4,
 
-
-	'textbox_x':0.95,
+	'textbox_x':0.96,
 	'textbox_y':0.93,
-	'textbox_fontsize':8,
+	'textbox_fontsize':10.0,
 	'textbox_nmol':True
 }
 
