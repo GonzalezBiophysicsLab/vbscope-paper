@@ -13,7 +13,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 matplotlib.rcParams['savefig.format'] = 'pdf'
 matplotlib.rcParams['pdf.fonttype'] = 42
-matplotlib.rcParams['figure.facecolor'] = 1.0
+matplotlib.rcParams['figure.facecolor'] = 'white'
 matplotlib.rcParams['xtick.major.size'] = 4
 matplotlib.rcParams['xtick.minor.size'] = 2
 matplotlib.rcParams['xtick.major.width'] = 1.0
