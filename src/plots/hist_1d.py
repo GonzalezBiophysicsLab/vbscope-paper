@@ -27,6 +27,8 @@ default_prefs = {
 	'label_x_nticks':8,
 	'label_y_nticks':4,
 
+	'kde_bandwidth':0.0,
+
 	'gmm_on':True,
 	'hmm_on':True,
 	'hmm_viterbi':False,
@@ -203,19 +205,32 @@ def studentt(x,a,b,k,m):
 	return np.exp(lny)
 
 
+def kde(x,d,bw=None):
+	from scipy.stats import gaussian_kde
+	if bw is None:
+		kernel = gaussian_kde(d)
+	else:
+		kernel = gaussian_kde(d,bw)
+	y = kernel(x)
+	return y
+
+
 def recalc(gui):
 	popplot = gui.popout_plots['plot_hist1d'].ui
 
 	## Data
-	fpb = gui.data.get_plot_data()[0].copy()
-	if popplot.prefs['wiener_filter'] is True:
-		for i in range(fpb.shape[0]):
-			cut = np.isfinite(fpb[i])
-		try:
-			fpb[i][cut] = wiener(fpb[i][cut])
-		except:
-			pass
-	gui.popout_plots['plot_hist1d'].ui.fpb = fpb
+	if popplot.prefs['hmm_viterbi']:
+		gui.popout_plots['plot_hist1d'].ui.fpb = gui.data.get_viterbi_data(signal=True)
+	else:
+		fpb = gui.data.get_plot_data()[0].copy()
+		if popplot.prefs['wiener_filter'] is True:
+			for i in range(fpb.shape[0]):
+				cut = np.isfinite(fpb[i])
+			try:
+				fpb[i][cut] = wiener(fpb[i][cut])
+			except:
+				pass
+		gui.popout_plots['plot_hist1d'].ui.fpb = fpb
 
 	## GMM
 	if not popplot.gmm_result is None:
@@ -271,9 +286,14 @@ def recalc(gui):
 				if popplot.prefs['hmm_viterbi']:
 					v = gui.data.get_viterbi_data(signal=True).flatten()
 					v = v[np.isfinite(v)]
-					from scipy.stats import gaussian_kde
-					kernel = gaussian_kde(v)
-					tot = kernel(x)
+					if popplot.prefs['kde_bandwidth'] != 0.0:
+						try:
+							tot = kde(x,v,popplot.prefs['kde_bandwidth'])
+						except:
+							tot = kde(x,v)
+					else:
+						tot = kde(x,v)
+
 				else:
 					for j in range(len(r.results)):
 						rr = r.results[j]
