@@ -19,23 +19,26 @@ class traj_container():
 		self.deadprob = None
 
 	def calc_cross_corr(self,d=None): ## of gradient
-		if d is None:
-			x = self.d[:,0] #- self.d[:,0].mean(1)[:,None]
-			y = self.d[:,1] #- self.d[:,1].mean(1)[:,None]
-		else:
-			x = d[0].reshape((1,-1))
-			y = d[1].reshape((1,-1))
-		x = np.gradient(x,axis=1)
-		y = np.gradient(y,axis=1)
+		try:
+			if d is None:
+				x = self.d[:,0] #- self.d[:,0].mean(1)[:,None]
+				y = self.d[:,1] #- self.d[:,1].mean(1)[:,None]
+			else:
+				x = d[0].reshape((1,-1))
+				y = d[1].reshape((1,-1))
+			x = np.gradient(x,axis=1)
+			y = np.gradient(y,axis=1)
 
-		a = np.fft.fft(x,axis=1)
-		b = np.conjugate(np.fft.fft(y,axis=1))
-		cc = np.fft.ifft((a*b),axis=1)
-		cc = cc[:,0].real
-		return cc
-		# return np.abs(cc)
-		#return cc.argsort()
-
+			a = np.fft.fft(x,axis=1)
+			b = np.conjugate(np.fft.fft(y,axis=1))
+			cc = np.fft.ifft((a*b),axis=1)
+			cc = cc[:,0].real
+			return cc
+			# return np.abs(cc)
+			#return cc.argsort()
+		except:
+			return np.zeros_like(x)
+			
 	def calc_all_cc(self):
 		self.cc_list = np.array([self.calc_cross_corr(self.d[j,:,self.pre_list[j]:self.pb_list[j]])[0] for j in range(self.d.shape[0])])
 
