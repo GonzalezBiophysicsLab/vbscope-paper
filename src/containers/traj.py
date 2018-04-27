@@ -38,7 +38,7 @@ class traj_container():
 			#return cc.argsort()
 		except:
 			return np.zeros_like(x)
-			
+
 	def calc_all_cc(self):
 		self.cc_list = np.array([self.calc_cross_corr(self.d[j,:,self.pre_list[j]:self.pb_list[j]])[0] for j in range(self.d.shape[0])])
 
@@ -340,7 +340,10 @@ class traj_container():
 			for j in range(len(self.hmm_result.ran)): ## hmm index
 				i = self.hmm_result.ran[j] ## trace index
 
-				v = self.hmm_result.viterbi[j]
+				if self.hmm_result.type == 'consensus vbfret':
+					v = self.hmm_result.viterbi[j]
+				else:
+					v = self.hmm_result.results[j].viterbi
 
 				pre = int(self.pre_list[i])
 				post = int(self.pb_list[i])
