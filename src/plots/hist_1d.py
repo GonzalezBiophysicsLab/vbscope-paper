@@ -267,7 +267,10 @@ def recalc(gui):
 		if r.type == 'consensus vbfret':
 			rr = r.result
 			for i in range(rr.m.size):
-				y = rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i])
+				if popplot.prefs['hmm_states']:
+					y = rr.ppi[i]*normal(x,rr.m[i],1./rr.beta[i])
+				else:
+					y = rr.ppi[i]*studentt(x,rr.a[i],rr.b[i],rr.beta[i],rr.m[i])
 				tot += y
 				ys.append(y)
 		elif r.type == 'vb' or r.type == 'ml':
