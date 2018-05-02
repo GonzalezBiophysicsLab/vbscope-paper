@@ -270,6 +270,8 @@ class plotter_gui(ui_general.gui):
 
 		tools_conhmm = QAction('Consensus VB',self)
 		tools_conhmm.triggered.connect(lambda event: self.data.run_conhmm())
+		tools_conhmmmodel = QAction('Consensus VB + Model Selection',self)
+		tools_conhmmmodel.triggered.connect(lambda event: self.data.run_conhmm_model())
 		tools_mlhmm = QAction('Max Likelihood',self)
 		tools_mlhmm.triggered.connect(lambda event: self.data.run_mlhmm())
 		tools_vbhmm = QAction('vbFRET',self)
@@ -286,7 +288,7 @@ class plotter_gui(ui_general.gui):
 			menu_tools.addMenu(f)
 		for f in [tools_remove,tools_dead,tools_order]:
 			menu_tools.addAction(f)
-		for f in [tools_vbhmm,tools_vbhmmmodel,tools_conhmm,tools_mlhmm]:
+		for f in [tools_vbhmm,tools_vbhmmmodel,tools_conhmm,tools_conhmmmodel,tools_mlhmm]:
 			menu_hmm.addAction(f)
 		menu_tools.addMenu(menu_hmm)
 #

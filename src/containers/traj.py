@@ -374,6 +374,68 @@ class traj_container():
 	def _cancel_run(self):
 		self.flag_running = False
 
+	def run_conhmm_model(self,nmin=None,nmax=None,color=None,prompt_export=True):
+		self.gui.set_status('Compiling...')
+		from ..supporting.hmms.consensus_vb_em_hmm import consensus_vb_em_hmm,consensus_vb_em_hmm_parallel
+		# from ..supporting.hmms.ml_em_gmm import ml_em_gmm
+		self.gui.set_status('')
+
+		if not self.d is None:
+			success1,success2,nmin,nmax = self.get_nstate_range(nmin,nmax)
+			if not success1 or not success2:
+				return
+			success3,color = self.hmm_get_colorchannel(color)
+
+			if success1 and success2 and success3:
+				try:
+					y,ran = self.hmm_get_traces(color)
+				except:
+					return
+
+				from ..ui.ui_progressbar import progressbar
+				prog = progressbar()
+				prog.setRange(nmin,nmax+1)
+				prog.setWindowTitle('Consensus HMM Progress')
+				self.flag_running = True
+				prog.canceled.connect(self._cancel_run)
+				prog.show()
+
+				priors = np.array([self.gui.prefs[sss] for sss in ['vb_prior_beta','vb_prior_a','vb_prior_b','vb_prior_pi','vb_prior_alpha']])
+				self.hmm_result = consensus_hmm_result()
+				self.hmm_result.type = 'consensus vbfret'
+				self.hmm_result.models = []
+				self.hmm_result.likelihoods = []
+				for i in range(nmin,nmax+1):
+					prog.setValue(i)
+					prog.setLabelText('Current Model: %d'%(i))
+					self.gui.app.processEvents()
+
+					if self.flag_running:
+						rs = consensus_vb_em_hmm_parallel(y,i,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],prior_strengths=priors,ncpu=self.gui.prefs['ncpu'])
+						ls = rs.likelihood[-1,0]
+
+						self.hmm_result.models.append(rs)
+						self.hmm_result.likelihoods.append(ls)
+				if i == nmax:
+					modelmax = np.argmax(self.hmm_result.likelihoods)
+					self.hmm_result.result = self.hmm_result.models[modelmax]
+
+					self.gui.log("HMM report - %d to %d model selection"%(nmin,nmax),True)
+					self.gui.log("Best Model - %d states"%(self.hmm_result.result.mu.size))
+					self.gui.log(self.hmm_result.result.report(),True)
+
+					self.hmm_result.ran = ran
+
+					self.gui.plot.initialize_hmm_plot()
+					self.gui.plot.update_plots()
+
+					self.hmm_export(prompt_export)
+					if self.gui.prefs['hmm_binding_expt'] is True:
+						self.hmm_savechopped()
+				else:
+					self.safe_hmm()
+
+
 	def run_conhmm(self,nstates=None,color=None,prompt_export=True):
 		self.gui.set_status('Compiling...')
 		from ..supporting.hmms.consensus_vb_em_hmm import consensus_vb_em_hmm,consensus_vb_em_hmm_parallel
