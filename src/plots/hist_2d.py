@@ -5,6 +5,7 @@ from scipy.signal import wiener
 
 default_prefs = {
 	'sync_start':True,
+	'sync_postsync':True,
 	'time_min':0,
 	'time_max':200,
 	'time_nbins':200,
@@ -139,7 +140,7 @@ def get_data(gui):
 		elif gui.data.hmm_result.type == 'vb' or gui.data.hmm_result.type == 'ml':
 			if state < gui.data.hmm_result.results[0].mu.size:
 				flag = True
-		if flag:
+		if flag and popplot.prefs['sync_postsync']:
 			v = gui.data.get_viterbi_data()
 			vv = np.array([[v[i,:-1],v[i,1:]] for i in range(v.shape[0])])
 			oo = []
