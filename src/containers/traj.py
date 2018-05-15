@@ -311,7 +311,7 @@ class traj_container():
 					ran.append(i)
 		return y,ran
 
-	def hmm_export(self,prompt_export=True):
+	def hmm_export(self,prompt_export=True,oname=None):
 		if prompt_export:
 			import cPickle as pickle
 			oname = QFileDialog.getSaveFileName(self.gui, 'Export HMM results', '_HMM.dat','*.dat')
@@ -324,6 +324,16 @@ class traj_container():
 				except:
 					QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
 					self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
+		else:
+			if not oname is None:
+				import cPickle as pickle
+				try:
+					f = open(oname,'w')
+					pickle.dump(self.hmm_result, f)
+					f.close()
+					self.gui.log('Exported HMM results as %s'%(oname),True)
+				except:
+					self.gui.log('Failed to export HMM results as %s'%(oname),True)
 
 	def hmm_savechopped(self):
 			oname = QFileDialog.getSaveFileName(self.gui, 'Save Chopped Traces', '_chopped.dat','*.dat')
