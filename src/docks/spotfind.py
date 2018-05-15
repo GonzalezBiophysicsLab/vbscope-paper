@@ -8,6 +8,10 @@ import multiprocessing as mp
 import numpy as np
 import matplotlib.pyplot as plt
 
+_windows = False
+import os
+if os.name == 'nt':
+	_windows = True
 
 default_prefs = {
 	'spotfind_nsearch':3,
@@ -195,8 +199,7 @@ class dock_spotfind(QWidget):
 			# self.gmms,self.locs = self.setup_spot_find(self.gui.data.current_frame)
 			self.gmms,self.locs = self.setup_spot_find()
 
-			from sys import platform
-			if self.gui.prefs['computer_ncpu'] > 1 and platform != "win32":
+			if self.gui.prefs['computer_ncpu'] > 1 and not _windows:
 				pool = mp.Pool(self.gui.prefs['computer_ncpu'])
 				self.gmms = pool.map(_run,self.gmms)
 				pool.close()
@@ -257,7 +260,7 @@ class dock_spotfind(QWidget):
 					gmms.append(g[j])
 					locs.append(l[j])
 
-			if self.gui.prefs['computer_ncpu'] > 1:
+			if self.gui.prefs['computer_ncpu'] > 1 and not _windows:
 				pool = mp.Pool(self.gui.prefs['computer_ncpu'])
 				gmms = pool.map(_run,gmms)
 				pool.close()
