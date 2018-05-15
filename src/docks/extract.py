@@ -11,7 +11,7 @@ from time import time
 
 
 default_prefs = {
-	'extract_same_cutoff':1.0,
+	'extract_same_cutoff':1.42,
 	'extract_numerical_aperture':1.2,
 	'extract_pixel_size':13300.0,
 	'extract_magnification':60.0,
