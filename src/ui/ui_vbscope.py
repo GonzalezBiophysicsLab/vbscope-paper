@@ -114,6 +114,7 @@ class vbscope_gui(movie_viewer):
 		success = super(vbscope_gui, self).load(fname)
 		if success:
 			self.docks['spotfind'][1].setup_sliders()
+			self.docks['spotfind'][1].flush_old()
 			self._prefs.update_table()
 			self.docks['tag_viewer'][1].init_model()
 

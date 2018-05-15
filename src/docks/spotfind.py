@@ -173,6 +173,13 @@ class dock_spotfind(QWidget):
 		self.button_savepriors.clicked.connect(self.savepriors)
 		self.button_clearpriors.clicked.connect(self.clearpriors)
 
+	def flush_old(self):
+		self.flag_spots = False
+		self.gmms = None
+		self.xys = None
+		self.locs = None
+		self.gui.plot.clear_collections()
+
 	def print_spotnum(self):
 		try:
 			s = [self.xys[j].shape[-1] for j in range(self.gui.data.ncolors)]
