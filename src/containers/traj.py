@@ -97,23 +97,14 @@ class traj_container():
 		else:
 			success = True
 		if success:
-			cut = np.min(self.d,axis=(1,2)) > threshold
-			pbt = self.pb_list.copy()
-			pret = self.pre_list.copy()
+			keep = np.min(self.d,axis=(1,2)) > threshold
+			if self.remove_traces(keep):
+				self.gui.plot.initialize_plots()
+				self.gui.initialize_sliders()
 
-			d = self.d[cut]
-			pbt = pbt[cut]
-			pret = pret[cut]
-			self.gui.plot.index = 0
-			self.gui.initialize_data(d,sort=False)
-			self.pb_list = pbt
-			self.pre_list = pret
-			self.gui.plot.initialize_plots()
-			self.gui.initialize_sliders()
-
-			msg = "Cull traces: kept %d out of %d = %f %%, with a value less than %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size),threshold)
-			self.gui.log(msg,True)
-			self.gui.update_display_traces()
+				msg = "Cull traces: kept %d out of %d = %f %%, with a value less than %f"%(keep.sum(),keep.size,keep.sum()/float(keep.size),threshold)
+				self.gui.log(msg,True)
+				self.gui.update_display_traces()
 
 	def cull_max(self,event=None,threshold=None):
 		if threshold is None:
@@ -121,46 +112,46 @@ class traj_container():
 		else:
 			success = True
 		if success:
-			cut = np.max(self.d,axis=(1,2)) < threshold
-			pbt = self.pb_list.copy()
-			pret = self.pre_list.copy()
+			keep = np.max(self.d,axis=(1,2)) < threshold
+			if self.remove_traces(keep):
+				self.gui.plot.initialize_plots()
+				self.gui.initialize_sliders()
 
-			d = self.d[cut]
-			pbt = pbt[cut]
-			pret = pret[cut]
-			self.gui.plot.index = 0
-			self.gui.initialize_data(d,sort=False)
-			self.pb_list = pbt
-			self.pre_list = pret
-			self.gui.plot.initialize_plots()
-			self.gui.initialize_sliders()
-
-			msg = "Cull traces: kept %d out of %d = %f %%, with a value greater than %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size),threshold)
-			self.gui.log(msg,True)
-			self.gui.update_display_traces()
+				msg = "Cull traces: kept %d out of %d = %f %%, with a value greater than %f"%(keep.sum(),keep.size,keep.sum()/float(keep.size),threshold)
+				self.gui.log(msg,True)
+				self.gui.update_display_traces()
 
 	## Remove trajectories with number of kept-frames < threshold
 	def cull_pb(self):
 		if not self.d is None and self.gui.ncolors == 2:
 			self.safe_hmm()
-			pbt = self.pb_list.copy()
-			pret = self.pre_list.copy()
-			dt = pbt-pret
-			cut = dt > self.gui.prefs['min_length']
+			dt = self.pb_list-self.pre_list
+			keep = dt > self.gui.prefs['min_length']
 
-			d = self.d[cut]
-			pbt = pbt[cut]
-			pret = pret[cut]
+			if self.remove_traces(keep):
+				self.gui.plot.initialize_plots()
+				self.gui.initialize_sliders()
+
+				msg = "Cull short traces: kept %d out of %d = %f"%(keep.sum(),keep.size,keep.sum()/float(keep.size))
+				self.gui.log(msg,True)
+				self.gui.update_display_traces()
+
+	def remove_traces(self,mask):
+		if mask.sum() == 0:
+			msg = "ERROR: cannot remove all traces"
+			self.gui.log(msg,True)
+			return False
+		else:
+			d = self.d[mask]
+			pbt = self.pb_list[mask].copy()
+			pret = self.pre_list[mask].copy()
+			classes = self.class_list[mask].copy()
 			self.gui.plot.index = 0
 			self.gui.initialize_data(d,sort=False)
 			self.pb_list = pbt
 			self.pre_list = pret
-			self.gui.plot.initialize_plots()
-			self.gui.initialize_sliders()
-
-			msg = "Cull short traces: kept %d out of %d = %f"%(cut.sum(),cut.size,cut.sum()/float(cut.size))
-			self.gui.log(msg,True)
-			self.gui.update_display_traces()
+			self.class_list = classes
+			return True
 
 	def cull_photons(self,color=None,threshold=None):
 		if not self.d is None:
@@ -186,13 +177,11 @@ class traj_container():
 					success2 = True
  				if success2:
 					keep = y > threshold
-					d = self.d[keep]
-					self.gui.plot.index = 0
-					self.gui.initialize_data(d)
-					self.gui.plot.initialize_plots()
-					self.gui.initialize_sliders()
-					self.gui.log('Cull Photons: %d traces with less than %d total counts in channel %s removed'%((keep==0).sum(),threshold,c),True)
-					self.gui.update_display_traces()
+					if self.remove_traces(keep):
+						self.gui.plot.initialize_plots()
+						self.gui.initialize_sliders()
+						self.gui.log('Cull Photons: %d traces with less than %d total counts in channel %s removed'%((keep==0).sum(),threshold,c),True)
+						self.gui.update_display_traces()
 
 
 	def get_plot_data(self):
