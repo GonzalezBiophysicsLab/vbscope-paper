@@ -21,6 +21,9 @@ default_prefs = {
 'label_y_nticks':8,
 'label_x_nticks':8,
 'label_ticksize':8,
+'label_x_rotate',:0.,
+'label_y_rotate',:0.,
+
 'textbox_x':0.95,
 'textbox_y':0.93,
 'textbox_fontsize':8,
@@ -150,8 +153,10 @@ def plot(gui):
 	popplot.ax[0].set_title('Transition Density',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
 	# bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
 	# popplot.ax[0].annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['label_ticksize']/gui.plot.canvas.devicePixelRatio())
-	popplot.ax[0].set_xticks(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_x_nticks']))
-	popplot.ax[0].set_yticks(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_y_nticks']))
+	popplot.ax[0].set_xticks(np.around(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_x_nticks']),4)+0.)
+	popplot.ax[0].set_xticklabels(popplot.ax[0].get_xticks(),rotation=popplot.prefs['label_x_rotate'])
+	popplot.ax[0].set_yticks(np.around(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_y_nticks']),4)+0.)
+	popplot.ax[0].set_yticklabels(popplot.ax[0].get_yticks(),rotation=popplot.prefs['label_y_rotate'])
 
 
 	bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
