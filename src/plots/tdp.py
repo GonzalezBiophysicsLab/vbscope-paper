@@ -21,8 +21,8 @@ default_prefs = {
 'label_y_nticks':8,
 'label_x_nticks':8,
 'label_ticksize':8,
-'label_x_rotate',:0.,
-'label_y_rotate',:0.,
+'label_x_rotate':0.,
+'label_y_rotate':0.,
 
 'textbox_x':0.95,
 'textbox_y':0.93,
