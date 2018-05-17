@@ -189,6 +189,7 @@ class plotter_gui(ui_general.gui):
 	## Reset everything with the new trajectories loaded in with this function
 	def initialize_data(self,data,sort=True):
 		self.data.d = data
+		self.data.hmm_result = None
 
 		## Guess at good y-limits for the plot
 		self.plot.yminmax = np.percentile(self.data.d.flatten()[np.isfinite(self.data.d.flatten())],[.1,99.9])
