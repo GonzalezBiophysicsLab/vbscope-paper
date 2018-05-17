@@ -5,27 +5,32 @@ from PyQt5.QtWidgets import QPushButton
 import multiprocessing as mp
 
 default_prefs = {
+	'fig_height':2.5,
+	'fig_width':2.5,
+	'label_fontsize':10.,
+	'label_ticksize':8.,
+
 	'fret_min':-.2,
 	'fret_max':1.2,
-	'fret_nbins':161,
+	'fret_nbins':141,
 	'fret_clip_low':-1.,
 	'fret_clip_high':2.,
 	'label_padding_left':.15,
 	'label_padding_bottom':.15,
 	'label_padding_top':.05,
 	'label_padding_right':.05,
-	'label_space':5.,
+	'label_space':2.,
 
 	'hist_type':'stepfilled',
 	'hist_color':'steelblue',
 	'hist_edgecolor':'black',
 	'hist_log_y':False,
-	'hist_force_ymax':False,
-	'hist_ymax':2.0,
+	'hist_force_ymax':True,
+	'hist_ymax':2.5,
 	'hist_ymin':0.0,
 
 	'label_x_nticks':8,
-	'label_y_nticks':4,
+	'label_y_nticks':6,
 
 	'kde_bandwidth':0.0,
 
@@ -47,9 +52,9 @@ default_prefs = {
 	'gmm_maxiters':1000,
 
 	'wiener_filter':False,
-	'textbox_x':0.95,
-	'textbox_y':0.93,
-	'textbox_fontsize':8,
+	'textbox_x':0.965,
+	'textbox_y':0.9,
+	'textbox_fontsize':10,
 	'textbox_nmol':True
 }
 
