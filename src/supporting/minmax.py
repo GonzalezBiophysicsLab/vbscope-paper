@@ -26,11 +26,13 @@ def clip(image,s):
 
 def max_map(image,s):
 	shifted = make_shift(image,s)
-	return clip(np.argmax(shifted,axis=0) == s*s/2,s)
+	middle = (s+1)*(s-1)/2
+	return clip(np.argmax(shifted,axis=0) == middle,s)
 
 def min_map(image,s):
 	shifted = make_shift(image,s)
-	return clip(np.argmin(shifted,axis=0) == s*s/2,s)
+	middle = (s+1)*(s-1)/2
+	return clip(np.argmin(shifted,axis=0) == middle,s)
 
 @nb.jit(nopython=True)
 def minmax_map(image,s,clip_level=None):
