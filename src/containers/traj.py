@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QInputDialog,QFileDialog
-
+from PyQt5.QtWidgets import QInputDialog,QFileDialog,QMessageBox
+import os
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import wiener
@@ -302,27 +302,132 @@ class traj_container():
 
 	def hmm_export(self,prompt_export=True,oname=None):
 		if prompt_export:
-			import cPickle as pickle
-			oname = QFileDialog.getSaveFileName(self.gui, 'Export HMM results', '_HMM.dat','*.dat')
-			if oname[0] != "":
-				try:
-					f = open(oname[0],'w')
-					pickle.dump(self.hmm_result, f)
-					f.close()
-					self.gui.log('Exported HMM results as %s'%(oname[0]),True)
-				except:
-					QMessageBox.critical(self,'Export Traces','There was a problem trying to export the HMM results')
-					self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
+			oname = QFileDialog.getSaveFileName(self.gui, 'Export HMM results', '_HMM.hdf5','*.hdf5')
 		else:
-			if not oname is None:
-				import cPickle as pickle
-				try:
-					f = open(oname,'w')
-					pickle.dump(self.hmm_result, f)
-					f.close()
-					self.gui.log('Exported HMM results as %s'%(oname),True)
-				except:
-					self.gui.log('Failed to export HMM results as %s'%(oname),True)
+			oname = [oname]
+
+		if oname[0] != "" and not oname[0] is None:
+			try:
+				def _addhash(hdf5_item):
+					"""
+					Acts on an h5py item to add identification attributes:
+						* Time Created
+						* Hash ID
+					Input:
+						* `hdf5_item` is an h5py item (e.g., file, group, or dataset)
+					"""
+					from time import ctime
+					from hashlib import md5
+
+					time = ctime()
+					hdf5_item.attrs['Time Created'] = time
+					# h5py items don't really hash, so.... do this, instead.
+					# Should be unique, and the point of the hash is for identification
+					hdf5_item.attrs['Unique ID'] = md5(time + str(hdf5_item.id.id) + str(np.random.rand())).hexdigest()
+
+				import h5py
+				hr = self.hmm_result
+				f = open(oname[0],'w')
+				f.close()
+				f = h5py.File(oname[0],'w')
+				_addhash(f)
+				f.attrs['type'] = str(hr.type)
+				f.attrs['log'] = self.gui._log.textedit.toPlainText()
+				f.flush()
+				ran = np.array(hr.ran,dtype='int')
+				f.create_dataset('ran',ran.shape,ran.dtype,ran)
+				_addhash(f['ran'])
+				f.flush()
+
+				f.create_group("models")
+				if hr.type == 'consensus vbfret':
+					for i in range(len(hr.models)):
+						g = f.create_group("models/model_%08d"%(i))
+						_addhash(g)
+						m = hr.models[i]
+						for key,value in m.__dict__.items():
+							if type(value) is np.ndarray:
+								g.create_dataset(key,data=value)
+						g.create_dataset('iteration',data=np.array(m.iteration))
+						gg = g.create_group('r')
+						for j in range(len(m.r)):
+							gg.create_dataset('trace_%08d'%(j),data=m.r[j])
+						gg = g.create_group('viterbi')
+						for j in range(len(m.viterbi)):
+							gg.create_dataset('trace_%08d'%(j),data=m.viterbi[j])
+				else:
+					for j in range(len(hr.models)):
+						for i in range(len(hr.models[j])):
+							g = f.create_group("models/trace_%08d/model_%08d"%(j,i))
+							_addhash(g)
+							m = hr.models[j][i]
+							for key,value in m.__dict__.items():
+								if type(value) is np.ndarray:
+									g.create_dataset(key,data=value)
+							g.create_dataset('iteration',data=np.array(m.iteration))
+				f.flush()
+				f.close()
+
+				# import cPickle as pickle
+				# f = open(oname[0],'w')
+				# pickle.dump(self.hmm_result, f)
+				# f.close()
+				self.gui.log('Exported HMM results as %s'%(oname[0]),True)
+			except:
+				QMessageBox.critical(self.gui,'Export Traces','There was a problem trying to export the HMM results')
+				self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
+
+	def hmm_load(self,fname):
+		import h5py
+		from ..supporting.hmms.fxns.hmm_related import result_consensus_bayesian_hmm, result_bayesian_hmm, result_ml_hmm
+
+		f = h5py.File(fname,'r')
+		t = f.attrs['type']
+		if t.startswith('consensus'):
+			self.hmm_result = consensus_hmm_result()
+		else:
+			self.hmm_result = ensemble_hmm_result()
+
+		self.hmm_result.type = t
+		self.hmm_result.ran = f['ran'].value.tolist()
+		self.hmm_result.models = []
+
+		bayes_list = ['r','a','b','m','beta','pi','tmatrix','E_lnlam','E_lnpi','E_lntm','likelihood','iteration']
+		ml_list = ['mu','var','r','ppi','tmatrix','likelihood','iteration']
+
+		if self.hmm_result.type.startswith('consensus'):
+			for g in f['models'].values():
+				r = [rr.value for rr in g['r'].values()]
+				m = result_consensus_bayesian_hmm(r,*[g[v].value for v in bayes_list[1:]])
+				m.viterbi = [v.value for v in g['viterbi'].values()]
+				self.hmm_result.models.append(m)
+			self.likelihoods = np.array([m.likelihood[-1,0] for m in self.hmm_result.models])
+			self.hmm_result.result = self.hmm_result.models[np.argmax(self.likelihoods)]
+
+		elif self.hmm_result.type == 'vb':
+			self.hmm_result.results = []
+			for g in f['models'].values():
+				trace = []
+				for gg in g.values():
+					m = result_bayesian_hmm(*[gg[v].value for v in bayes_list])
+					m.viterbi = gg['viterbi'].value
+					trace.append(m)
+				likelihoods = np.array([m.likelihood[-1,0] for m in trace])
+				self.hmm_result.results.append(trace[np.argmax(likelihoods)])
+				self.hmm_result.models.append(trace)
+
+		elif self.hmm_result.type == 'ml':
+			self.hmm_result.results = []
+			for g in f['models'].values():
+				trace = []
+				for gg in g.values(): ## There's only one, but be general here...
+					m = result_ml_hmm(*[gg[v].value for v in ml_list])
+					m.viterbi = gg['viterbi'].value
+					trace.append(m)
+				self.hmm_result.models.append(trace)
+				self.hmm_result.results.append(trace[0])
+
+		f.close()
 
 	def hmm_savechopped(self):
 			oname = QFileDialog.getSaveFileName(self.gui, 'Save Chopped Traces', '_chopped.dat','*.dat')
@@ -456,8 +561,10 @@ class traj_container():
 				priors = np.array([self.gui.prefs[sss] for sss in ['vb_prior_beta','vb_prior_a','vb_prior_b','vb_prior_pi','vb_prior_alpha']])
 				self.hmm_result = consensus_hmm_result()
 				self.hmm_result.type = 'consensus vbfret'
+				self.hmm_result.models = []
 				self.gui.set_status('Running...')
 				self.hmm_result.result = consensus_vb_em_hmm_parallel(y,nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],prior_strengths=priors,ncpu=self.gui.prefs['ncpu'])
+				self.hmm_result.models = [self.hmm_result.result]
 
 				self.gui.log(self.hmm_result.result.report(),True)
 				# self.gui.log(result.gen_report(tau=self.gui.prefs['tau']))
@@ -554,12 +661,14 @@ class traj_container():
 				priors = np.array([self.gui.prefs[sss] for sss in ['vb_prior_beta','vb_prior_a','vb_prior_b','vb_prior_pi','vb_prior_alpha']])
 				self.hmm_result = ensemble_hmm_result()
 				self.hmm_result.type = 'vb'
+				self.hmm_result.models= []
 				for i in range(len(y)):
 					prog.setValue(i)
 					prog.setLabelText('Current Trajectory: %d/%d'%(i,len(y)))
 					self.gui.app.processEvents()
 					if self.flag_running:
 						self.hmm_result.results.append(vb_em_hmm_parallel(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],prior_strengths=priors,ncpu=self.gui.prefs['ncpu']))
+						self.hmm_result.models.append([self.hmm_result.results[-1]])
 				self.hmm_result.ran = ran[:len(self.hmm_result.results)]
 
 				self.gui.log("HMM report - %d states"%(nstates),True)
@@ -602,9 +711,12 @@ class traj_container():
 
 				self.hmm_result = ensemble_hmm_result()
 				self.hmm_result.type = 'ml'
+				self.hmm_result.models = []
 				for i in range(len(y)):
 					if self.flag_running:
 						self.hmm_result.results.append(ml_em_hmm_parallel(y[i],nstates,maxiters=self.gui.prefs['hmm_max_iters'],threshold=self.gui.prefs['hmm_threshold'],nrestarts=self.gui.prefs['hmm_nrestarts'],ncpu=self.gui.prefs['ncpu']))
+						self.hmm_result.models.append([self.hmm_result.results[-1]])
+
 					prog.setValue(i)
 					prog.setLabelText('Current Trajectory: %d/%d'%(i,len(y)))
 					self.gui.app.processEvents()

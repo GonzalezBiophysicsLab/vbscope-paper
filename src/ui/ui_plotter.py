@@ -630,16 +630,21 @@ class plotter_gui(ui_general.gui):
 				fname,_ = QFileDialog.getOpenFileName(self,'Choose HMM result file','./')
 			if fname != "":
 				try:
-				# if 1:
-					import cPickle as pickle
-					f = open(fname,'r')
-					self.data.hmm_result = pickle.load(f)
-					f.close()
+					self.data.hmm_load(fname)
 					self.plot.initialize_hmm_plot()
 					self.plot.update_plots()
 					self.log("Loaded HMM result from %s"%(fname),True)
 				except:
-					self.log("Failed to load HMM result",True)
+					try:
+						import cPickle as pickle
+						f = open(fname,'r')
+						self.data.hmm_result = pickle.load(f)
+						f.close()
+						self.plot.initialize_hmm_plot()
+						self.plot.update_plots()
+						self.log("Loaded HMM result from %s"%(fname),True)
+					except:
+						self.log("Failed to load HMM result",True)
 
 	## Try to load trajectories from a vbscope style file (commas)
 	def load_traces(self,filename=None,checked=False,ncolors=2):
