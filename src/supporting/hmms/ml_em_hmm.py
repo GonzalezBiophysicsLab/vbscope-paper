@@ -70,7 +70,7 @@ def ml_em_hmm(x,nstates,maxiters=1000,threshold=1e-6):
 
 	mu,var,r,ppi,tmatrix,iteration,likelihood = outer_loop(x,mu,var,ppi,tmatrix,maxiters,threshold)
 
-	result = result_ml_hmm(mu,var,r,ppi,tmatrix,likelihood,iteration)
+	result = result_ml_hmm(mu,var,r,ppi,tmatrix,np.array((likelihood)),iteration)
 	result.viterbi = viterbi(x,result.mu,result.var,result.tmatrix,result.ppi)
 
 	return result
