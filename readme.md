@@ -21,8 +21,7 @@ Should work on best on Unix-based systems (Mac and Linux); Mostly works on Windo
 
 ### Install using conda
 ``` bash
-conda install scikit-image scipy numpy matplotlib pyqt numba h5py pip
-pip install tqdm
+conda install scikit-image scipy numpy matplotlib pyqt numba h5py tqdm
 ```
 
 ## Make a Terminal Shortcut
