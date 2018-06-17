@@ -1,16 +1,17 @@
 ## Install the Required Python Libraries
-* pyqt 5.6
-* numpy 1.13
-* matplotlib 2.2
-* scipy 0.19
-* scikit-image 0.13
-* scikit-learn 0.19.0
-* numba 0.34
-* gitpython 2.1
+* pyqt 5.9.4
+* numpy 1.11.3
+* matplotlib 2.2.2
+* scipy 0.19.0
+* scikit-image 0.13.1
+* numba 0.35
+* tqdm 4.23.3
+* h5py 2.7.1
 
 ### Using conda
 ``` bash
-conda install scikit-image scipy numpy matplotlib pyqt scikit-learn numba gitpython
+conda install scikit-image scipy numpy matplotlib pyqt numba h5py pip
+pip install tqdm
 ```
 
 ## Make a Terminal Shortcut
