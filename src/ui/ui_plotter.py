@@ -242,7 +242,10 @@ class plotter_gui(ui_general.gui):
 		export_classes = QAction('Save Classes', self, shortcut='Ctrl+D')
 		export_classes.triggered.connect(lambda event: self.export_classes())
 
-		for f in [export_traces,export_classes,export_processed_traces]:
+		export_hmm = QAction('Save HMM',self)
+		export_hmm.triggered.connect(lambda event: self.data.hmm_export(prompt_export=True))
+
+		for f in [export_traces,export_classes,export_processed_traces,export_hmm]:
 			menu_save.addAction(f)
 
 		### tools
