@@ -643,6 +643,8 @@ class plotter_gui(ui_general.gui):
 						f = open(fname,'r')
 						self.data.hmm_result = pickle.load(f)
 						f.close()
+						if not 'models' in self.data.hmm_result.__dict__:
+							self.data.hmm_result.models = [self.data.hmm_result.result]
 						self.plot.initialize_hmm_plot()
 						self.plot.update_plots()
 						self.log("Loaded HMM result from %s"%(fname),True)
