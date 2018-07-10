@@ -22,7 +22,7 @@ class gui(QMainWindow):
 		* app
 		* menubar
 		* _log
-		* _prefs
+		* prefs
 		* docks
 
 	Functions of Importance:
@@ -31,8 +31,8 @@ class gui(QMainWindow):
 		* set_status
 		* log
 		* load - overload this
-		* _prefs.combine_prefs (for a dictionary)
-		* _prefs.add_pref (for one entry)
+		* prefs.add_dictionary (for a dictionary)
+		* prefs['new_pref_name'] = new_pref_value  (for one entry)
 
 	Variables of Importance:
 		* app_name
@@ -63,7 +63,7 @@ class gui(QMainWindow):
 		self.init_shortcuts()
 
 		self._log = logger()
-		self._prefs = preferences(self)
+		self.prefs = preferences(self)
 
 		self.ui_update()
 		self.show()
@@ -99,7 +99,8 @@ class gui(QMainWindow):
 		self.addDockWidget(l, self.docks[name][0])
 
 		try:
-			self._prefs.combine_prefs(widget.default_prefs)
+			self.prefs.add_dictionary(widget.default_prefs)
+
 		except:
 			pass
 
@@ -161,7 +162,7 @@ class gui(QMainWindow):
 		self._open_ui(self._log)
 
 	def open_preferences(self):
-		self._open_ui(self._prefs)
+		self._open_ui(self.prefs)
 
 	def open_main(self):
 		self._open_ui(self)
@@ -180,7 +181,7 @@ class gui(QMainWindow):
 		# self.resize(QDesktopWidget().availableGeometry(self).size() * 0.5)
 		# self.menubar.setStyleSheet('background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 lightgray, stop:1 darkgray)')
 
-		for s in [self,self._log,self._prefs]:
+		for s in [self,self._log,self.prefs]:
 			s.setStyleSheet('''
 			color:%s;
 			background-color:%s;
@@ -228,7 +229,7 @@ class gui(QMainWindow):
 		if reply == QMessageBox.Yes:
 			# self.app.quit()
 			self._log.close()
-			self._prefs.close()
+			self.prefs.close()
 			event.accept()
 		else:
 			event.ignore()

@@ -110,7 +110,6 @@ def plot(gui):
 	if popplot.prefs['color_ceiling'] == popplot.prefs['color_floor']:
 		popplot.prefs['color_floor'] = 0.0
 		popplot.prefs['color_ceiling'] = np.ceil(z.max())
-		popplot._prefs.update_table()
 
 	vmin = popplot.prefs['color_floor']
 	vmax = popplot.prefs['color_ceiling']

@@ -93,7 +93,7 @@ class plotter_gui(ui_general.gui):
 		self.initialize_ui()
 
 		super(plotter_gui,self).__init__(self.gui.app,self._main_widget)
-		self._prefs.combine_prefs(default_prefs)
+		self.prefs.add_dictionary(default_prefs)
 
 		self.initialize_connections()
 
@@ -390,7 +390,7 @@ class plotter_gui(ui_general.gui):
 			self.popout_plots[plot_handle] = popout_plot_container(nplots_x, nplots_y,self)
 			self.popout_plots[plot_handle].setWindowTitle(plot_name_str)
 			if not dprefs is None:
-				self.popout_plots[plot_handle].ui._prefs.combine_prefs(dprefs)
+				self.popout_plots[plot_handle].ui.prefs.add_dictionary(dprefs)
 			if not callback is None:
 				self.popout_plots[plot_handle].ui.setcallback(callback)
 			self.popout_plots[plot_handle].resize(int(self.popout_plots[plot_handle].ui.prefs['fig_width']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+200,int(self.popout_plots[plot_handle].ui.prefs['fig_height']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+125)

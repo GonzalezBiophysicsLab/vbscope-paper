@@ -33,7 +33,7 @@ class popout_plot_container_widget(QWidget):
 	def __init__(self,nplots_x=1, nplots_y=1, parent=None):
 		super(QWidget,self).__init__()
 
-		self._prefs = preferences(self)
+		self.prefs = preferences(self)
 		self.prefs = {
 			'fig_width':4.0,
 			'fig_height':3.0,
@@ -41,12 +41,11 @@ class popout_plot_container_widget(QWidget):
 			'label_ticksize':12,
 			'label_padding':.1
 		}
-		self._prefs.update_table()
 
-		self._prefs.edit_callback = self.replot
+		self.prefs.edit_callback = self.replot
 
 		self.qd_prefs = QDockWidget("Preferences",self)
-		self.qd_prefs.setWidget(self._prefs)
+		self.qd_prefs.setWidget(self.prefs)
 		self.qd_prefs.setAllowedAreas( Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		parent.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
 		# self.qd_prefs.setFloating(True)
@@ -169,6 +168,6 @@ class popout_plot_container_widget(QWidget):
 
 	def setcallback(self,fxn):
 		self.replot = fxn
-		self._prefs.edit_callback = self.replot
+		self.prefs.edit_callback = self.replot
 		self.button_refresh.clicked.connect(self.replot)
 #

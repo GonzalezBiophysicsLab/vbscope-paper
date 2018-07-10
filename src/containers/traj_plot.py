@@ -21,11 +21,12 @@ class traj_plot_container():
 	def __init__(self,gui):
 		self.gui = gui
 
-		self.f,self.a = plt.subplots(2,2,gridspec_kw={'width_ratios':[6,1]},figsize=(6.5,4))
+		self.f,self.a = plt.subplots(2,2,gridspec_kw={'width_ratios':[6,1]},figsize=(6.5,5))
 		self.canvas = FigureCanvas(self.f)
 		self.f.set_dpi(self.f.get_dpi()/self.canvas.devicePixelRatio())
 
-		sizePolicy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+		# sizePolicy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+		sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 		self.canvas.setSizePolicy(sizePolicy)
 
 		self.toolbar = NavigationToolbar(self.canvas,None)

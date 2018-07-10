@@ -42,7 +42,7 @@ class movie_viewer(gui):
 
 	def initialize(self):
 
-		self._prefs.combine_prefs(default_prefs)
+		self.prefs.add_dictionary(default_prefs)
 
 		self.setup_docks()
 		self.setup_menus()
@@ -124,7 +124,7 @@ class movie_viewer(gui):
 				self.log('Loaded %s'%(self.data.filename),True)
 
 				self.setWindowTitle('%s - %s'%(self.app_name,self.data.filename))
-				self._prefs.add_pref('movie_filename',self.data.filename)
+				self.prefs['movie_filename'] =self.data.filename
 				return True
 
 			else:
