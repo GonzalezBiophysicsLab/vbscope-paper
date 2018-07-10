@@ -166,6 +166,12 @@ class gui(QMainWindow):
 ################################################################################
 	def resizeEvent(self,event):
 		if not self.signalsBlocked():
+			s = self.size()
+			sw = 0
+			if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+				sw = self.qd_prefs.size().width()
+			self.prefs['ui_width'] = s.width()-sw
+			self.prefs['ui_height'] = s.height()
 			super(gui,self).resizeEvent(event)
 
 	def open_log(self):
@@ -217,10 +223,12 @@ class gui(QMainWindow):
 			font-size: %spx;
 		'''%(self.prefs['ui_fontcolor'],self.prefs['ui_bgcolor'],self.prefs['ui_fontsize']))
 
+		self.blockSignals(True)
 		sw = 0
 		if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
 			sw = self.qd_prefs.size().width()
 		self.resize(self.prefs['ui_width']+sw,self.prefs['ui_height'])
+		self.blockSignals(False)
 		self.setWindowTitle(self.app_name)
 
 	def quicksafe_load(self,fname):

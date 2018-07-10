@@ -152,14 +152,15 @@ class preferences(QWidget):
 				self.model.setData(self.model.index(0,1),v)
 
 		self.proxy_model.setSourceModel(self.model)
-
 		self.proxy_view.sortByColumn(0, Qt.AscendingOrder)
+		self.resize_columns()
+		self.model.blockSignals(False)
+
+	def resize_columns(self):
 		self.proxy_view.setFocus()
 		self.proxy_view.hide()
 		self.proxy_view.resizeColumnsToContents()
 		self.proxy_view.show()
-
-		self.model.blockSignals(False)
 
 	def get(self,s):
 		x = self.model.findItems(s)
@@ -178,10 +179,12 @@ class preferences(QWidget):
 	### override these to put focus in line edit filter
 	def setVisible(self,f):
 		self.le_filter.setFocus()
+		self.resize_columns()
 		super(preferences,self).setVisible(f)
 
 	def show(self):
 		self.le_filter.setFocus()
+		self.resize_columns()
 		super(preferences,self).show()
 
 	####### Customs
