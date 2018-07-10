@@ -12,4 +12,4 @@ gui = launch_plotter(False)
 # popplot.prefs['plotter_min_fret']=-.25
 # popplot.prefs['plotter_max_fret']=1.25
 # gui.plot_hist1d()
-# popplot.f.savefig('test.pdf')
+# popplot.f.savefig('test.pdf'

@@ -166,9 +166,6 @@ class gui(QMainWindow):
 ################################################################################
 	def resizeEvent(self,event):
 		if not self.signalsBlocked():
-			s = self.size()
-			self.prefs['ui_width'] = s.width()
-			self.prefs['ui_height'] = s.height()
 			super(gui,self).resizeEvent(event)
 
 	def open_log(self):
