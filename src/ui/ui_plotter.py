@@ -4,13 +4,14 @@ from PyQt5.Qt import QFont
 from PyQt5.QtGui import QDoubleValidator, QKeySequence
 
 import multiprocessing as mp
-
 import numpy as np
+
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
 matplotlib.rcParams['savefig.format'] = 'pdf'
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['figure.facecolor'] = 'white'
@@ -26,15 +27,16 @@ matplotlib.rcParams['ytick.minor.width'] = 1.0
 matplotlib.rcParams['ytick.direction'] = 'in'
 matplotlib.rcParams['axes.linewidth'] = 1.0
 
-
 from . import ui_general
 from .ui_batch_loader import gui_batch_loader
 from ..containers import traj_plot_container, traj_container, popout_plot_container
 from .. import plots
 
+number_keys = [Qt.Key_0,Qt.Key_1,Qt.Key_2,Qt.Key_3,Qt.Key_4,Qt.Key_5,Qt.Key_6,Qt.Key_7,Qt.Key_8,Qt.Key_9]
+
 default_prefs = {
 
-	'channel_colors':['green','red','blue','purple'],
+	'channel_colors':["green","red","blue","purple"],
 
 	'tau':1.0,
 	'bleedthrough':np.array(((0.,0.05,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.))).flatten(),
@@ -42,30 +44,11 @@ default_prefs = {
 	'ncpu':mp.cpu_count(),
 
 	'downsample':1,
-	# 'snr_threshold':.5,
 	'min_length':10,
-    #
-	# 'plotter_floor':0.2,
-	# 'plotter_nbins_contour':20,
-	# 'plotter_smoothx':0.5,
-	# 'plotter_smoothy':0.5,
-	# 'plotter_timeshift':0.0,
-	# 'plotter_floorcolor':'lightgoldenrodyellow',
-	# 'plotter_cmap':'rainbow',
+
 	'plotter_min_fret':-.5,
 	'plotter_max_fret':1.5,
 	'wiener_smooth':False,
-	# 'plotter_nbins_fret':41,
-	# 'plotter_min_time':0,
-	# 'plotter_max_time':100,
-	# 'plotter_nbins_time':100,
-	# 'plotter_2d_syncpreframes':10,
-	# 'plotter_2d_normalizecolumn':False,
-
-	# 'convert_flag':False,
-	# 'convert_c_lambda':[11.64,12.75],
-	# 'convert_em_gain':300,
-	# 'convert_offset':0,
 
 	'photobleaching_flag':True,
 	'synchronize_start_flag':False,
@@ -113,7 +96,14 @@ class plotter_gui(ui_general.gui):
 		self.setWindowTitle(self.app_name)
 
 		self.ui_update()
+		self.prefs.edit_callback = self.update_pref_callback
+		self.setFocus()
 		self.show()
+		self.move(1,1)
+
+	def update_pref_callback(self):
+		self.plot.update_plots()
+		self.ui_update()
 
 	def initialize_ui(self):
 		## Initialize Plots
@@ -169,7 +159,6 @@ class plotter_gui(ui_general.gui):
 		self.initialize_menubar()
 
 		# ## Connect everything for interaction
-		self.initialize_shortcuts()
 		self.initialize_sliders()
 		for le in [self.le_min,self.le_max]:
 			le.editingFinished.connect(self.plot.update_minmax)
@@ -345,30 +334,11 @@ class plotter_gui(ui_general.gui):
 
 ################################################################################
 
-	## Helper function to setup keyboard shortcuts
-	def initialize_shortcuts(self):
-		## Helper function to setup keyboard shortcuts
-		def _make_shortcut(key,fxn):
-			qs = QShortcut(self)
-			qs.setKey(key)
-			qs.activated.connect(fxn)
-
-		_make_shortcut(Qt.Key_Left,lambda : self.callback_keypress('left'))
-		_make_shortcut(Qt.Key_Right,lambda : self.callback_keypress('right'))
-		_make_shortcut(Qt.Key_H,lambda : self.callback_keypress('h'))
-		_make_shortcut(Qt.Key_1,lambda : self.callback_keypress(1))
-		_make_shortcut(Qt.Key_2,lambda : self.callback_keypress(2))
-		_make_shortcut(Qt.Key_3,lambda : self.callback_keypress(3))
-		_make_shortcut(Qt.Key_4,lambda : self.callback_keypress(4))
-		_make_shortcut(Qt.Key_5,lambda : self.callback_keypress(5))
-		_make_shortcut(Qt.Key_6,lambda : self.callback_keypress(6))
-		_make_shortcut(Qt.Key_7,lambda : self.callback_keypress(7))
-		_make_shortcut(Qt.Key_8,lambda : self.callback_keypress(8))
-		_make_shortcut(Qt.Key_9,lambda : self.callback_keypress(9))
-		_make_shortcut(Qt.Key_0,lambda : self.callback_keypress(0))
-		_make_shortcut(Qt.Key_R,lambda : self.callback_keypress('r'))
-		_make_shortcut(Qt.Key_G,lambda : self.callback_keypress('g'))
-		_make_shortcut(Qt.Key_P,lambda : self.callback_keypress('p'))
+	def keyPressEvent(self,event):
+		if not (self.prefs.le_filter.hasFocus() or self.prefs.proxy_view.hasFocus()):
+			self.callback_keypress(event.key())
+		else:
+			super(plotter_gui,self).keyPressEvent(event)
 
 	def initialize_plot_docks(self):
 		self.popout_plots = {
@@ -429,26 +399,35 @@ class plotter_gui(ui_general.gui):
 
 	## Callback function for keyboard presses
 	def callback_keypress(self,kk):
-		if kk == 'right':
-			self.plot.index += 1
-		elif kk == 'left':
-			self.plot.index -= 1
-		if self.plot.index < 0:
-			self.plot.index = 0
-		elif self.plot.index >= self.data.d.shape[0]:
-			self.plot.index = self.data.d.shape[0]-1
-		self.slider_select.setValue(self.plot.index)
+		if kk in [Qt.Key_Right,Qt.Key_Left]:
+			try:
+				if kk == Qt.Key_Right:
+					self.plot.index += 1
+				elif kk == Qt.Key_Left:
+						self.plot.index -= 1
+				if self.plot.index < 0:
+					self.plot.index = 0
+				elif self.plot.index >= self.data.d.shape[0]:
+					self.plot.index = self.data.d.shape[0]-1
+				self.slider_select.setValue(self.plot.index)
+				self.plot.update_plots()
+			except:
+				pass
+			return
 
-		if kk == 'r':
+		if kk == Qt.Key_R:
 			self.data.pre_list[self.plot.index] = 0
 			self.data.pb_list[self.plot.index] = self.data.d.shape[2]-1
 			self.data.safe_hmm()
-		elif kk == 'g':
+			self.plot.update_plots()
+			return
+		elif kk == Qt.Key_G:
 			self.plot.a[0,0].grid()
 			self.plot.a[1,0].grid()
 			self.plot.update_blits()
 			self.plot.update_plots()
-		elif kk == 'p':
+			return
+		elif kk == Qt.Key_P:
 			try:
 				from ..supporting.photobleaching import get_point_pbtime
 				self.data.pre_list[self.plot.index] = 0
@@ -459,23 +438,18 @@ class plotter_gui(ui_general.gui):
 				self.data.pb_list[self.plot.index] = get_point_pbtime(qq,1.,1.,1.,1000.)
 				self.data.safe_hmm()
 				self.plot.update_plots()
+				return
+			except:
+				return
+
+		if kk in number_keys:
+			self.data.class_list[self.plot.index] = number_keys.index(kk)
+			self.plot.update_plots()
+			try:
+				self.update_display_traces()
+				self.gui.app.processEvents()
 			except:
 				pass
-
-		for i in range(10):
-			if i == kk:
-				self.data.class_list[self.plot.index] = kk
-				self.plot.update_plots()
-				break
-
-		try:
-			self.update_display_traces()
-			self.gui.app.processEvents()
-		except:
-			pass
-
-		self.plot.update_plots()
-
 
 	## callback function for changing the trajectory using the slider
 	def callback_sliders(self,v):

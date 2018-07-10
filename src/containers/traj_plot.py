@@ -202,38 +202,41 @@ class traj_plot_container():
 
 # 	## Plot current trajectory
 	def update_plots(self):
-		if self.flag_arm:
-			self.update_blits()
-			self.flag_arm = False
-		[[self.f.canvas.restore_region(bbb) for bbb in bb] for bb in self.blit_bgs]
+		try:
+			if self.flag_arm:
+				self.update_blits()
+				self.flag_arm = False
+			[[self.f.canvas.restore_region(bbb) for bbb in bb] for bb in self.blit_bgs]
 
-		t,intensities,rel,pretime,pbtime = self.calc_trajectory()
-		self.plot_traj(t,intensities,rel,pretime,pbtime)
+			t,intensities,rel,pretime,pbtime = self.calc_trajectory()
+			self.plot_traj(t,intensities,rel,pretime,pbtime)
 
-		if not self.gui.data.hmm_result is None:
-			state_means,vitpath = self.calc_hmm_traj()
-			if state_means is None:
-				self.plot_no_hmm()
-			else:
-				self.plot_hmm(t,state_means,vitpath,pretime,pbtime)
+			if not self.gui.data.hmm_result is None:
+				state_means,vitpath = self.calc_hmm_traj()
+				if state_means is None:
+					self.plot_no_hmm()
+				else:
+					self.plot_hmm(t,state_means,vitpath,pretime,pbtime)
 
-		intensity_hists,fret_hists = self.calc_histograms(intensities,rel,pretime,pbtime)
-		for i in range(len(intensity_hists)):
-			self.plot_hist(i,*intensity_hists[i])
-		for i in range(len(fret_hists)):
-			self.plot_fret_hist(i,*fret_hists[i])
-		self.update_colors()
+			intensity_hists,fret_hists = self.calc_histograms(intensities,rel,pretime,pbtime)
+			for i in range(len(intensity_hists)):
+				self.plot_hist(i,*intensity_hists[i])
+			for i in range(len(fret_hists)):
+				self.plot_fret_hist(i,*fret_hists[i])
+			self.update_colors()
 
-		[[[aaa.draw_artist(l) for l in aaa.lines] for aaa in aa] for aa in self.a]
-		[[self.f.canvas.blit(aaa.bbox) for aaa in aa] for aa in self.a]
+			[[[aaa.draw_artist(l) for l in aaa.lines] for aaa in aa] for aa in self.a]
+			[[self.f.canvas.blit(aaa.bbox) for aaa in aa] for aa in self.a]
 
-		self.canvas.update()
-		self.canvas.flush_events()
+			self.canvas.update()
+			self.canvas.flush_events()
 
-		yl = self.a[1][0].get_ylim()
-		if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plotter_min_fret'] or yl[1] != self.gui.prefs['plotter_max_fret']:
-			self.update_axes()
-		self.draw()
+			yl = self.a[1][0].get_ylim()
+			if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plotter_min_fret'] or yl[1] != self.gui.prefs['plotter_max_fret']:
+				self.update_axes()
+			self.draw()
+		except:
+			pass
 
 	## Plot initial data to set aesthetics
 	def initialize_plots(self):

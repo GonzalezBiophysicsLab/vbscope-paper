@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut
+from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget
 from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
 
@@ -63,7 +63,14 @@ class gui(QMainWindow):
 		self.init_shortcuts()
 
 		self._log = logger()
+
 		self.prefs = preferences(self)
+		self.qd_prefs = QDockWidget("Preferences",self)
+		self.qd_prefs.setWidget(self.prefs)
+		self.qd_prefs.setAllowedAreas( Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		self.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
+		self.qd_prefs.hide()
+		self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
 
 		self.ui_update()
 		self.show()
@@ -157,12 +164,37 @@ class gui(QMainWindow):
 		self.app.processEvents()
 
 ################################################################################
+	def resizeEvent(self,event):
+		if not self.signalsBlocked():
+			s = self.size()
+			self.prefs['ui_width'] = s.width()
+			self.prefs['ui_height'] = s.height()
+			super(gui,self).resizeEvent(event)
 
 	def open_log(self):
 		self._open_ui(self._log)
 
+	def resize_prefs(self):
+		w = self.prefs['ui_width']
+		h = self.prefs['ui_height']
+		self.blockSignals(True)
+		if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+			sw = self.qd_prefs.size().width()
+			self.resize(w+sw+4,h) ## ugh... +4 for dock handles
+			if not self.centralWidget() == 0:
+				self.centralWidget().resize(w,h)
+		else:
+			self.resize(w,h)
+		self.blockSignals(False)
+
 	def open_preferences(self):
-		self._open_ui(self.prefs)
+		if self.qd_prefs.isHidden():
+			self.qd_prefs.show()
+			self.qd_prefs.raise_()
+			self.prefs.le_filter.setFocus()
+		else:
+			self.qd_prefs.hide()
+		self.resize_prefs()
 
 	def open_main(self):
 		self._open_ui(self)
@@ -188,7 +220,10 @@ class gui(QMainWindow):
 			font-size: %spx;
 		'''%(self.prefs['ui_fontcolor'],self.prefs['ui_bgcolor'],self.prefs['ui_fontsize']))
 
-		self.resize(self.prefs['ui_width'],self.prefs['ui_height'])
+		sw = 0
+		if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+			sw = self.qd_prefs.size().width()
+		self.resize(self.prefs['ui_width']+sw,self.prefs['ui_height'])
 		self.setWindowTitle(self.app_name)
 
 	def quicksafe_load(self,fname):

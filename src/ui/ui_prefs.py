@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication
+from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication,QShortcut
 from PyQt5.QtCore import  QRegExp, QSortFilterProxyModel, Qt
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QKeySequence
 
 import numpy as np
 import multiprocessing as mp
@@ -44,6 +44,15 @@ class QAlmostStandardItemModel(QStandardItemModel):
 				return np.array(eval(d))
 		return d
 
+class QAlmostLineEdit(QLineEdit):
+	def __init__(self,*args):
+		super(QAlmostLineEdit,self).__init__(*args)
+	def keyPressEvent(self,event):
+		if event.key() == Qt.Key_Escape:
+			self.clear()
+		else:
+			super(QAlmostLineEdit,self).keyPressEvent(event)
+
 class preferences(QWidget):
 	def __init__(self,parent=None):
 		super(preferences, self).__init__()
@@ -64,7 +73,7 @@ class preferences(QWidget):
 		self.proxy_view.horizontalHeader().setVisible(False)
 		self.proxy_view.verticalHeader().setVisible(False)
 
-		self.le_filter = QLineEdit()
+		self.le_filter = QAlmostLineEdit()
 		self.le_filter.textChanged.connect(self.filter_regex_changed)
 		self.le_filter.setPlaceholderText("Enter filter here")
 
@@ -80,6 +89,17 @@ class preferences(QWidget):
 
 		self.add_dictionary(default_prefs)
 		self.le_filter.setFocus()
+
+		undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"),self)
+		undo_shortcut.activated.connect(self.undo)
+
+	def keyPressEvent(self,event):
+		if event.key() == Qt.Key_Escape:
+			self.le_filter.clear()
+			self.le_filter.setFocus()
+			self.proxy_view.clearSelection()
+		else:
+			super(preferences,self).keyPressEvent(event)
 
 	def edit(self,a):
 		name = self.model.data(self.model.index(a.row(),0))

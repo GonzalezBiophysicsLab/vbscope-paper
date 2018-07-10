@@ -71,16 +71,13 @@ def gen_histogram(gui,fpb):
 		dtmax = fpb.shape[1]
 		popplot.prefs['time_max'] = dtmax
 		popplot.prefs['time_nbins'] = dtmax
-		popplot._prefs.update_table()
 
 	if dtmin >= dtmax: ## negative bins
 		dtmin = 0
 		popplot.prefs['time_min'] = 0
-		popplot._prefs.update_table()
 	# if dtmax == -1 or dtmax > fpb.shape[1]: ##
 		# dtmax = fpb.shape[1]
 		# popplot.prefs['time_max'] = dtmax
-		# popplot._prefs.update_table()
 
 	x = np.arange(np.max((0,dtmin)),np.min((dtmax,fpb.shape[1])))
 	ts = np.array([x for _ in range(fpb.shape[0])])
@@ -105,7 +102,6 @@ def gen_histogram(gui,fpb):
 	if popplot.prefs['color_ceiling'] == popplot.prefs['color_floor']:
 		popplot.prefs['color_floor'] = 0.0
 		popplot.prefs['color_ceiling'] = np.ceil(z.max())
-		popplot._prefs.update_table()
 
 	if popplot.prefs['hist_normalize']:
 		z /= z.max()

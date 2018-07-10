@@ -34,13 +34,13 @@ class popout_plot_container_widget(QWidget):
 		super(QWidget,self).__init__()
 
 		self.prefs = preferences(self)
-		self.prefs = {
+		self.prefs.add_dictionary({
 			'fig_width':4.0,
 			'fig_height':3.0,
 			'label_fontsize':14,
 			'label_ticksize':12,
 			'label_padding':.1
-		}
+		})
 
 		self.prefs.edit_callback = self.replot
 
