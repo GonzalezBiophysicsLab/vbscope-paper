@@ -16,36 +16,42 @@ default_prefs = {
 	'plot_filter':False,
 	'plot_channel_colors':["#0EA52F","#EE0000","cyan","purple"],
 	'plot_downsample':1,
-	'plot_efret_color':'#023bf9',
+	'plot_fret_color':'#023bf9',
 	'plot_line_linewidth':1.0,
-	'plot_hist_linewidth':2.0,
+	'plot_hist_linewidth':1.0,
+	'plot_hist_show':True,
 	'plot_line_alpha_pb':0.25,
 	'plot_axes_spinewidth':1.0,
-	'plot_axes_topright':True,
-	'plot_tick_fontsize':12.0,
+	'plot_axes_topright':False,
+	'plot_tick_fontsize':8.0,
 	'plot_tick_length_minor':2.0,
 	'plot_tick_length_major':4.0,
 	'plot_tick_linewidth':1.0,
-	'plot_tick_direction':'in',
-	'plot_subplots_left':0.14,
-	'plot_subplots_right':0.98,
-	'plot_subplots_top':0.92,
-	'plot_subplots_bottom':0.14,
+	'plot_tick_direction':'out',
+	'plot_subplots_left':0.125,
+	'plot_subplots_right':0.99,
+	'plot_subplots_top':0.99,
+	'plot_subplots_bottom':0.155,
 	'plot_subplots_hspace':0.04,
 	'plot_subplots_wspace':0.03,
 	'plot_line_alpha':0.8,
 	'plot_viterbi_color':'k',
 	'plot_viterbi_linewidth':1.0,
 	'plot_viterbi_alpha':0.8,
-	'plot_label_fontsize':12.0,
-	'plot_ylabel_offset':-0.18,
-	'plot_xlabel_offset':-0.21,
+	'plot_label_fontsize':8.0,
+	'plot_ylabel_offset':-0.165,
+	'plot_xlabel_offset':-0.25,
 	'plot_font':'Arial',
 	'plot_xlabel_text1':'Time (s)',
 	'plot_xlabel_text2':'Probability',
 	'plot_ylabel_text1':r'Intensity (a.u.)',
-	'plot_ylabel_text2':r'E$_{\rm{FRET}}$'
+	'plot_ylabel_text2':r'E$_{\rm{FRET}}$',
+	'plot_fret_pbzero':True
 }
+#
+# 	'ui_width':400.,
+# 	'ui_height':325
+# }
 
 class traj_plot_container():
 	'''
@@ -116,7 +122,10 @@ class traj_plot_container():
 		for i in range(self.gui.ncolors-1):
 			self.a[1][0].lines[3*i+0].set_data(t[:pretime],rel[i,:pretime])
 			self.a[1][0].lines[3*i+1].set_data(t[pretime:pbtime],rel[i,pretime:pbtime])
-			self.a[1][0].lines[3*i+2].set_data(t[pbtime:],rel[i,pbtime:])
+			if not self.gui.prefs['plot_fret_pbzero']:
+				self.a[1][0].lines[3*i+2].set_data(t[pbtime:],rel[i,pbtime:])
+			else:
+				self.a[1][0].lines[3*i+2].set_data(t[pbtime:],np.zeros_like(rel[i,pbtime:]))
 
 	def calc_trajectory(self):
 		intensities = self.gui.data.d[self.index].copy()
@@ -215,6 +224,10 @@ class traj_plot_container():
 				self.flag_arm = False
 			[[self.f.canvas.restore_region(bbb) for bbb in bb] for bb in self.blit_bgs]
 
+			if type(self.gui.prefs['plot_hist_show']) is bool:
+				for i in range(2):
+					self.a[i][1].set_visible(self.gui.prefs['plot_hist_show'])
+
 			t,intensities,rel,pretime,pbtime = self.calc_trajectory()
 			self.plot_traj(t,intensities,rel,pretime,pbtime)
 
@@ -235,6 +248,7 @@ class traj_plot_container():
 			self.update_axis_geometry()
 			self.update_lines()
 			self.update_axis_labels()
+
 
 			[[[aaa.draw_artist(l) for l in aaa.lines] for aaa in aa] for aa in self.a]
 			[[self.f.canvas.blit(aaa.bbox) for aaa in aa] for aa in self.a]
@@ -311,7 +325,7 @@ class traj_plot_container():
 		## Rel. Intensities
 		for i in range(self.gui.ncolors-1):
 			if self.gui.ncolors == 2:
-				color = self.gui.prefs['plot_efret_color']
+				color = self.gui.prefs['plot_fret_color']
 			else:
 				color = self.gui.prefs['plot_channel_colors'][i+1]
 			for j,alpha in zip(range(3),alphas):
