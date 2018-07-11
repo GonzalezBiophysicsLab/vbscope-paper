@@ -3,15 +3,12 @@ from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
 
 # def handler(msg_type, msg_log_context, msg_string):
-	# pass
+# 	pass
 # qInstallMessageHandler(handler)
 
-## Force Qt5 for matplotlib
-try:
-	import matplotlib
-	matplotlib.use('Qt5Agg')
-except:
-	pass
+import matplotlib
+matplotlib.use('Qt5Agg')
+
 
 from ui_log import logger
 from ui_prefs import preferences

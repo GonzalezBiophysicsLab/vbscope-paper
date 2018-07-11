@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication,QShortcut
+from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut
 from PyQt5.QtCore import  QRegExp, QSortFilterProxyModel, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QKeySequence
 
@@ -14,7 +14,8 @@ default_prefs = {
 	'ui_fontsize':12,
 	'ui_height':500,
 	'ui_version':0.1,
-	'ui_width':700
+	'ui_width':700,
+	'pref_precision':6
 }
 
 class QAlmostStandardItemModel(QStandardItemModel):
@@ -33,7 +34,6 @@ class QAlmostStandardItemModel(QStandardItemModel):
 	def enforce_type(self,old,new):
 		if not old is None:
 			if type(old) != type(new):
-				print type(old),old,type(new),new
 				return old
 		return new
 
@@ -43,6 +43,24 @@ class QAlmostStandardItemModel(QStandardItemModel):
 		 	if d.count(',') > 0 and (d.count('[') > 0 or d.count('(') > 0):
 				return np.array(eval(d))
 		return d
+
+class QAlmostLineEdit(QLineEdit):
+	def __init__(self,*args):
+		super(QAlmostLineEdit,self).__init__(*args)
+	def keyPressEvent(self,event):
+		super(QAlmostLineEdit,self).keyPressEvent(event)
+
+class precision_delegate(QStyledItemDelegate):
+	def __init__(self,*args):
+		super(precision_delegate,self).__init__(*args)
+		self.precision = default_prefs['pref_precision']
+
+	def createEditor(self, parent, option, index):
+		value = index.data()
+		editor = super(precision_delegate,self).createEditor(parent,option,index)
+		if isinstance(value, float):
+			editor.setDecimals(self.precision)
+		return editor
 
 class preferences(QWidget):
 	def __init__(self,parent=None):
@@ -58,13 +76,16 @@ class preferences(QWidget):
 		self.proxy_model.setDynamicSortFilter(True)
 
 		self.proxy_view = QTableView()
+		self.delegate = precision_delegate()
+		self.proxy_view.setItemDelegate(self.delegate)
+
 		self.proxy_view.setModel(self.proxy_model)
 		self.proxy_view.setSortingEnabled(True)
 		self.proxy_view.horizontalHeader().setStretchLastSection(True)
 		self.proxy_view.horizontalHeader().setVisible(False)
 		self.proxy_view.verticalHeader().setVisible(False)
 
-		self.le_filter = QLineEdit()
+		self.le_filter = QAlmostLineEdit()
 		self.le_filter.textChanged.connect(self.filter_regex_changed)
 		self.le_filter.setPlaceholderText("Enter filter here")
 
@@ -91,10 +112,11 @@ class preferences(QWidget):
 				return
 			self.le_filter.setFocus()
 			self.proxy_view.clearSelection()
+			super(preferences,self).keyPressEvent(event)
 		elif event.key() == Qt.Key_Return and self.le_filter.hasFocus():
 			if self.proxy_model.rowCount() > 0:
 				self.focusNextChild()
-		super(preferences,self).keyPressEvent(event)
+
 
 	def edit(self,a):
 		name = self.model.data(self.model.index(a.row(),0))
@@ -109,6 +131,10 @@ class preferences(QWidget):
 				self.model.blockSignals(False)
 			self.redraw()
 		self.log(name,old_value,new_value)
+
+		if name == 'pref_precision':
+			if new_value > 0:
+				self.delegate.precision = new_value
 
 		self.edit_callback()
 

@@ -15,17 +15,6 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 matplotlib.rcParams['savefig.format'] = 'pdf'
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['figure.facecolor'] = 'white'
-matplotlib.rcParams['xtick.major.size'] = 4
-matplotlib.rcParams['xtick.minor.size'] = 2
-matplotlib.rcParams['xtick.major.width'] = 1.0
-matplotlib.rcParams['xtick.minor.width'] = 1.0
-matplotlib.rcParams['xtick.direction'] = 'in'
-matplotlib.rcParams['ytick.major.size'] = 4
-matplotlib.rcParams['ytick.minor.size'] = 2
-matplotlib.rcParams['ytick.major.width'] = 1.0
-matplotlib.rcParams['ytick.minor.width'] = 1.0
-matplotlib.rcParams['ytick.direction'] = 'in'
-matplotlib.rcParams['axes.linewidth'] = 1.0
 
 from . import ui_general
 from .ui_batch_loader import gui_batch_loader
@@ -35,18 +24,16 @@ from .. import plots
 number_keys = [Qt.Key_0,Qt.Key_1,Qt.Key_2,Qt.Key_3,Qt.Key_4,Qt.Key_5,Qt.Key_6,Qt.Key_7,Qt.Key_8,Qt.Key_9]
 
 default_prefs = {
-
-	'channel_colors':["green","red","blue","purple"],
+	'filter_method':0,
+	'filter_width':1.0,
+	'hmm_filter':False,
 
 	'tau':1.0,
-	'bleedthrough':np.array(((0.,0.05,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.))).flatten(),
+	'bleedthrough':np.array(((0.,0.05,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.))).flatten().tolist(),
 
 	'ncpu':mp.cpu_count(),
 
-	'downsample':1,
 	'min_length':10,
-
-	'wiener_smooth':False,
 
 	'photobleaching_flag':True,
 	'synchronize_start_flag':False,
@@ -54,7 +41,6 @@ default_prefs = {
 	'hmm_nrestarts':4,
 	'hmm_threshold':1e-10,
 	'hmm_max_iters':1000,
-	'wiener_smooth':False,
 	'hmm_binding_expt':False,
 	'hmm_bound_dynamics':False,
 	'vb_prior_beta':0.25,
@@ -375,10 +361,9 @@ class plotter_gui(ui_general.gui):
 	def keyPressEvent(self,event):
 		kk = event.key()
 
-		if self.prefs.le_filter.hasFocus():
-			if kk == Qt.Key_Escape and str(self.prefs.le_filter.text()) == "":
-				self.open_preferences()
-				return
+		if kk == Qt.Key_Escape and str(self.prefs.le_filter.text()) == "":
+			self.open_preferences()
+			return
 
 		if kk in [Qt.Key_Right,Qt.Key_Left]:
 			try:

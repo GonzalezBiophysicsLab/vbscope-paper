@@ -7,14 +7,44 @@ from matplotlib.widgets import  RectangleSelector
 from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget
 
 import numpy as np
-from scipy.ndimage import gaussian_filter1d
-from scipy.signal import wiener
 
 default_prefs = {
-	'plot_fret_min':float(-.5),
-	'plot_fret_max':float(1.5),
+	'plot_fret_min':float(-.25),
+	'plot_fret_max':float(1.25),
 	'plot_intensity_min':float(-1000.0),
-	'plot_intensity_max':float(10000.0)
+	'plot_intensity_max':float(10000.0),
+	'plot_filter':False,
+	'plot_channel_colors':["#0EA52F","#EE0000","cyan","purple"],
+	'plot_downsample':1,
+	'plot_efret_color':'#023bf9',
+	'plot_line_linewidth':1.0,
+	'plot_hist_linewidth':2.0,
+	'plot_line_alpha_pb':0.25,
+	'plot_axes_spinewidth':1.0,
+	'plot_axes_topright':True,
+	'plot_tick_fontsize':12.0,
+	'plot_tick_length_minor':2.0,
+	'plot_tick_length_major':4.0,
+	'plot_tick_linewidth':1.0,
+	'plot_tick_direction':'in',
+	'plot_subplots_left':0.14,
+	'plot_subplots_right':0.98,
+	'plot_subplots_top':0.92,
+	'plot_subplots_bottom':0.14,
+	'plot_subplots_hspace':0.04,
+	'plot_subplots_wspace':0.03,
+	'plot_line_alpha':0.8,
+	'plot_viterbi_color':'k',
+	'plot_viterbi_linewidth':1.0,
+	'plot_viterbi_alpha':0.8,
+	'plot_label_fontsize':12.0,
+	'plot_ylabel_offset':-0.18,
+	'plot_xlabel_offset':-0.21,
+	'plot_font':'Arial',
+	'plot_xlabel_text1':'Time (s)',
+	'plot_xlabel_text2':'Probability',
+	'plot_ylabel_text1':r'Intensity (a.u.)',
+	'plot_ylabel_text2':r'E$_{\rm{FRET}}$'
 }
 
 class traj_plot_container():
@@ -58,14 +88,11 @@ class traj_plot_container():
 
 	## Read in y-min and y-max values, then update the plot
 	def update_minmax(self):
-		self.initialize_plots()
-		# self.yminmax = np.array((float(self.gui.prefs['plot_intensity_min']),float(self.gui.prefs['plot_intensity_max'])))
-		# if not np.all(np.isfinite(self.yminmax)):
-		# 	self.yminmax = np.array((-1000.,10000))
-		# self.a[0][0].set_ylim(self.yminmax[0],self.yminmax[1])
-		self.a[0][0].set_ylim(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'])
-		print self.a[0][0].get_ylim()
-
+		# self.initialize_plots()
+		try:
+			self.a[0][0].set_ylim(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'])
+		except:
+			self.a[0][0].set_ylim(-1000.,10000.)
 		self.canvas.draw()
 
 	def plot_hist(self,i,hx,hy):
@@ -91,18 +118,12 @@ class traj_plot_container():
 			self.a[1][0].lines[3*i+1].set_data(t[pretime:pbtime],rel[i,pretime:pbtime])
 			self.a[1][0].lines[3*i+2].set_data(t[pbtime:],rel[i,pbtime:])
 
-
 	def calc_trajectory(self):
 		intensities = self.gui.data.d[self.index].copy()
-
-		# if self.gui.prefs['convert_flag']:
-		# 	for i in range(self.gui.ncolors):
-		# 		intensities[i] = self.gui.prefs['convert_c_lambda'][i]/self.gui.prefs['convert_em_gain']*(intensities[i] - self.gui.prefs['convert_offset'])
-
-		if self.gui.prefs['wiener_smooth'] is True:
+		if self.gui.prefs['plot_filter'] is True:
 			for i in range(intensities.shape[0]):
 				try:
-					intensities[i] = wiener(intensities[i],mysize=3)
+					intensities[i] = self.gui.data.filter(intensities[i])
 				except:
 					pass
 
@@ -111,11 +132,9 @@ class traj_plot_container():
 			for j in range(self.gui.ncolors):
 				intensities[j] -= bts[i,j]*intensities[i]
 
-
-
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
 
-		downsample = int(self.gui.prefs['downsample'])
+		downsample = int(self.gui.prefs['plot_downsample'])
 		if downsample != 1:
 			ll = t.size / downsample
 			intensities = np.array([np.sum(intensities[i,:ll*downsample].reshape((ll,downsample)),axis=1) for i in range(self.gui.ncolors)])
@@ -180,31 +199,17 @@ class traj_plot_container():
 			vitpath = None
 		return state_means,vitpath
 
-	def update_axes(self):
+	def update_axis_limits(self):
 		self.a[0][0].set_xlim(0, self.gui.data.d.shape[2]*self.gui.prefs['tau'])
 		self.a[0][0].set_ylim(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'])
 		self.a[0][1].set_xlim(0.01, 1.25)
 		self.a[1][0].set_ylim(self.gui.prefs['plot_fret_min'],self.gui.prefs['plot_fret_max'])
 		self.a[1][1].set_xlim(self.a[0][1].get_xlim())
 
-	def update_colors(self):
-		for i in range(self.gui.ncolors):
-			color = self.gui.prefs['channel_colors'][i]
-			for j in range(3):
-				self.a[0][0].lines[3*i+j].set_color(color)
-			self.a[0][1].lines[i].set_color(color)
-		for i in range(self.gui.ncolors-1):
-			if self.gui.ncolors == 2:
-				color = 'blue'
-			else:
-				color = self.gui.prefs['channel_colors'][i+1]
-			for j in range(3):
-				self.a[1][0].lines[3*i+j].set_color(color)
-			self.a[1][1].lines[i].set_color(color)
-
-# 	## Plot current trajectory
+	## Plot current trajectory
 	def update_plots(self):
 		try:
+			self.canvas.blockSignals(True)
 			if self.flag_arm:
 				self.update_blits()
 				self.flag_arm = False
@@ -225,28 +230,106 @@ class traj_plot_container():
 				self.plot_hist(i,*intensity_hists[i])
 			for i in range(len(fret_hists)):
 				self.plot_fret_hist(i,*fret_hists[i])
-			self.update_colors()
+
+			self.update_ticks()
+			self.update_axis_geometry()
+			self.update_lines()
+			self.update_axis_labels()
 
 			[[[aaa.draw_artist(l) for l in aaa.lines] for aaa in aa] for aa in self.a]
 			[[self.f.canvas.blit(aaa.bbox) for aaa in aa] for aa in self.a]
+
 
 			self.canvas.update()
 			self.canvas.flush_events()
 
 			yl = self.a[1][0].get_ylim()
 			if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plot_fret_min'] or yl[1] != self.gui.prefs['plot_fret_max']:
-				self.update_axes()
+				self.update_axis_limits()
 			self.draw()
+			self.canvas.blockSignals(False)
 		except:
 			pass
+
+	def update_ticks(self):
+		dpr = self.canvas.devicePixelRatio()
+
+		## Set the ticks/labels so that they look nice
+		for aa in self.a:
+			for aaa in aa:
+				for asp in ['top','bottom','left','right']:
+					aaa.spines[asp].set_linewidth(self.gui.prefs['plot_axes_spinewidth']/dpr)
+					if not self.gui.prefs['plot_axes_topright'] and asp in ['top','right']:
+						aaa.spines[asp].set_visible(False)
+				tickdirection = self.gui.prefs['plot_tick_direction']
+				if not tickdirection in ['in','out']: tickdirection = 'in'
+				aaa.tick_params(labelsize=self.gui.prefs['plot_tick_fontsize']/dpr, axis='both', direction=tickdirection , width=self.gui.prefs['plot_tick_linewidth']/dpr, length=self.gui.prefs['plot_tick_length_minor']/dpr)
+				aaa.tick_params(axis='both',which='major',length=self.gui.prefs['plot_tick_length_major']/dpr)
+				for label in aaa.get_xticklabels():
+					label.set_family(self.gui.prefs['plot_font'])
+				for label in aaa.get_yticklabels():
+					label.set_family(self.gui.prefs['plot_font'])
+
+		plt.setp(self.a[0][0].get_xticklabels(), visible=False)
+		for aa in [self.a[0][1],self.a[1][1]]:
+			plt.setp(aa.get_yticklabels(),visible=False)
+			plt.setp(aa.get_xticklabels(),visible=False)
+			aa.set_xticks(())
+			aa.set_yticks(())
+		self.a[0][0].tick_params(axis='x', which='both',length=0)
+		# self.a[0][1].tick_params(axis='y',which='both',direction=tickdirection )
+		# self.a[1][1].tick_params(axis='y',which='both',direction=tickdirection )
+
+
+	def update_axis_geometry(self):
+		self.f.tight_layout()
+
+		self.f.subplots_adjust(left=self.gui.prefs['plot_subplots_left'],right=self.gui.prefs['plot_subplots_right'],top=self.gui.prefs['plot_subplots_top'],bottom=self.gui.prefs['plot_subplots_bottom'],hspace=self.gui.prefs['plot_subplots_hspace'],wspace=self.gui.prefs['plot_subplots_wspace'])
+
+	def update_line(self,l,color,alpha,linewidth):
+		l.set_color(color)
+		l.set_alpha(alpha)
+		l.set_linewidth(linewidth)
+
+	def update_lines(self):
+		p = self.gui.prefs
+		dpr = self.canvas.devicePixelRatio()
+		lw = p['plot_line_linewidth']/dpr
+		hw = p['plot_hist_linewidth']/dpr
+
+		la = p['plot_line_alpha']
+		lapb = p['plot_line_alpha_pb']
+		alphas = [lapb,la,lapb]
+
+		## Intensities
+		for i in range(self.gui.ncolors):
+			color = p['plot_channel_colors'][i]
+			for j,alpha in zip(range(3),alphas):
+				self.update_line(self.a[0][0].lines[3*i+j], color, alpha, lw)
+			self.update_line(self.a[0][1].lines[i], color, p['plot_line_alpha'], hw)
+
+		## Rel. Intensities
+		for i in range(self.gui.ncolors-1):
+			if self.gui.ncolors == 2:
+				color = self.gui.prefs['plot_efret_color']
+			else:
+				color = self.gui.prefs['plot_channel_colors'][i+1]
+			for j,alpha in zip(range(3),alphas):
+				self.update_line(self.a[1][0].lines[3*i+j], color, alpha, lw)
+			self.update_line(self.a[1][1].lines[i], color, p['plot_line_alpha'], hw)
+
+		if len(self.a[1,0].lines)%4==0:
+			for i in range(self.gui.ncolors-1):
+				color = p['plot_viterbi_color']
+				alpha = p['plot_viterbi_alpha']
+				lw = p['plot_viterbi_linewidth']/dpr
+				self.update_line(self.a[1,0].lines[-(1+i)], color, alpha, lw)
+
 
 	## Plot initial data to set aesthetics
 	def initialize_plots(self):
 		## clear everything
 		[[aaa.cla() for aaa in aa] for aa in self.a]
-
-		lw = .75 / self.canvas.devicePixelRatio()
-		pb = .2
 
 		## Make it so that certain plots zoom together
 		self.a[0][0].get_shared_y_axes().join(self.a[0][0],self.a[0][1])
@@ -254,60 +337,26 @@ class traj_plot_container():
 		self.a[0][0].get_shared_x_axes().join(self.a[0][0],self.a[1][0])
 		self.a[0][1].get_shared_x_axes().join(self.a[0][1],self.a[1][1])
 
-		## Set the ticks/labels so that they look nice
-		for aa in self.a:
-			for aaa in aa:
-				for asp in ['top','bottom','left','right']:
-					aaa.spines[asp].set_linewidth(1.0/self.canvas.devicePixelRatio())
-				aaa.tick_params(labelsize=12./self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=2./self.canvas.devicePixelRatio())
-				aaa.tick_params(axis='both',which='major',length=4./self.canvas.devicePixelRatio())
-
-		plt.setp(self.a[0][0].get_xticklabels(), visible=False)
-		for aa in [self.a[0][1],self.a[1][1]]:
-			aa.yaxis.tick_right()
-			plt.setp(aa.get_yticklabels(),visible=False)
-			plt.setp(aa.get_xticklabels(),visible=False)
-			# aa.tick_params(axis='x', which='both',length=0)
-		self.a[0][1].tick_params(axis='x', which='both',length=0)
-		self.a[0][0].tick_params(axis='x', which='both',length=0)
-		self.a[0][1].tick_params(axis='y',which='both',direction='in')
-		self.a[1][1].tick_params(axis='y',which='both',direction='in')
-
 		## Redraw everything
-		self.update_axes()
-		self.label_axes()
-		self.f.tight_layout()
-		offset1 = .08
-		offset2 = 0.02
-		offset3 = 0.14
-		self.f.subplots_adjust(left=offset3,right=1.-offset2,top=1.-offset1,bottom=offset3,hspace=.03,wspace=0.015)
+		self.update_ticks()
+		self.update_axis_limits()
+		self.update_axis_labels()
+		self.update_axis_geometry()
 
 		self.canvas.draw()
-		# self.draw()
 
 		for i in range(self.gui.ncolors):
-			## plot pre-truncated, kept, and post-truncated trajectory (Intensities)
-			color = self.gui.prefs['channel_colors'][i]
-			self.a[0][0].plot(np.random.rand(self.gui.data.d.shape[0]),color=color,ls=':',alpha=pb,lw=lw)
-			self.a[0][0].plot(np.random.rand(self.gui.data.d.shape[0]),color=color,alpha=.8,lw=lw)
-			self.a[0][0].plot(np.random.rand(self.gui.data.d.shape[0]),color=color,ls=':',alpha=pb,lw=lw)
+			for ls in [':','-',':']:
+				self.a[0][0].plot(np.random.rand(self.gui.data.d.shape[0]), ls=ls)
+				if i > 0:
+					self.a[1][0].plot(np.random.rand(self.gui.data.d.shape[0]), ls=ls)
 
-			## Plot histograms of intensities
-			self.a[0][1].plot(np.random.rand(100),color=color,alpha=.8,lw=1./ self.canvas.devicePixelRatio())
+		for i in range(self.gui.ncolors):
+			self.a[0][1].plot(np.random.rand(100))
+			if i > 0:
+				self.a[1][1].plot(np.random.rand(100))
 
-		## plot pre-truncated, kept, and post-truncated trajectory (E_{FRET})
-		for i in range(1,self.gui.ncolors):
-			if self.gui.ncolors == 2:
-				color = 'blue'
-			else:
-				color = self.gui.prefs['channel_colors'][i]
-			self.a[1][0].plot(np.random.rand(self.gui.data.d.shape[0]),color=color,ls=':',alpha=pb,lw=lw)
-			self.a[1][0].plot(np.random.rand(self.gui.data.d.shape[0]),color=color,alpha=.8,lw=lw)
-			self.a[1][0].plot(np.random.rand(self.gui.data.d.shape[0]),color=color,ls=':',alpha=pb,lw=lw)
-			## Plot histograms of rel. intensities
-			self.a[1][1].plot(np.random.rand(100),color=color,alpha=.8,lw=1./ self.canvas.devicePixelRatio())
-
-		self.update_colors()
+		self.update_lines()
 
 		self.update_blits()
 		self.update_plots()
@@ -321,21 +370,23 @@ class traj_plot_container():
 	def initialize_hmm_plot(self):
 		self.gui.update_display_traces()
 		if len(self.a[1,0].lines) < 4:
-			self.a[1,0].plot(np.random.rand(100),np.random.rand(100),color='k',lw=1.,alpha=.8)
+			self.a[1,0].plot(np.random.rand(100),np.random.rand(100))
 
 	## Add axis labels to plots
-	def label_axes(self):
-		fs = 12./self.canvas.devicePixelRatio()
+	def update_axis_labels(self):
+		fs = self.gui.prefs['plot_label_fontsize']/self.canvas.devicePixelRatio()
+		font = {
+			'family': self.gui.prefs['plot_font'],
+			'size': fs,
+			'va':'top'
+		}
 
-		self.a[0][0].set_ylabel(r'Intensity (a.u.)',fontsize=fs,va='top')
-		if self.gui.ncolors == 2:
-			self.a[1][0].set_ylabel(r'E$_{\rm{FRET}}$',fontsize=fs,va='top')
-		else:
-			self.a[1][0].set_ylabel(r'Relative Intensity',fontsize=fs,va='top')
-		self.a[1][0].set_xlabel(r'Time (s)',fontsize=fs)
-		self.a[1][1].set_xlabel(r'Probability',fontsize=fs)
+		self.a[0][0].set_ylabel(self.gui.prefs['plot_ylabel_text1'],fontdict=font)
+		self.a[1][0].set_ylabel(self.gui.prefs['plot_ylabel_text2'],fontdict=font)
+		self.a[1][0].set_xlabel(self.gui.prefs['plot_xlabel_text1'],fontdict=font)
+		self.a[1][1].set_xlabel(self.gui.prefs['plot_xlabel_text2'],fontdict=font)
 
-		self.a[0][0].yaxis.set_label_coords(-.18, 0.5)
-		self.a[1][0].yaxis.set_label_coords(-.18, 0.5)
-		self.a[1][0].xaxis.set_label_coords(0.5, -.21)
-		self.a[1][1].xaxis.set_label_coords(0.5, -.21)
+		self.a[0][0].yaxis.set_label_coords(self.gui.prefs['plot_ylabel_offset'], 0.5)
+		self.a[1][0].yaxis.set_label_coords(self.gui.prefs['plot_ylabel_offset'], 0.5)
+		self.a[1][0].xaxis.set_label_coords(0.5, self.gui.prefs['plot_xlabel_offset'])
+		self.a[1][1].xaxis.set_label_coords(0.5, self.gui.prefs['plot_xlabel_offset'])
