@@ -4,13 +4,18 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import RegularPolygon
 from matplotlib.collections import PatchCollection
 from matplotlib.widgets import  RectangleSelector
-
-
 from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget
 
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import wiener
+
+default_prefs = {
+	'plot_fret_min':float(-.5),
+	'plot_fret_max':float(1.5),
+	'plot_intensity_min':float(-1000.0),
+	'plot_intensity_max':float(10000.0)
+}
 
 class traj_plot_container():
 	'''
@@ -20,6 +25,8 @@ class traj_plot_container():
 	'''
 	def __init__(self,gui):
 		self.gui = gui
+		if self.gui.prefs.count('plot_fret_min') == 0:
+			self.gui.prefs.add_dictionary(default_prefs)
 
 		self.f,self.a = plt.subplots(2,2,gridspec_kw={'width_ratios':[6,1]},figsize=(6.5,5))
 		self.canvas = FigureCanvas(self.f)
@@ -52,19 +59,14 @@ class traj_plot_container():
 	## Read in y-min and y-max values, then update the plot
 	def update_minmax(self):
 		self.initialize_plots()
-		self.yminmax = np.array((float(self.gui.le_min.text()),float(self.gui.le_max.text())))
-		if not np.all(np.isfinite(self.yminmax)):
-			self.yminmax = np.array((-1000.,10000))
-			print "yminmax fixed"
-		self.a[0][0].set_ylim(self.yminmax[0],self.yminmax[1])
+		# self.yminmax = np.array((float(self.gui.prefs['plot_intensity_min']),float(self.gui.prefs['plot_intensity_max'])))
+		# if not np.all(np.isfinite(self.yminmax)):
+		# 	self.yminmax = np.array((-1000.,10000))
+		# self.a[0][0].set_ylim(self.yminmax[0],self.yminmax[1])
+		self.a[0][0].set_ylim(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'])
+		print self.a[0][0].get_ylim()
 
 		self.canvas.draw()
-
-		for le in [self.gui.le_min,self.gui.le_max]:
-			try:
-				le.clearFocus()
-			except:
-				pass
 
 	def plot_hist(self,i,hx,hy):
 		self.a[0][1].lines[i].set_data(hy,hx)
@@ -129,13 +131,13 @@ class traj_plot_container():
 		intensity_hists = []
 		fret_hists = []
 		hymaxes = []
-
+		yminmax = np.array((self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max']))
 		for i in range(self.gui.ncolors):
 			if pretime < pbtime:
-				hy,hx = np.histogram(intensities[i,pretime:pbtime],range=self.yminmax,bins=int(np.sqrt(pbtime-pretime)))
+				hy,hx = np.histogram(intensities[i,pretime:pbtime],range=yminmax,bins=int(np.sqrt(pbtime-pretime)))
 			else:
 				hy = np.zeros(100)
-				hx = np.linspace(self.yminmax[0],self.yminmax[1],101)
+				hx = np.linspace(yminmax[0],yminmax[1],101)
 			hy = np.append(np.append(0.,hy),0.)
 			hx = np.append(np.append(hx[0],.5*(hx[1:]+hx[:-1])),hx[-1])
 			hymaxes.append(hy.max())
@@ -143,10 +145,10 @@ class traj_plot_container():
 
 		for i in range(self.gui.ncolors-1):
 			if pretime < pbtime:
-				hy,hx = np.histogram(rel[i,pretime:pbtime],range=(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret']),bins=int(np.sqrt(pbtime-pretime)))
+				hy,hx = np.histogram(rel[i,pretime:pbtime],range=(self.gui.prefs['plot_fret_min'],self.gui.prefs['plot_fret_max']),bins=int(np.sqrt(pbtime-pretime)))
 			else:
 				hy = np.zeros(100)
-				hx = np.linspace(self.yminmax[0],self.yminmax[1],101)
+				hx = np.linspace(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'],101)
 			hy = np.append(np.append(0.,hy),0.)
 			hx = np.append(np.append(hx[0],.5*(hx[1:]+hx[:-1])),hx[-1])
 			hymaxes.append(hy.max())
@@ -180,9 +182,9 @@ class traj_plot_container():
 
 	def update_axes(self):
 		self.a[0][0].set_xlim(0, self.gui.data.d.shape[2]*self.gui.prefs['tau'])
-		self.a[0][0].set_ylim(self.yminmax[0],self.yminmax[1])
+		self.a[0][0].set_ylim(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'])
 		self.a[0][1].set_xlim(0.01, 1.25)
-		self.a[1][0].set_ylim(self.gui.prefs['plotter_min_fret'],self.gui.prefs['plotter_max_fret'])
+		self.a[1][0].set_ylim(self.gui.prefs['plot_fret_min'],self.gui.prefs['plot_fret_max'])
 		self.a[1][1].set_xlim(self.a[0][1].get_xlim())
 
 	def update_colors(self):
@@ -232,7 +234,7 @@ class traj_plot_container():
 			self.canvas.flush_events()
 
 			yl = self.a[1][0].get_ylim()
-			if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plotter_min_fret'] or yl[1] != self.gui.prefs['plotter_max_fret']:
+			if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plot_fret_min'] or yl[1] != self.gui.prefs['plot_fret_max']:
 				self.update_axes()
 			self.draw()
 		except:

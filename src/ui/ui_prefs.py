@@ -33,7 +33,7 @@ class QAlmostStandardItemModel(QStandardItemModel):
 	def enforce_type(self,old,new):
 		if not old is None:
 			if type(old) != type(new):
-				print old,new
+				print type(old),old,type(new),new
 				return old
 		return new
 
@@ -136,6 +136,10 @@ class preferences(QWidget):
 		## 	print window['s']
 		val = self.get(key)
 		return val
+
+	def count(self,k):
+		x = self.model.findItems(k)
+		return len(x)
 
 	def add_dictionary(self,dictionary):
 		self.model.blockSignals(True)

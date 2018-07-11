@@ -46,8 +46,6 @@ default_prefs = {
 	'downsample':1,
 	'min_length':10,
 
-	'plotter_min_fret':-.5,
-	'plotter_max_fret':1.5,
 	'wiener_smooth':False,
 
 	'photobleaching_flag':True,
@@ -73,10 +71,10 @@ class plotter_gui(ui_general.gui):
 		self.gui = gui
 		self.data = traj_container(self)
 
-		self.initialize_ui()
-
+		self._main_widget = QWidget()
 		super(plotter_gui,self).__init__(self.gui.app,self._main_widget)
 		self.prefs.add_dictionary(default_prefs)
+		self.initialize_ui()
 
 		self.initialize_connections()
 
@@ -102,6 +100,7 @@ class plotter_gui(ui_general.gui):
 		self.move(1,1)
 
 	def update_pref_callback(self):
+		self.plot.update_minmax()
 		self.plot.update_plots()
 		self.ui_update()
 
@@ -124,31 +123,14 @@ class plotter_gui(ui_general.gui):
 		hbox.addWidget(self.label_current)
 		qw.setLayout(hbox)
 
-		### Initialize line edit boxes for y-min and y-max intensity values
-		self.plot.yminmax = np.array((0.,0.))
-
-		scalewidget = QWidget()
-		g = QGridLayout()
-		g.addWidget(QLabel('Min'),0,0)
-		g.addWidget(QLabel('Max'),0,1)
-		self.le_min = QLineEdit()
-		self.le_max = QLineEdit()
-		g.addWidget(self.le_min,1,0)
-		g.addWidget(self.le_max,1,1)
-
-		for ll in [self.le_min,self.le_max]:
-			ll.setValidator(QDoubleValidator(-1e300,1e300,100))
-			ll.setText(str(0.))
-		scalewidget.setLayout(g)
-
 		## Put all of the widgets together
-		self._main_widget = QWidget()
+		# self._main_widget = QWidget()
 		self.layout = QVBoxLayout()
 		self.layout.addWidget(self.plot.canvas)
 		self.layout.addWidget(self.plot.toolbar)
 		# self.layout.addWidget(self.slider_select)
 		self.layout.addWidget(qw)
-		self.layout.addWidget(scalewidget)
+		# self.layout.addWidget(scalewidget)
 		self._main_widget.setLayout(self.layout)
 
 		plt.close(self.plot.f)
@@ -160,8 +142,6 @@ class plotter_gui(ui_general.gui):
 
 		# ## Connect everything for interaction
 		self.initialize_sliders()
-		for le in [self.le_min,self.le_max]:
-			le.editingFinished.connect(self.plot.update_minmax)
 		self.slider_select.valueChanged.connect(self.callback_sliders)
 		self.plot.f.canvas.mpl_connect('button_press_event', self.callback_mouseclick)
 
@@ -181,11 +161,9 @@ class plotter_gui(ui_general.gui):
 		self.data.hmm_result = None
 
 		## Guess at good y-limits for the plot
-		self.plot.yminmax = np.percentile(self.data.d.flatten()[np.isfinite(self.data.d.flatten())],[.1,99.9])
-		self.le_min.setText(str(self.plot.yminmax[0]))
-		self.le_max.setText(str(self.plot.yminmax[1]))
-
-
+		yy =  np.percentile(self.data.d.flatten()[np.isfinite(self.data.d.flatten())],[.1,99.9])
+		self.prefs['plot_intensity_min'] = float(yy[0])
+		self.prefs['plot_intensity_max'] = float(yy[1])
 
 		## Calculate/set photobleaching, initialize class list
 		self.data.update_fret()
@@ -335,7 +313,7 @@ class plotter_gui(ui_general.gui):
 ################################################################################
 
 	def keyPressEvent(self,event):
-		if not (self.prefs.le_filter.hasFocus() or self.prefs.proxy_view.hasFocus()):
+		if not (self.prefs.proxy_view.hasFocus()):
 			self.callback_keypress(event.key())
 		else:
 			super(plotter_gui,self).keyPressEvent(event)
