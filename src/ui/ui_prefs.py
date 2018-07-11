@@ -44,15 +44,6 @@ class QAlmostStandardItemModel(QStandardItemModel):
 				return np.array(eval(d))
 		return d
 
-class QAlmostLineEdit(QLineEdit):
-	def __init__(self,*args):
-		super(QAlmostLineEdit,self).__init__(*args)
-	def keyPressEvent(self,event):
-		if event.key() == Qt.Key_Escape:
-			self.clear()
-		else:
-			super(QAlmostLineEdit,self).keyPressEvent(event)
-
 class preferences(QWidget):
 	def __init__(self,parent=None):
 		super(preferences, self).__init__()
@@ -73,7 +64,7 @@ class preferences(QWidget):
 		self.proxy_view.horizontalHeader().setVisible(False)
 		self.proxy_view.verticalHeader().setVisible(False)
 
-		self.le_filter = QAlmostLineEdit()
+		self.le_filter = QLineEdit()
 		self.le_filter.textChanged.connect(self.filter_regex_changed)
 		self.le_filter.setPlaceholderText("Enter filter here")
 
@@ -95,11 +86,15 @@ class preferences(QWidget):
 
 	def keyPressEvent(self,event):
 		if event.key() == Qt.Key_Escape:
-			self.le_filter.clear()
+			if self.le_filter.hasFocus() and not str(self.le_filter.text()) is "":
+				self.le_filter.clear()
+				return
 			self.le_filter.setFocus()
 			self.proxy_view.clearSelection()
-		else:
-			super(preferences,self).keyPressEvent(event)
+		elif event.key() == Qt.Key_Return and self.le_filter.hasFocus():
+			if self.proxy_model.rowCount() > 0:
+				self.focusNextChild()
+		super(preferences,self).keyPressEvent(event)
 
 	def edit(self,a):
 		name = self.model.data(self.model.index(a.row(),0))

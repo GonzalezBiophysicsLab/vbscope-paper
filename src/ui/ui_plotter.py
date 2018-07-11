@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog, QDockWidget, QMessageBox, QTabWidget, QListWidget, QAbstractItemView
 from PyQt5.QtCore import Qt
 from PyQt5.Qt import QFont
-from PyQt5.QtGui import QDoubleValidator, QKeySequence
+from PyQt5.QtGui import QDoubleValidator, QKeySequence, QStandardItem
 
 import multiprocessing as mp
 import numpy as np
@@ -100,9 +100,12 @@ class plotter_gui(ui_general.gui):
 		self.move(1,1)
 
 	def update_pref_callback(self):
-		self.plot.update_minmax()
-		self.plot.update_plots()
-		self.ui_update()
+		try:
+			self.ui_update()
+			self.plot.update_minmax()
+			self.plot.update_plots()
+		except:
+			pass
 
 	def initialize_ui(self):
 		## Initialize Plots
@@ -312,12 +315,6 @@ class plotter_gui(ui_general.gui):
 
 ################################################################################
 
-	def keyPressEvent(self,event):
-		if not (self.prefs.proxy_view.hasFocus()):
-			self.callback_keypress(event.key())
-		else:
-			super(plotter_gui,self).keyPressEvent(event)
-
 	def initialize_plot_docks(self):
 		self.popout_plots = {
 			'plot_hist1d':None,
@@ -375,8 +372,14 @@ class plotter_gui(ui_general.gui):
 		self.raise_plot('vb_states', 'VB States', 1,1, lambda: plots.vb_states.plot(self), plots.vb_states.default_prefs)
 		plots.vb_states.plot(self)
 
-	## Callback function for keyboard presses
-	def callback_keypress(self,kk):
+	def keyPressEvent(self,event):
+		kk = event.key()
+
+		if self.prefs.le_filter.hasFocus():
+			if kk == Qt.Key_Escape and str(self.prefs.le_filter.text()) == "":
+				self.open_preferences()
+				return
+
 		if kk in [Qt.Key_Right,Qt.Key_Left]:
 			try:
 				if kk == Qt.Key_Right:
@@ -421,13 +424,15 @@ class plotter_gui(ui_general.gui):
 				return
 
 		if kk in number_keys:
-			self.data.class_list[self.plot.index] = number_keys.index(kk)
-			self.plot.update_plots()
 			try:
+				self.data.class_list[self.plot.index] = number_keys.index(kk)
+				self.plot.update_plots()
 				self.update_display_traces()
 				self.gui.app.processEvents()
 			except:
 				pass
+
+		super(plotter_gui,self).keyPressEvent(event)
 
 	## callback function for changing the trajectory using the slider
 	def callback_sliders(self,v):
