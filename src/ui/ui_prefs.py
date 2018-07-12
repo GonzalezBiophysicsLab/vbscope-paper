@@ -11,7 +11,7 @@ default_prefs = {
 	'computer_ncpu':mp.cpu_count(),
 	'ui_bgcolor':'white',
 	'ui_fontcolor':'grey',
-	'ui_fontsize':12,
+	'ui_fontsize':12.0,
 	'ui_height':500,
 	'ui_version':0.1,
 	'ui_width':700,
@@ -116,7 +116,6 @@ class preferences(QWidget):
 		elif event.key() == Qt.Key_Return and self.le_filter.hasFocus():
 			if self.proxy_model.rowCount() > 0:
 				self.focusNextChild()
-
 
 	def edit(self,a):
 		name = self.model.data(self.model.index(a.row(),0))

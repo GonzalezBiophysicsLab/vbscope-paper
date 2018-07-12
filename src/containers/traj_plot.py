@@ -17,11 +17,11 @@ default_prefs = {
 	'plot_channel_colors':["#0EA52F","#EE0000","cyan","purple"],
 	'plot_downsample':1,
 	'plot_fret_color':'#023bf9',
-	'plot_line_linewidth':1.0,
+	'plot_line_linewidth':0.7,
 	'plot_hist_linewidth':1.0,
 	'plot_hist_show':True,
 	'plot_line_alpha_pb':0.25,
-	'plot_axes_spinewidth':1.0,
+	'plot_axes_linewidth':1.0,
 	'plot_axes_topright':False,
 	'plot_tick_fontsize':8.0,
 	'plot_tick_length_minor':2.0,
@@ -34,10 +34,10 @@ default_prefs = {
 	'plot_subplots_bottom':0.155,
 	'plot_subplots_hspace':0.04,
 	'plot_subplots_wspace':0.03,
-	'plot_line_alpha':0.8,
+	'plot_line_alpha':0.9,
 	'plot_viterbi_color':'k',
-	'plot_viterbi_linewidth':1.0,
-	'plot_viterbi_alpha':0.8,
+	'plot_viterbi_linewidth':0.7,
+	'plot_viterbi_alpha':0.9,
 	'plot_label_fontsize':8.0,
 	'plot_ylabel_offset':-0.165,
 	'plot_xlabel_offset':-0.25,
@@ -46,12 +46,26 @@ default_prefs = {
 	'plot_xlabel_text2':'Probability',
 	'plot_ylabel_text1':r'Intensity (a.u.)',
 	'plot_ylabel_text2':r'E$_{\rm{FRET}}$',
-	'plot_fret_pbzero':True
+	'plot_fret_pbzero':True,
+	'plot_fret_nticks':7,
+	'plot_intensity_nticks':6,
+	'plot_time_rotate':0.0,
+	'plot_time_min':0.0,
+	'plot_time_max':1.0,
+	'plot_time_nticks':6,
+	'plot_time_offset':0.0,
+	'plot_time_decimals':0,
+	'plot_intensity_decimals':0,
+	'plot_fret_decimals':2,
+	'normalize_intensities':False
 }
-#
-# 	'ui_width':400.,
-# 	'ui_height':325
-# }
+
+default_prefs['ui_width'] = 250
+default_prefs['ui_height'] = 325
+default_prefs['plot_filter'] = True
+default_prefs['tau'] = 0.025
+
+
 
 class traj_plot_container():
 	'''
@@ -141,6 +155,12 @@ class traj_plot_container():
 			for j in range(self.gui.ncolors):
 				intensities[j] -= bts[i,j]*intensities[i]
 
+		if self.gui.prefs['normalize_intensities']:
+			q = intensities.sum(0)+50.0
+			q /= q[0]
+			intensities /= q[None,:]
+
+
 		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
 
 		downsample = int(self.gui.prefs['plot_downsample'])
@@ -209,11 +229,24 @@ class traj_plot_container():
 		return state_means,vitpath
 
 	def update_axis_limits(self):
-		self.a[0][0].set_xlim(0, self.gui.data.d.shape[2]*self.gui.prefs['tau'])
+		self.a[1][0].set_xlim(self.gui.prefs['plot_time_min'],self.gui.prefs['plot_time_max'])
 		self.a[0][0].set_ylim(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'])
 		self.a[0][1].set_xlim(0.01, 1.25)
 		self.a[1][0].set_ylim(self.gui.prefs['plot_fret_min'],self.gui.prefs['plot_fret_max'])
 		self.a[1][1].set_xlim(self.a[0][1].get_xlim())
+		self.update_decimals()
+
+	def update_decimals(self):
+		fd = {'rotation':self.gui.prefs['plot_time_rotate'], 'ha':'center'}
+		if fd['rotation'] != 0: fd['ha'] = 'right'
+		xt = self.a[1][0].get_xticks()
+		self.a[1][0].set_xticklabels(["{0:.{1}f}".format(x - self.gui.prefs['plot_time_offset'],self.gui.prefs['plot_time_decimals']) for x in xt],fontdict=fd)
+
+		fd = {}
+		yt = self.a[1][0].get_yticks()
+		self.a[1][0].set_yticklabels(["{0:.{1}f}".format(y,self.gui.prefs['plot_fret_decimals']) for y in yt],fontdict=fd)
+		yt = self.a[0][0].get_yticks()
+		self.a[0][0].set_xticklabels(["{0:.{1}f}".format(y,self.gui.prefs['plot_intensity_decimals']) for y in yt],fontdict=fd)
 
 	## Plot current trajectory
 	def update_plots(self):
@@ -258,8 +291,11 @@ class traj_plot_container():
 			self.canvas.flush_events()
 
 			yl = self.a[1][0].get_ylim()
-			if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plot_fret_min'] or yl[1] != self.gui.prefs['plot_fret_max']:
+			# if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plot_fret_min'] or yl[1] != self.gui.prefs['plot_fret_max']:
+			if 1:
 				self.update_axis_limits()
+
+
 			self.draw()
 			self.canvas.blockSignals(False)
 		except:
@@ -272,9 +308,10 @@ class traj_plot_container():
 		for aa in self.a:
 			for aaa in aa:
 				for asp in ['top','bottom','left','right']:
-					aaa.spines[asp].set_linewidth(self.gui.prefs['plot_axes_spinewidth']/dpr)
-					if not self.gui.prefs['plot_axes_topright'] and asp in ['top','right']:
-						aaa.spines[asp].set_visible(False)
+					aaa.spines[asp].set_linewidth(self.gui.prefs['plot_axes_linewidth']/dpr)
+					if asp in ['top','right']:
+						aaa.spines[asp].set_visible(self.gui.prefs['plot_axes_topright'])
+
 				tickdirection = self.gui.prefs['plot_tick_direction']
 				if not tickdirection in ['in','out']: tickdirection = 'in'
 				aaa.tick_params(labelsize=self.gui.prefs['plot_tick_fontsize']/dpr, axis='both', direction=tickdirection , width=self.gui.prefs['plot_tick_linewidth']/dpr, length=self.gui.prefs['plot_tick_length_minor']/dpr)
@@ -291,8 +328,40 @@ class traj_plot_container():
 			aa.set_xticks(())
 			aa.set_yticks(())
 		self.a[0][0].tick_params(axis='x', which='both',length=0)
-		# self.a[0][1].tick_params(axis='y',which='both',direction=tickdirection )
-		# self.a[1][1].tick_params(axis='y',which='both',direction=tickdirection )
+
+		self.a[0][0].set_yticks(self.figure_ticks(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'],self.gui.prefs['plot_intensity_nticks']))
+		self.a[1][0].set_yticks(self.figure_ticks(self.gui.prefs['plot_fret_min'],self.gui.prefs['plot_fret_max'],self.gui.prefs['plot_fret_nticks']))
+		self.a[1][0].set_xticks(self.figure_ticks(self.gui.prefs['plot_time_min'],self.gui.prefs['plot_time_max'],self.gui.prefs['plot_time_nticks']))
+
+
+
+	def figure_ticks(self,ymin,ymax,nticks):
+		m = nticks
+		if m <= 0: return ()
+		if ymax <= ymin: return ()
+
+		delta = np.abs(ymax-ymin)
+		o = np.floor(np.log10(delta))
+		d = 10.**o
+		y0 = np.ceil(ymin/d)*d
+		delta = np.abs(ymax-y0)
+
+		if delta <= d:
+			d /= 10.
+			y0 = np.ceil(ymin/d)*d
+			delta = np.abs(ymax-y0)
+		n = np.floor(delta/d)
+		f = 2.**(np.floor(np.log2(n/m))+1)
+		d*=f
+
+		if d<=0: return ()
+
+		y0 = np.ceil(ymin/d)*d
+		delta = np.abs(ymax-y0)
+		n = np.floor(delta/d)
+
+		ticks = np.linspace(y0,y0+n*d,n+1)
+		return ticks
 
 
 	def update_axis_geometry(self):
@@ -339,6 +408,30 @@ class traj_plot_container():
 				lw = p['plot_viterbi_linewidth']/dpr
 				self.update_line(self.a[1,0].lines[-(1+i)], color, alpha, lw)
 
+	def update_blits(self):
+		[[[l.set_visible(False) for l in aaa.lines] for aaa in aa] for aa in self.a]
+		self.f.canvas.draw()
+		self.blit_bgs = [[self.f.canvas.copy_from_bbox(aaa.bbox) for aaa in aa] for aa in self.a]
+		[[[l.set_visible(True) for l in aaa.lines] for aaa in aa] for aa in self.a]
+
+	## Add axis labels to plots
+	def update_axis_labels(self):
+		fs = self.gui.prefs['plot_label_fontsize']/self.canvas.devicePixelRatio()
+		font = {
+			'family': self.gui.prefs['plot_font'],
+			'size': fs,
+			'va':'top'
+		}
+
+		self.a[0][0].set_ylabel(self.gui.prefs['plot_ylabel_text1'],fontdict=font)
+		self.a[1][0].set_ylabel(self.gui.prefs['plot_ylabel_text2'],fontdict=font)
+		self.a[1][0].set_xlabel(self.gui.prefs['plot_xlabel_text1'],fontdict=font)
+		self.a[1][1].set_xlabel(self.gui.prefs['plot_xlabel_text2'],fontdict=font)
+
+		self.a[0][0].yaxis.set_label_coords(self.gui.prefs['plot_ylabel_offset'], 0.5)
+		self.a[1][0].yaxis.set_label_coords(self.gui.prefs['plot_ylabel_offset'], 0.5)
+		self.a[1][0].xaxis.set_label_coords(0.5, self.gui.prefs['plot_xlabel_offset'])
+		self.a[1][1].xaxis.set_label_coords(0.5, self.gui.prefs['plot_xlabel_offset'])
 
 	## Plot initial data to set aesthetics
 	def initialize_plots(self):
@@ -352,6 +445,7 @@ class traj_plot_container():
 		self.a[0][1].get_shared_x_axes().join(self.a[0][1],self.a[1][1])
 
 		## Redraw everything
+		self.gui.prefs['plot_time_max'] = self.gui.data.d.shape[2]*self.gui.prefs['tau']
 		self.update_ticks()
 		self.update_axis_limits()
 		self.update_axis_labels()
@@ -375,32 +469,7 @@ class traj_plot_container():
 		self.update_blits()
 		self.update_plots()
 
-	def update_blits(self):
-		[[[l.set_visible(False) for l in aaa.lines] for aaa in aa] for aa in self.a]
-		self.f.canvas.draw()
-		self.blit_bgs = [[self.f.canvas.copy_from_bbox(aaa.bbox) for aaa in aa] for aa in self.a]
-		[[[l.set_visible(True) for l in aaa.lines] for aaa in aa] for aa in self.a]
-
 	def initialize_hmm_plot(self):
 		self.gui.update_display_traces()
 		if len(self.a[1,0].lines) < 4:
 			self.a[1,0].plot(np.random.rand(100),np.random.rand(100))
-
-	## Add axis labels to plots
-	def update_axis_labels(self):
-		fs = self.gui.prefs['plot_label_fontsize']/self.canvas.devicePixelRatio()
-		font = {
-			'family': self.gui.prefs['plot_font'],
-			'size': fs,
-			'va':'top'
-		}
-
-		self.a[0][0].set_ylabel(self.gui.prefs['plot_ylabel_text1'],fontdict=font)
-		self.a[1][0].set_ylabel(self.gui.prefs['plot_ylabel_text2'],fontdict=font)
-		self.a[1][0].set_xlabel(self.gui.prefs['plot_xlabel_text1'],fontdict=font)
-		self.a[1][1].set_xlabel(self.gui.prefs['plot_xlabel_text2'],fontdict=font)
-
-		self.a[0][0].yaxis.set_label_coords(self.gui.prefs['plot_ylabel_offset'], 0.5)
-		self.a[1][0].yaxis.set_label_coords(self.gui.prefs['plot_ylabel_offset'], 0.5)
-		self.a[1][0].xaxis.set_label_coords(0.5, self.gui.prefs['plot_xlabel_offset'])
-		self.a[1][1].xaxis.set_label_coords(0.5, self.gui.prefs['plot_xlabel_offset'])

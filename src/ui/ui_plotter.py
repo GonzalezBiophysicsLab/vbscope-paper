@@ -84,6 +84,7 @@ class plotter_gui(ui_general.gui):
 		self.setFocus()
 		self.show()
 		self.move(1,1)
+		self.qd_prefs.keyPressEvent = self.keyPressEvent
 
 	def update_pref_callback(self):
 		try:

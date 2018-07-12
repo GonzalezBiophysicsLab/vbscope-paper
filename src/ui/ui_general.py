@@ -66,6 +66,7 @@ class gui(QMainWindow):
 		self.qd_prefs.setWidget(self.prefs)
 		self.qd_prefs.setAllowedAreas( Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		self.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
+		self.qd_prefs.setFloating(True)
 		self.qd_prefs.hide()
 		self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
 
@@ -192,8 +193,9 @@ class gui(QMainWindow):
 			self.qd_prefs.show()
 			self.qd_prefs.raise_()
 			self.prefs.le_filter.setFocus()
+
 		else:
-			self.qd_prefs.hide()
+			self.qd_prefs.setHidden(True)
 		self.resize_prefs()
 
 	def open_main(self):
