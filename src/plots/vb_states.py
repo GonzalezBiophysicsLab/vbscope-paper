@@ -3,65 +3,68 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import cnames
 
 default_prefs = {
-	'fig_height':4.0,
-	'fig_width':4.0,
-	'label_padding_left':.20,
-	'label_padding_bottom':.15,
-	'label_padding_top':.05,
-	'label_padding_right':.05,
-	'label_space':5.,
-
 	'bar_color':'steelblue',
 	'bar_edgecolor':'black',
 
 	'states_low':1,
 	'states_high':10,
 
-	'label_y_nticks':4,
+	'count_nticks':5,
+
+
+	'xlabel_text':r'N$_{\rm{States}}$',
+	'ylabel_nticks':4,
+	'ylabel_text':r'$N_{\rm trajectories}$',
 
 	'textbox_x':0.96,
 	'textbox_y':0.93,
 	'textbox_fontsize':10.0,
 	'textbox_nmol':True
-}
 
+	'fig_width':3.0,
+	'fig_height':2.0,
+	'subplots_top':0.97,
+	'subplots_left':0.16,
+}
 
 def plot(gui):
 	popplot = gui.popout_plots['vb_states'].ui
+	pp = popplot.prefs
 	popplot.ax[0].cla()
 	popplot.resize_fig()
 	gui.app.processEvents()
 
+	dpr = popplot.f.canvas.devicePixelRatio()
+
 	if not gui.data.hmm_result is None:
-		# if gui.data.hmm_result.__dict__.keys().count('models')
 		if gui.data.hmm_result.type == 'vb':
-			ns = np.arange(popplot.prefs['states_low'],popplot.prefs['states_high']+1).astype('i')
+			ns = np.arange(pp['states_low'],pp['states_high']+1).astype('i')
 			nstates = np.array([r.mu.size for r in gui.data.hmm_result.results])
 			y = np.array([np.sum(nstates == i) for i in ns])
 
 			try:
 				bcolor = 'steelblue'
 				ecolor = 'black'
-				if cnames.keys().count(popplot.prefs['bar_color']) > 0:
-					bcolor = popplot.prefs['bar_color']
-				if cnames.keys().count(popplot.prefs['bar_edgecolor']) > 0:
-					ecolor = popplot.prefs['bar_edgecolor']
+				if cnames.keys().count(pp['bar_color']) > 0:
+					bcolor = pp['bar_color']
+				if cnames.keys().count(pp['bar_edgecolor']) > 0:
+					ecolor = pp['bar_edgecolor']
 				popplot.ax[0].bar(ns,y,width=1.0,color=bcolor,edgecolor=ecolor)
 			except:
 				pass
-				
+
 		popplot.ax[0].set_xticks(ns)
+		ylim = popplot.ax[0].get_ylim()
+		ticks = popplot.figure_out_ticks(0.,ylim[1],pp['count_nticks'])
+		popplot.ax[0].set_yticks(ticks)
 
-		popplot.ax[0].set_xlabel(r'$N_{\rm states}$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio(),labelpad=popplot.prefs['label_space'])
-		popplot.ax[0].set_ylabel(r'$N_{\rm trajectories}$', fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio(), labelpad=popplot.prefs['label_space'])
+		popplot.ax[0].set_xlabel(pp['xlabel_text'],fontsize=pp['label_fontsize']/dpr,labelpad=popplot.prefs['xlabel_offset'])
+		popplot.ax[0].set_ylabel(pp['ylabel_text'],fontsize=pp['label_fontsize']/dpr,labelpad=popplot.prefs['ylabel_offset'])
 
-		for asp in ['top','bottom','left','right']:
-			popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-		popplot.f.subplots_adjust(left=popplot.prefs['label_padding_left'],bottom=popplot.prefs['label_padding_bottom'],top=1.-popplot.prefs['label_padding_top'],right=1.-popplot.prefs['label_padding_right'])
 
-		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
+		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=pp['axes_linewidth']/dpr)
 		lstr = 'N = %d'%(int(y.sum()))
 
-		popplot.ax[0].annotate(lstr,xy=(popplot.prefs['textbox_x'],popplot.prefs['textbox_y']),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['textbox_fontsize']/gui.plot.canvas.devicePixelRatio())
+		popplot.ax[0].annotate(lstr,xy=(pp['textbox_x'],pp['textbox_y']),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=pp['textbox_fontsize']/dpr)
 
 		popplot.f.canvas.draw()
