@@ -1,60 +1,52 @@
 from PyQt5.QtWidgets import QInputDialog
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import wiener
+
 
 default_prefs = {
-	'sync_start':True,
-	'sync_postsync':True,
+	'subplots_top':0.97,
+	'axes_topright':True,
+	'xlabel_offset':-0.1,
+	'ylabel_offset':-0.18,
+	'fig_height':2.5,
+
 	'time_min':0,
 	'time_max':200,
 	'time_nbins':200,
 	'time_shift':0.0,
-	# 'fret_min':-.25,
-	# 'fret_max':1.25,
-	# 'fret_nbins':81,
-	'tau':.1,
+	'time_nticks':5,
+	'time_dt':1.,
+
+	'sync_start':True,
+	'sync_postsync':True,
 	'sync_preframe':10,
-	# 'hist_smoothx':.1,
-	# 'hist_smoothy':.1,
-	# 'color_cmap':'rainbow',
-	# 'color_floorcolor':'lightgoldenrodyellow',
-	# 'color_floor':0.05,
-	# 'color_ceiling':0.95,
-	# 'plotter_2d_normalizecolumn':False,
-	# 'plotter_nbins_contour':200,
-
 	'sync_hmmstate':0,
-	'fig_height':4.,
-	'fig_width':4.,
-	'label_y_nticks':8,
-	'label_x_nticks':5,
-	'label_ticksize':8,
-	'label_padding_left':.2,
-	'label_padding_bottom':.15,
-	'label_padding_top':.05,
-	'label_padding_right':.05,
-	'label_fontsize':12.,
-	'label_ticksize':10.,
-	'textbox_x':0.95,
-	'textbox_y':0.93,
-	'textbox_fontsize':10.,
-	'textbox_nmol':True,
-	'fret_min':-.2,
-	'fret_max':1.2,
-	'fret_nbins':151,
-	'hist_smoothx':2.,
-	'hist_smoothy':2.,
-	'hist_normalize':True,
-	'wiener_filter':False,
 
+	'textbox_x':0.97,
+	'textbox_y':0.92,
+	'textbox_fontsize':8.,
+	'textbox_nmol':True,
+
+	'fret_min':-.25,
+	'fret_max':1.25,
+	'fret_nbins':51,
+	'fret_nticks':7,
+
+	'hist_smoothx':1.,
+	'hist_smoothy':1.,
+	'hist_normalize':True,
 	'hist_inerp_res':800,
+
+	'filter':False,
 
 	'color_cmap':'rainbow',
 	'color_floorcolor':'lightgoldenrodyellow',
 	'color_ceiling':0.95,
 	'color_floor':0.05,
 	'color_nticks':5,
+
+	'xlabel_text':r'Time (s)',
+	'ylabel_text':r'E$_{\rm{FRET}}$'
 }
 
 
@@ -93,7 +85,7 @@ def gen_histogram(gui,fpb):
 
 	## interpolate histogram - interp2d is backwards...
 	f =  interp2d(y,x,z, kind='cubic')
-	x = np.linspace(popplot.prefs['time_min'],popplot.prefs['time_max'],popplot.prefs['hist_inerp_res'])#*popplot.prefs['tau']
+	x = np.linspace(popplot.prefs['time_min'],popplot.prefs['time_max'],popplot.prefs['hist_inerp_res'])#*popplot.prefs['time_dt']
 	y = np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['hist_inerp_res']+1)
 	z = f(y,x)
 	z[z<0] = 0.
@@ -120,8 +112,8 @@ def get_data(gui):
 			post = gui.data.pb_list[i]
 			if pre < post:
 				yy = y[pre:post]
-				if popplot.prefs['wiener_filter']:
-					yy = wiener(yy)
+				if popplot.prefs['filter']:
+					yy = gui.data.filter(yy)
 				if popplot.prefs['sync_start'] is True:
 					fpb[i,0:post-pre] = yy
 				else:
@@ -150,8 +142,8 @@ def get_data(gui):
 					o = fpb[i].copy()
 					ox = int(np.max((0,ms[j]-popplot.prefs['sync_preframe'])))
 					o = o[ox:ms[j+1]]
-					if popplot.prefs['wiener_filter']:
-						o = wiener(o)
+					if popplot.prefs['filter']:
+						o = gui.data.filter(o)
 					ooo = np.empty(v.shape[1]) + np.nan
 					ooo[:o.size] = o
 					oo.append(ooo)
@@ -174,9 +166,12 @@ def colormap(gui):
 
 def plot(gui):
 	popplot = gui.popout_plots['plot_hist2d'].ui
+	pp = popplot.prefs
 	popplot.ax[0].cla()
 	popplot.resize_fig()
 	gui.app.processEvents()
+
+	dpr = popplot.f.canvas.devicePixelRatio()
 
 	if gui.ncolors != 2 or gui.data.d is None:
 		return
@@ -187,12 +182,12 @@ def plot(gui):
 	### Plotting
 	cm = colormap(gui)
 
-	vmin = popplot.prefs['color_floor']
-	vmax = popplot.prefs['color_ceiling']
+	vmin = pp['color_floor']
+	vmax = pp['color_ceiling']
 
 	## imshow is backwards
-	tau = popplot.prefs['tau']
-	pc = popplot.ax[0].imshow(z.T, cmap=cm, origin='lower',interpolation='none',extent=[x.min()*tau+popplot.prefs['time_shift'],x.max()*tau+popplot.prefs['time_shift'],y.min(),y.max()],aspect='auto',vmin=vmin,vmax=vmax)
+	tau = pp['time_dt']
+	pc = popplot.ax[0].imshow(z.T, cmap=cm, origin='lower',interpolation='none',extent=[x.min()*tau+pp['time_shift'],x.max()*tau+pp['time_shift'],y.min(),y.max()],aspect='auto',vmin=vmin,vmax=vmax)
 
 	# for pcc in pc.collections:
 		# pcc.set_edgecolor("face")
@@ -207,93 +202,46 @@ def plot(gui):
 		popplot.f.axes[1].cla()
 		cb = popplot.f.colorbar(pc,cax=popplot.f.axes[1],extend=ext)
 
-	cbticks = np.linspace(0,vmax,popplot.prefs['color_nticks'])
-	cbticks = cbticks[cbticks > popplot.prefs['color_floor']]
-	# cbticks = cbticks[cbticks < popplot.prefs['color_ceiling']]
-	cbticks = np.append(popplot.prefs['color_floor'], cbticks)
-	cbticks = np.append(cbticks, popplot.prefs['color_ceiling'])
+	cbticks = np.linspace(0,vmax,pp['color_nticks'])
+	cbticks = np.array(popplot.figure_out_ticks(0,pp['color_ceiling'],pp['color_nticks']))
+	cbticks = cbticks[cbticks > pp['color_floor']]
+	cbticks = cbticks[cbticks < popplot.prefs['color_ceiling']]
+	cbticks = np.append(pp['color_floor'], cbticks)
+	cbticks = np.append(cbticks, pp['color_ceiling'])
 	cb.set_ticks(cbticks)
 	cb.set_ticklabels(["%.2f"%(cbt) for cbt in cbticks])
+	for label in cb.ax.get_yticklabels():
+		label.set_family(pp['font'])
 
-
-	cb.ax.yaxis.set_tick_params(labelsize=popplot.prefs['label_ticksize']/gui.plot.canvas.devicePixelRatio(),direction='in',width=1.0/gui.plot.canvas.devicePixelRatio(),length=4./gui.plot.canvas.devicePixelRatio())
+	cb.ax.yaxis.set_tick_params(labelsize=pp['tick_fontsize']/dpr,direction=pp['tick_direction'],width=pp['tick_linewidth']/dpr,length=pp['tick_length_major']/dpr)
 	for asp in ['top','bottom','left','right']:
-		cb.ax.spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
+		cb.ax.spines[asp].set_linewidth(pp['axes_linewidth']/dpr)
 	cb.solids.set_edgecolor('face')
 	cb.solids.set_rasterized(True)
 
-	####
-	#
+	####################################################
+	####################################################
 
-	popplot.ax[0].set_yticks(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_y_nticks']))
-	popplot.ax[0].set_xticks(np.linspace(popplot.prefs['time_min']*popplot.prefs['tau']+popplot.prefs['time_shift'],popplot.prefs['time_max']*popplot.prefs['tau']+popplot.prefs['time_shift'],popplot.prefs['label_x_nticks']))
-	popplot.ax[0].set_xlabel('Time (s)',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
-	popplot.ax[0].set_ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
+	popplot.ax[0].set_xticks(popplot.figure_out_ticks(pp['time_min']*pp['time_dt']+pp['time_shift'],pp['time_max']*pp['time_dt']+pp['time_shift'],pp['time_nticks']))
+	popplot.ax[0].set_yticks(popplot.figure_out_ticks(pp['fret_min'],pp['fret_max'],pp['fret_nticks']))
 
+	fs = pp['label_fontsize']/dpr
+	font = {
+		'family': pp['font'],
+		'size': fs,
+		'va':'top'
+	}
+	popplot.ax[0].set_xlabel(pp['xlabel_text'],fontdict=font)
+	popplot.ax[0].set_ylabel(pp['ylabel_text'],fontdict=font)
 
-	bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
+	popplot.ax[0].yaxis.set_label_coords(pp['ylabel_offset'], 0.5)
+	popplot.ax[0].xaxis.set_label_coords(0.5, pp['xlabel_offset'])
+
+	bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./dpr)
 	lstr = 'n = %d'%(fpb.shape[0])
-	if popplot.prefs['textbox_nmol']:
+	if pp['textbox_nmol']:
 		lstr = 'N = %d'%(fpb.shape[0])
 
-	popplot.ax[0].annotate(lstr,xy=(popplot.prefs['textbox_x'],popplot.prefs['textbox_y']),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['textbox_fontsize']/gui.plot.canvas.devicePixelRatio())
-
-
-	for asp in ['top','bottom','left','right']:
-		popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-	popplot.f.subplots_adjust(left=popplot.prefs['label_padding_left'],bottom=popplot.prefs['label_padding_bottom'],top=1.-popplot.prefs['label_padding_top'],right=1.-popplot.prefs['label_padding_right'])
+	popplot.ax[0].annotate(lstr,xy=(pp['textbox_x'],pp['textbox_y']),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=pp['textbox_fontsize']/dpr)
 
 	popplot.f.canvas.draw()
-	# cm = colormap(gui)
-	#
-	#
-	# vmin = popplot.prefs['color_floor']
-	# vmax = popplot.prefs['color_ceiling']
-	#
-	#
-	# from matplotlib.colors import LogNorm
-	# if vmin <= 0 or vmin >=z.max():
-	# 	pc = popplot.ax[0].contourf(x.T,y.T,z.T,popplot.prefs['plotter_nbins_contour'],cmap=cm)
-	# else:
-	# 	# pc = plt.pcolor(y.T,x.T,z.T,vmin =vmin,cmap=cm,edgecolors='face',lw=1,norm=LogNorm(z.min(),z.max()))
-	# 	pc = popplot.ax[0].contourf(x.T,y.T,z.T,popplot.prefs['plotter_nbins_contour'],vmin =vmin,vmax=vmax,cmap=cm)
-	# for pcc in pc.collections:
-	# 	pcc.set_edgecolor("face")
-	#
-	# try:
-	# 	if len(popplot.f.axes) == 1:
-	# 		cb = popplot.f.colorbar(pc)
-	# 	else:
-	# 		popplot.f.axes[1].cla()
-	# 		cb = popplot.f.colorbar(pc,cax=popplot.f.axes[1])
-	#
-	# 	# cbticks = np.linspace(popplot.prefs['color_floor'],popplot.prefs['color_ceiling'],popplot.prefs['label_colorbar_nticks'])
-	# 	cbticks = np.linspace(0.,1.,popplot.prefs['label_colorbar_nticks'])
-	# 	cbticks = cbticks[cbticks > popplot.prefs['color_floor']]
-	# 	cbticks = cbticks[cbticks < popplot.prefs['color_ceiling']]
-	# 	cbticks = np.append(popplot.prefs['color_floor'], cbticks)
-	# 	cbticks = np.append(cbticks, popplot.prefs['color_ceiling'])
-	# 	cb.set_ticks(cbticks)
-	# 	cb.set_ticklabels(["%.2f"%(cbt) for cbt in cbticks])
-	#
-	# 	cb.ax.yaxis.set_tick_params(labelsize=popplot.prefs['label_ticksize']/gui.plot.canvas.devicePixelRatio(),direction='in',width=1.0/gui.plot.canvas.devicePixelRatio(),length=4./gui.plot.canvas.devicePixelRatio())
-	# 	for asp in ['top','bottom','left','right']:
-	# 		cb.ax.spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-	# 	cb.solids.set_edgecolor('face')
-	# 	cb.solids.set_rasterized(True)
-	# except:
-	# 	pass
-	#
-	# for asp in ['top','bottom','left','right']:
-	# 	popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-	# popplot.f.subplots_adjust(left=.05+popplot.prefs['label_padding'],bottom=.05+popplot.prefs['label_padding'],top=.95,right=.95)
-	#
-	# popplot.ax[0].set_xlim(rx.min()-popplot.prefs['plotter_timeshift'],rx.max()-popplot.prefs['plotter_timeshift'])
-	# popplot.ax[0].set_ylim(popplot.prefs['fret_min'],popplot.prefs['fret_max'])
-	# popplot.ax[0].set_yticks(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_y_nticks']))
-	# popplot.ax[0].set_xticks(np.linspace(popplot.prefs['time_min']*popplot.prefs['tau']-popplot.prefs['plotter_timeshift'],popplot.prefs['time_max']*popplot.prefs['tau']-popplot.prefs['plotter_timeshift'],popplot.prefs['label_x_nticks']))
-	# popplot.ax[0].set_xlabel('Time (s)',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
-	# popplot.ax[0].set_ylabel(r'$\rm E_{\rm FRET}(t)$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
-	# bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
-	# popplot.ax[0].annotate('n = %d'%(fpb.shape[0]),xy=(popplot.prefs['textbox_x'],popplot.prefs['textbox_y']),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['textbox_fontsize']/gui.plot.canvas.devicePixelRatio())
-	# popplot.canvas.draw()

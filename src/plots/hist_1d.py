@@ -360,7 +360,6 @@ def plot(gui):
 			'size': fs,
 			'va':'top'
 		}
-
 		popplot.ax[0].set_xlabel(pp['xlabel_text'],fontdict=font)
 		popplot.ax[0].set_ylabel(pp['ylabel_text'],fontdict=font)
 
