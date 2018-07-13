@@ -13,7 +13,6 @@ default_prefs = {
 	'ui_fontcolor':'grey',
 	'ui_fontsize':12.0,
 	'ui_height':500,
-	'ui_version':0.1,
 	'ui_width':700,
 	'pref_precision':6
 }
@@ -89,7 +88,7 @@ class preferences(QWidget):
 
 		self.le_filter = QAlmostLineEdit()
 		self.le_filter.textChanged.connect(self.filter_regex_changed)
-		self.le_filter.setPlaceholderText("Enter filter here")
+		self.le_filter.setPlaceholderText("Filter / command")
 
 		proxyLayout = QVBoxLayout()
 		proxyLayout.addWidget(self.le_filter)
@@ -107,6 +106,8 @@ class preferences(QWidget):
 		undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"),self)
 		undo_shortcut.activated.connect(self.undo)
 
+		self.commands = {'load':self.load_preferences,'save':self.save_preferences}
+
 	def keyPressEvent(self,event):
 		if event.key() == Qt.Key_Escape:
 			if self.le_filter.hasFocus() and not str(self.le_filter.text()) is "":
@@ -115,20 +116,22 @@ class preferences(QWidget):
 			self.le_filter.setFocus()
 			self.proxy_view.clearSelection()
 			super(preferences,self).keyPressEvent(event)
-		elif event.key() == Qt.Key_Return and self.le_filter.hasFocus():
-			if self.proxy_model.rowCount() > 0:
-				self.focusNextChild()
-			if self.le_filter.text() == 'load':
-				self.load_preferences()
-				self.le_filter.clear()
-				self.proxy_view.clearSelection()
-				self.le_filter.setFocus()
-			elif self.le_filter.text() == 'save':
-				self.save_preferences()
-				self.le_filter.clear()
-				self.proxy_view.clearSelection()
-				self.le_filter.setFocus()
 
+		elif event.key() == Qt.Key_Return and self.le_filter.hasFocus():
+			if self.run_command(self.le_filter.text()):
+				return
+			elif self.proxy_model.rowCount() > 0:
+				self.focusNextChild()
+				return
+
+	def run_command(self,s):
+		if s in self.commands:
+			self.commands[s]()
+			self.le_filter.clear()
+			self.proxy_view.clearSelection()
+			self.le_filter.setFocus()
+			return 1
+		return 0
 
 	def edit(self,a):
 		name = self.model.data(self.model.index(a.row(),0))
@@ -297,10 +300,6 @@ class preferences(QWidget):
 
 
 	####### Customs
-	def combine_prefs(self,add_dictionary):
-		## legacy
-		self.add_dictionary(add_dictionary)
-
 	def redraw(self):
 		try:
 			self.gui.plot.image.set_cmap(self['plot_colormap'])
