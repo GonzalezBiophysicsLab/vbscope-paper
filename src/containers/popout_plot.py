@@ -17,7 +17,7 @@ class popout_plot_container(QMainWindow):
 		super(QMainWindow,self).__init__(parent)
 		self.ui = popout_plot_container_widget(nplots_x, nplots_y, self)
 		self.setCentralWidget(self.ui)
-		self.resizeDocks([self.ui.qd_prefs],[200],Qt.Horizontal)
+		# self.resizeDocks([self.ui.qd_prefs],[200],Qt.Horizontal)
 		self.show()
 
 	def closeEvent(self,event):
@@ -25,8 +25,8 @@ class popout_plot_container(QMainWindow):
 		self.parent().raise_()
 		self.parent().setFocus()
 
-	def resizeEvent(self,event):
-		pass
+	# def resizeEvent(self,event):
+		# pass
 
 
 class popout_plot_container_widget(QWidget):
@@ -37,9 +37,24 @@ class popout_plot_container_widget(QWidget):
 		self.prefs.add_dictionary({
 			'fig_width':4.0,
 			'fig_height':3.0,
-			'label_fontsize':14,
-			'label_ticksize':12,
-			'label_padding':.1
+
+			'label_fontsize':8.0,
+			'ylabel_offset':-0.165,
+			'xlabel_offset':-0.25,
+			'font':'Arial',
+			'axes_linewidth':1.0,
+			'axes_topright':False,
+			'tick_fontsize':8.0,
+			'tick_length_minor':2.0,
+			'tick_length_major':4.0,
+			'tick_linewidth':1.0,
+			'tick_direction':'out',
+			'subplots_left':0.125,
+			'subplots_right':0.99,
+			'subplots_top':0.99,
+			'subplots_bottom':0.155,
+			'subplots_hspace':0.04,
+			'subplots_wspace':0.03
 		})
 
 		self.prefs.edit_callback = self.replot
@@ -109,15 +124,24 @@ class popout_plot_container_widget(QWidget):
 
 
 	def fix_ax(self):
-		offset = .08
-		offset2 = 0.14
-		self.f.subplots_adjust(left=offset2,right=1.-offset,top=1.-offset,bottom=offset2)
+		pp = self.prefs
+		self.f.subplots_adjust(left=pp['subplots_left'],right=pp['subplots_right'],top=pp['subplots_top'],bottom=pp['subplots_bottom'],hspace=pp['subplots_hspace'],wspace=pp['subplots_wspace'])
+
 		for aa in self.ax:
-			aa.tick_params(labelsize=self.prefs['label_ticksize']/self.canvas.devicePixelRatio(),axis='both',direction='in',width=1.0/self.canvas.devicePixelRatio(),length=4./self.canvas.devicePixelRatio())
+			dpr = self.f.canvas.devicePixelRatio()
+			for asp in ['top','bottom','left','right']:
+				aa.spines[asp].set_linewidth(pp['axes_linewidth']/dpr)
+				if asp in ['top','right']:
+					aa.spines[asp].set_visible(pp['axes_topright'])
 
-			aa.tick_params(axis='both', which='major', labelsize=self.prefs['label_ticksize']/self.canvas.devicePixelRatio())
-			# aa.format_coord = lambda x, y: ''
-
+				tickdirection = pp['tick_direction']
+				if not tickdirection in ['in','out']: tickdirection = 'in'
+				aa.tick_params(labelsize=pp['tick_fontsize']/dpr, axis='both', direction=tickdirection , width=pp['tick_linewidth']/dpr, length=pp['tick_length_minor']/dpr)
+				aa.tick_params(axis='both',which='major',length=pp['tick_length_major']/dpr)
+				for label in aa.get_xticklabels():
+					label.set_family(pp['font'])
+				for label in aa.get_yticklabels():
+					label.set_family(pp['font'])
 
 	def clf(self):
 		self.f.clf()
@@ -159,6 +183,33 @@ class popout_plot_container_widget(QWidget):
 		self.canvas.flush_events()
 		self.canvas.draw()
 
+	def figure_out_ticks(self,ymin,ymax,nticks):
+		m = nticks
+		if m <= 0: return ()
+		if ymax <= ymin: return ()
+
+		delta = np.abs(ymax-ymin)
+		o = np.floor(np.log10(delta))
+		d = 10.**o
+		y0 = np.ceil(ymin/d)*d
+		delta = np.abs(ymax-y0)
+
+		if delta <= d:
+			d /= 10.
+			y0 = np.ceil(ymin/d)*d
+			delta = np.abs(ymax-y0)
+		n = np.floor(delta/d)
+		f = 2.**(np.floor(np.log2(n/m))+1)
+		d*=f
+
+		if d<=0: return ()
+
+		y0 = np.ceil(ymin/d)*d
+		delta = np.abs(ymax-y0)
+		n = np.floor(delta/d)
+
+		ticks = np.linspace(y0,y0+n*d,n+1)
+		return ticks
 
 
 

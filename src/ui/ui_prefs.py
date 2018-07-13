@@ -277,6 +277,7 @@ class preferences(QWidget):
 					self.gui.log('Loaded preferences from %s'%(fname),True)
 				except:
 					pass
+				self.edit_callback()
 			except:
 
 				try:

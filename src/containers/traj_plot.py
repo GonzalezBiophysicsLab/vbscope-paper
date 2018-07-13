@@ -323,13 +323,11 @@ class traj_plot_container():
 			aa.set_yticks(())
 		self.a[0][0].tick_params(axis='x', which='both',length=0)
 
-		self.a[0][0].set_yticks(self.figure_ticks(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'],self.gui.prefs['plot_intensity_nticks']))
-		self.a[1][0].set_yticks(self.figure_ticks(self.gui.prefs['plot_fret_min'],self.gui.prefs['plot_fret_max'],self.gui.prefs['plot_fret_nticks']))
-		self.a[1][0].set_xticks(self.figure_ticks(self.gui.prefs['plot_time_min'],self.gui.prefs['plot_time_max'],self.gui.prefs['plot_time_nticks']))
+		self.a[0][0].set_yticks(self.figure_out_ticks(self.gui.prefs['plot_intensity_min'],self.gui.prefs['plot_intensity_max'],self.gui.prefs['plot_intensity_nticks']))
+		self.a[1][0].set_yticks(self.figure_out_ticks(self.gui.prefs['plot_fret_min'],self.gui.prefs['plot_fret_max'],self.gui.prefs['plot_fret_nticks']))
+		self.a[1][0].set_xticks(self.figure_out_ticks(self.gui.prefs['plot_time_min'],self.gui.prefs['plot_time_max'],self.gui.prefs['plot_time_nticks']))
 
-
-
-	def figure_ticks(self,ymin,ymax,nticks):
+	def figure_out_ticks(self,ymin,ymax,nticks):
 		m = nticks
 		if m <= 0: return ()
 		if ymax <= ymin: return ()
