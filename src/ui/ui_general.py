@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget
+from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget, QFileDialog
 from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
 
@@ -131,6 +131,11 @@ class gui(QMainWindow):
 		file_prefs.setShortcutContext(Qt.ApplicationShortcut)
 		file_prefs.triggered.connect(self.open_preferences)
 
+		file_saveprefs = QAction('Save Preferences',self)
+		file_saveprefs.triggered.connect(lambda e: self.save_preferences())
+		file_loadprefs = QAction('Load Preferences',self)
+		file_loadprefs.triggered.connect(lambda e: self.load_preferences())
+
 		self.about_text = ""
 		file_about = QAction('About',self)
 		file_about.triggered.connect(self.about)
@@ -139,7 +144,7 @@ class gui(QMainWindow):
 		# file_exit.triggered.connect(self.app.quit)
 		file_exit.triggered.connect(self.close)
 
-		for f in [file_load,file_log,file_prefs,file_about,file_exit]:
+		for f in [file_load,file_log,file_prefs,file_loadprefs,file_saveprefs,file_about,file_exit]:
 			self.menu_file.addAction(f)
 
 ################################################################################
@@ -174,6 +179,33 @@ class gui(QMainWindow):
 
 	def open_log(self):
 		self._open_ui(self._log)
+
+	def load_preferences(self,fname=None):
+		if fname is None:
+			fname,_ = QFileDialog.getOpenFileName(self,'Choose preferences file to load','./prefs.txt')
+		if fname != "":
+			try:
+				f = open(str(fname),'r')
+				p = ""
+				for line in f: p+=line
+				f.close()
+				self.prefs.load_str(p)
+				self.log('Loaded preferences from %s'%(fname),True)
+			except:
+				self.log('Failed to load preferences from %s'%(fname),True)
+
+	def save_preferences(self,fname=None):
+		if fname is None:
+			fname,_ = QFileDialog.getSaveFileName(self,'Save preferences text file','./prefs.txt','.txt')
+		if fname != "":
+			try:
+				p = self.prefs.output_str()
+				f = open(fname,'w')
+				f.write(p)
+				f.close()
+				self.log('Saved preferences to %s'%(fname),True)
+			except:
+				self.log('Failed to save preferences to %s'%(fname),True)
 
 	def resize_prefs(self):
 		w = self.prefs['ui_width']

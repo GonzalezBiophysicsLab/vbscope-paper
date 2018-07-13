@@ -60,6 +60,10 @@ class plotter_gui(ui_general.gui):
 		self._main_widget = QWidget()
 		super(plotter_gui,self).__init__(self.gui.app,self._main_widget)
 		self.prefs.add_dictionary(default_prefs)
+		try:
+			self.load_preferences(fname='./prefs.txt')
+		except:
+			pass
 		self.initialize_ui()
 
 		self.initialize_connections()

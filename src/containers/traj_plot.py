@@ -60,12 +60,6 @@ default_prefs = {
 	'normalize_intensities':False
 }
 
-default_prefs['ui_width'] = 250
-default_prefs['ui_height'] = 325
-default_prefs['plot_filter'] = True
-default_prefs['tau'] = 0.025
-
-
 
 class traj_plot_container():
 	'''

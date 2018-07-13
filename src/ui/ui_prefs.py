@@ -34,7 +34,9 @@ class QAlmostStandardItemModel(QStandardItemModel):
 	def enforce_type(self,old,new):
 		if not old is None:
 			if type(old) != type(new):
-				return old
+				if not type(old) in [type(u'a'),str] and not type(new) in [type(u'a'),str]:
+					print 'ignoring',old,new
+					return old
 		return new
 
 	def ddata(self,*args):
@@ -211,6 +213,38 @@ class preferences(QWidget):
 		self.resize_columns()
 		super(preferences,self).show()
 
+	def output_str(self):
+		total = ""
+		for i in range(self.model.rowCount()):
+			key = self.model.data(self.model.index(i,0))
+			val = self.model.data(self.model.index(i,1))
+			if type(val) is type(u'a'):
+				val = "\"%s\""%(str(val))
+			total += "%s:%s\n"%(key,val)
+		return str(total)
+
+	def load_str(self,s):
+		d = {}
+		ss =[ss.split(":") for ss in s.split('\n')]
+		try:
+			for i in range(len(ss)):
+				if len(ss[i]) == 2:
+					k,v = ss[i]
+					if v[0] in ["\"","\'"]:
+						v = v[1:-1]
+					elif v in ['True','true','T','t']:
+						v = True
+					elif v in ['False','false','F','f']:
+						v = False
+					elif v.count('.') or v.count('e'):
+						v = float(v)
+					else: ## Will probably break if not anything yet and not int
+						v = int(v)
+					d[k] = v
+		except:
+			pass
+		self.add_dictionary(d)
+
 	####### Customs
 	def combine_prefs(self,add_dictionary):
 		## legacy
@@ -241,5 +275,9 @@ if __name__ == '__main__':
 	prefs['aliens?'] = False
 	print prefs['aliens?']
 	print prefs['fun list'].mean()
+	o = prefs.output_str()
+	oo = "fun list:\"yep\""
+
+	prefs.load_str(oo)
 	prefs.show()
 	sys.exit(app.exec_())
