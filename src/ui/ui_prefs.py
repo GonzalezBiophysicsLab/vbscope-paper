@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut, QFileDialog
+from __future__ import print_function
+from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut, QFileDialog, QHeaderView
 from PyQt5.QtCore import  QRegExp, QSortFilterProxyModel, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QKeySequence
 
@@ -34,7 +35,7 @@ class QAlmostStandardItemModel(QStandardItemModel):
 		if not old is None:
 			if type(old) != type(new):
 				if not type(old) in [type(u'a'),str] and not type(new) in [type(u'a'),str]:
-					print 'ignoring',old,new
+					print('ignoring',old,new)
 					return old
 		return new
 
@@ -83,7 +84,8 @@ class preferences(QWidget):
 		self.proxy_view.setModel(self.proxy_model)
 		self.proxy_view.setSortingEnabled(True)
 		self.proxy_view.horizontalHeader().setStretchLastSection(True)
-		self.proxy_view.horizontalHeader().setVisible(False)
+		# self.proxy_view.horizontalHeader().setVisible(False)
+		self.proxy_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
 		self.proxy_view.verticalHeader().setVisible(False)
 
 		self.le_filter = QAlmostLineEdit()
@@ -101,12 +103,13 @@ class preferences(QWidget):
 		self.edit_callback = lambda: None
 
 		self.add_dictionary(default_prefs)
+		self.resize_columns()
 		self.le_filter.setFocus()
 
 		undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"),self)
 		undo_shortcut.activated.connect(self.undo)
 
-		self.commands = {'load':self.load_preferences,'save':self.save_preferences}
+		self.commands = {'load':self.load_preferences,'save':self.save_preferences,'hello':(lambda : print('hello world'))}
 
 	def keyPressEvent(self,event):
 		if event.key() == Qt.Key_Escape:
@@ -168,7 +171,7 @@ class preferences(QWidget):
 
 	def __getitem__(self, key):
 		### OVERRIDE TO MAKE IT ACT LIKE A DICTIONARY
-		## 	print window['s']
+		## 	print(window['s'])
 		val = self.get(key)
 		return val
 
@@ -189,17 +192,14 @@ class preferences(QWidget):
 				self.model.setData(self.model.index(0,0),k)
 				self.model.item(0,0).setEditable(False)
 				self.model.setData(self.model.index(0,1),v)
-
 		self.proxy_model.setSourceModel(self.model)
 		self.proxy_view.sortByColumn(0, Qt.AscendingOrder)
-		self.resize_columns()
 		self.model.blockSignals(False)
+		self.resize_columns()
 
 	def resize_columns(self):
-		self.proxy_view.setFocus()
-		self.proxy_view.hide()
-		self.proxy_view.resizeColumnsToContents()
-		self.proxy_view.show()
+		w = self.size().width()
+		self.proxy_view.setColumnWidth(0,w/2)
 
 	def get(self,s):
 		x = self.model.findItems(s)
@@ -218,12 +218,11 @@ class preferences(QWidget):
 	### override these to put focus in line edit filter
 	def setVisible(self,f):
 		self.le_filter.setFocus()
-		self.resize_columns()
+		self.proxy_view.resizeColumnToContents(0)
 		super(preferences,self).setVisible(f)
 
 	def show(self):
 		self.le_filter.setFocus()
-		self.resize_columns()
 		super(preferences,self).show()
 
 	def output_str(self):
@@ -231,7 +230,9 @@ class preferences(QWidget):
 		for i in range(self.model.rowCount()):
 			key = self.model.data(self.model.index(i,0))
 			val = self.model.data(self.model.index(i,1))
-			if type(val) is type(u'a'):
+			if type(val) is float:
+				val = "{0:.{1}f}".format(val,self['pref_precision'])
+			elif type(val) is type(u'a'):
 				val = "\"%s\""%(str(val))
 			total += "%s:%s\n"%(key,val)
 		return str(total)
@@ -321,10 +322,10 @@ if __name__ == '__main__':
 	prefs = preferences()
 	q = {'fun list':[1,3,4],'aliens?':True,'plot_colormap':'jet'}
 	prefs.add_dictionary(q)
-	print prefs['aliens?']
+	print(prefs['aliens?'])
 	prefs['aliens?'] = False
-	print prefs['aliens?']
-	print prefs['fun list'].mean()
+	print(prefs['aliens?'])
+	print(prefs['fun list'].mean())
 	o = prefs.output_str()
 	oo = "fun list:\"yep\""
 

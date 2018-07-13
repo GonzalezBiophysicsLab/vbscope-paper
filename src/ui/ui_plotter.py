@@ -89,6 +89,13 @@ class plotter_gui(ui_general.gui):
 		self.show()
 		self.move(1,1)
 		self.qd_prefs.keyPressEvent = self.keyPressEvent
+		self.add_pref_commands()
+
+	def add_pref_commands(self):
+		self.prefs.commands['open'] = self.load_traces
+		self.prefs.commands['run hmm'] = self.data.run_vbhmm_model
+		self.prefs.commands['photobleach'] = self.data.photobleach_step
+		self.prefs.commands['plot 1d'] = self.plot_hist1d
 
 	def update_pref_callback(self):
 		try:
