@@ -198,7 +198,7 @@ class preferences(QWidget):
 		self.resize_columns()
 
 	def resize_columns(self):
-		w = self.size().width()
+		w = self.proxy_view.size().width()
 		self.proxy_view.setColumnWidth(0,w/2)
 
 	def get(self,s):
@@ -258,6 +258,10 @@ class preferences(QWidget):
 		except:
 			pass
 		self.add_dictionary(d)
+
+	def show(self):
+		super(preferences,self).show()
+		self.resize_columns()
 
 	def load_preferences(self,fname=None):
 		if fname is None:
