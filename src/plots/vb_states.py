@@ -19,7 +19,7 @@ default_prefs = {
 	'textbox_x':0.96,
 	'textbox_y':0.93,
 	'textbox_fontsize':10.0,
-	'textbox_nmol':True
+	'textbox_nmol':True,
 
 	'fig_width':3.0,
 	'fig_height':2.0,
