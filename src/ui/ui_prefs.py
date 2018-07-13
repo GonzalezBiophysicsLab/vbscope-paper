@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut
+from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut, QFileDialog
 from PyQt5.QtCore import  QRegExp, QSortFilterProxyModel, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QKeySequence
 
@@ -118,6 +118,17 @@ class preferences(QWidget):
 		elif event.key() == Qt.Key_Return and self.le_filter.hasFocus():
 			if self.proxy_model.rowCount() > 0:
 				self.focusNextChild()
+			if self.le_filter.text() == 'load':
+				self.load_preferences()
+				self.le_filter.clear()
+				self.proxy_view.clearSelection()
+				self.le_filter.setFocus()
+			elif self.le_filter.text() == 'save':
+				self.save_preferences()
+				self.le_filter.clear()
+				self.proxy_view.clearSelection()
+				self.le_filter.setFocus()
+
 
 	def edit(self,a):
 		name = self.model.data(self.model.index(a.row(),0))
@@ -144,7 +155,6 @@ class preferences(QWidget):
 		# QRegExp.RegExp
 		# QRegExp.Wildcard
 		# QRegExp.FixedString
-
 		regExp = QRegExp(self.le_filter.text(), Qt.CaseInsensitive, syntax)
 		self.proxy_model.setFilterRegExp(regExp)
 
@@ -244,6 +254,47 @@ class preferences(QWidget):
 		except:
 			pass
 		self.add_dictionary(d)
+
+	def load_preferences(self,fname=None):
+		if fname is None:
+			fname,_ = QFileDialog.getOpenFileName(self,'Choose preferences file to load','./prefs.txt')
+		if fname != "":
+			try:
+				f = open(str(fname),'r')
+				p = ""
+				for line in f: p+=line
+				f.close()
+				self.load_str(p)
+				try:
+					self.gui.log('Loaded preferences from %s'%(fname),True)
+				except:
+					pass
+			except:
+
+				try:
+					self.gui.log('Failed to load preferences from %s'%(fname),True)
+				except:
+					pass
+
+	def save_preferences(self,fname=None):
+		if fname is None:
+			fname,_ = QFileDialog.getSaveFileName(self,'Save preferences text file','./prefs.txt','.txt')
+		if fname != "":
+			try:
+				p = self.output_str()
+				f = open(fname,'w')
+				f.write(p)
+				f.close()
+				try:
+					self.gui.log('Saved preferences to %s'%(fname),True)
+				except:
+					pass
+			except:
+				try:
+					self.gui.log('Failed to save preferences to %s'%(fname),True)
+				except:
+					pass
+
 
 	####### Customs
 	def combine_prefs(self,add_dictionary):

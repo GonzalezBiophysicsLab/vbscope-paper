@@ -132,9 +132,9 @@ class gui(QMainWindow):
 		file_prefs.triggered.connect(self.open_preferences)
 
 		file_saveprefs = QAction('Save Preferences',self)
-		file_saveprefs.triggered.connect(lambda e: self.save_preferences())
+		file_saveprefs.triggered.connect(lambda e: self.prefs.save_preferences())
 		file_loadprefs = QAction('Load Preferences',self)
-		file_loadprefs.triggered.connect(lambda e: self.load_preferences())
+		file_loadprefs.triggered.connect(lambda e: self.prefs.load_preferences())
 
 		self.about_text = ""
 		file_about = QAction('About',self)
@@ -179,33 +179,6 @@ class gui(QMainWindow):
 
 	def open_log(self):
 		self._open_ui(self._log)
-
-	def load_preferences(self,fname=None):
-		if fname is None:
-			fname,_ = QFileDialog.getOpenFileName(self,'Choose preferences file to load','./prefs.txt')
-		if fname != "":
-			try:
-				f = open(str(fname),'r')
-				p = ""
-				for line in f: p+=line
-				f.close()
-				self.prefs.load_str(p)
-				self.log('Loaded preferences from %s'%(fname),True)
-			except:
-				self.log('Failed to load preferences from %s'%(fname),True)
-
-	def save_preferences(self,fname=None):
-		if fname is None:
-			fname,_ = QFileDialog.getSaveFileName(self,'Save preferences text file','./prefs.txt','.txt')
-		if fname != "":
-			try:
-				p = self.prefs.output_str()
-				f = open(fname,'w')
-				f.write(p)
-				f.close()
-				self.log('Saved preferences to %s'%(fname),True)
-			except:
-				self.log('Failed to save preferences to %s'%(fname),True)
 
 	def resize_prefs(self):
 		w = self.prefs['ui_width']

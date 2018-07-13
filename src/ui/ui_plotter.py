@@ -61,7 +61,7 @@ class plotter_gui(ui_general.gui):
 		super(plotter_gui,self).__init__(self.gui.app,self._main_widget)
 		self.prefs.add_dictionary(default_prefs)
 		try:
-			self.load_preferences(fname='./prefs.txt')
+			self.prefs.load_preferences(fname='./prefs.txt')
 		except:
 			pass
 		self.initialize_ui()
