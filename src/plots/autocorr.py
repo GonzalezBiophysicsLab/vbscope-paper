@@ -73,6 +73,8 @@ def plot(gui):
 	yy = posterior[0]/norm
 	from scipy.ndimage import gaussian_filter1d
 	yy = gaussian_filter1d(yy,pp['acorr_filter'])
+	ci[0] = gaussian_filter1d(ci[0],pp['acorr_filter'])
+	ci[1] = gaussian_filter1d(ci[1],pp['acorr_filter'])
 	ct = np.sum(yy/yy[0])
 
 	popplot.ax[0].fill_between(t, ci[0]/norm, ci[1]/norm, alpha=.3, color=pp['line_color'])
@@ -80,7 +82,7 @@ def plot(gui):
 	popplot.ax[0].axvline(ct*pp['time_dt'], color='k', lw=1., alpha=.9)
 
 	f = np.fft.fft(yy)
-	ft = np.fft.fftfreq(yy.size)
+	ft = np.fft.fftfreq(yy.size) *(1./pp['time_dt'])
 	x = ft.argsort()
 	x = x[x>0]
 	popplot.ax[1].semilogy(ft[x],np.abs(f)[x],lw=1.,color='b',alpha=.9)
@@ -114,7 +116,7 @@ def plot(gui):
 	popplot.ax[0].set_ylim(pp['acorr_min'],pp['acorr_max'])
 	popplot.ax[1].set_ylim(pp['power_min'],pp['power_max'])
 
-	popplot.ax[1].set_xlim(ft[ft>0].min(),.5)
+	popplot.ax[1].set_xlim(ft[ft>0].min(),ft[ft>0].max())
 	popplot.ax[1].set_xscale('log')
 
 	# ####################################################
