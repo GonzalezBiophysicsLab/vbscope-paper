@@ -273,6 +273,8 @@ class plotter_gui(ui_general.gui):
 		plots_2d.triggered.connect(self.plot_hist2d)
 		plots_tdp = QAction('Transition Density Plot', self)
 		plots_tdp.triggered.connect(self.plot_tdp)
+		plots_acorr = QAction('Autocorrelation Function Plot', self)
+		plots_acorr.triggered.connect(self.plot_acorr)
 		plots_tranM = QAction('Transition Matrix Plot', self)
 		plots_tranM.triggered.connect(self.plot_tranM)
 		plots_intensities = QAction('Intensities Plot', self)
@@ -282,7 +284,7 @@ class plotter_gui(ui_general.gui):
 		plots_vb_states = QAction('VB States', self)
 		plots_vb_states.triggered.connect(self.plot_vb_states)
 
-		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_intensities,plots_crosscorr,plots_vb_states]:
+		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_acorr, plots_intensities,plots_crosscorr,plots_vb_states]:
 			menu_plots.addAction(f)
 
 		### classes
@@ -318,6 +320,7 @@ class plotter_gui(ui_general.gui):
 			'plot_hist1d':None,
 			'plot_hist2d':None,
 			'plot_tdp':None,
+			'plot_acorr':None,
 			'plot_tranM':None,
 			'plot_intensities':None,
 			'crosscorr':None
@@ -353,6 +356,10 @@ class plotter_gui(ui_general.gui):
 	def plot_tdp(self):
 		self.raise_plot('plot_tdp', 'Transition Density Plot', 1,1, lambda: plots.tdp.plot(self), plots.tdp.default_prefs)
 		plots.tdp.plot(self)
+
+	def plot_acorr(self):
+		self.raise_plot('plot_acorr', 'Autocorrelation Function Plot', 2,1, lambda: plots.autocorr.plot(self), plots.autocorr.default_prefs)
+		plots.autocorr.plot(self)
 
 	def plot_tranM(self):
 		self.raise_plot('plot_tranM', 'Transition Matrix Plot', 1,1, lambda: plots.tranM.plot(self), plots.tranM.default_prefs)
