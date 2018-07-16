@@ -95,7 +95,9 @@ class plotter_gui(ui_general.gui):
 		self.prefs.commands['open'] = self.load_traces
 		self.prefs.commands['run hmm'] = self.data.run_vbhmm_model
 		self.prefs.commands['photobleach'] = self.data.photobleach_step
-		self.prefs.commands['plot 1d'] = self.plot_hist1d
+		self.prefs.commands['hist1d'] = self.plot_hist1d
+		self.prefs.commands['hist2d'] = self.plot_hist2d
+		self.prefs.commands['acorr'] = self.plot_acorr
 
 	def update_pref_callback(self):
 		try:
