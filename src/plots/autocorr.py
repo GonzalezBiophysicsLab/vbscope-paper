@@ -19,6 +19,7 @@ default_prefs = {
 'acorr_min':-0.1,
 'acorr_max':1.0,
 'acorr_filter':1.0,
+'acorr_highpass':0.,
 
 'power_nticks':6,
 'power_min':.1,
@@ -72,14 +73,19 @@ def plot(gui):
 
 	yy = posterior[0]/norm
 	from scipy.ndimage import gaussian_filter1d
-	yy = gaussian_filter1d(yy,pp['acorr_filter'])
-	ci[0] = gaussian_filter1d(ci[0],pp['acorr_filter'])
-	ci[1] = gaussian_filter1d(ci[1],pp['acorr_filter'])
+	if pp['acorr_filter'] > 0.:
+		yy = gaussian_filter1d(yy,pp['acorr_filter'])
+		ci[0] = gaussian_filter1d(ci[0],pp['acorr_filter'])
+		ci[1] = gaussian_filter1d(ci[1],pp['acorr_filter'])
 	ct = np.sum(yy/yy[0])
+	x = t < pp['acorr_highpass']
+	yy[x] = 0.
+	ci[:,x] = 0.
 
 	popplot.ax[0].fill_between(t, ci[0]/norm, ci[1]/norm, alpha=.3, color=pp['line_color'])
 	popplot.ax[0].plot(t, yy, color=pp['line_color'], lw=1., alpha=.9)
 	popplot.ax[0].axvline(ct*pp['time_dt'], color='k', lw=1., alpha=.9)
+
 
 	f = np.fft.fft(yy)
 	ft = np.fft.fftfreq(yy.size) *(1./pp['time_dt'])

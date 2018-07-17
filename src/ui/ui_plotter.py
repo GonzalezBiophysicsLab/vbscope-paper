@@ -98,6 +98,7 @@ class plotter_gui(ui_general.gui):
 		self.prefs.commands['hist1d'] = self.plot_hist1d
 		self.prefs.commands['hist2d'] = self.plot_hist2d
 		self.prefs.commands['acorr'] = self.plot_acorr
+		self.prefs.commands['cycle'] = self.cycle_batch
 
 	def update_pref_callback(self):
 		try:
@@ -527,6 +528,36 @@ class plotter_gui(ui_general.gui):
 			self.ui_batch = gui_batch_loader(self)
 			self.ui_batch.setWindowTitle('Batch Load')
 			self.ui_batch.show()
+
+	def cycle_batch(self):
+		try:
+			ls = self.ui_batch.ui.get_lists()
+		except:
+			return
+		try:
+			i = self.cycle_number
+		except:
+			self.cycle_number = 0
+		try:
+			if not ls is None:
+				if len(ls[0]) > 0:
+					if self.cycle_number >= len(ls[0]):
+						self.cycle_number = 0
+					fn = ls[0][self.cycle_number]
+					self.load_traces(filename=fn,ncolors=self.ncolors)
+					self.ui_batch.ui.l1.setCurrentRow(self.cycle_number)
+					fn = ls[1][self.cycle_number]
+					if not fn is None:
+						self.load_classes(filename=fn)
+						self.ui_batch.ui.l2.clearSelection()
+						self.ui_batch.ui.l2.setCurrentRow(self.cycle_number)
+					self.cycle_number += 1
+
+					self.plot.initialize_plots()
+					self.initialize_sliders()
+					self.update_display_traces()
+		except:
+			return
 
 ################################################################################
 
