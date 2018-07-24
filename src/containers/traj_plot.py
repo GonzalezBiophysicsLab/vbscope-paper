@@ -331,29 +331,31 @@ class traj_plot_container():
 		m = nticks
 		if m <= 0: return ()
 		if ymax <= ymin: return ()
+		delta = ymax-ymin
 
-		delta = np.abs(ymax-ymin)
-		o = np.floor(np.log10(delta))
-		d = 10.**o
-		y0 = np.ceil(ymin/d)*d
-		delta = np.abs(ymax-y0)
+		d = 10.0**(np.floor(np.log10(delta)))
+		ind = np.arange(1,10)
+		ind = np.concatenate((1./ind[::-1],ind))
+		di = d*ind
+		for i in range(ind.size):
+			if np.floor(delta/di[i]) < m:
+				s = di[i]
+				break
+		y0 = np.ceil(ymin/s)*s
+		delta = ymax - y0
 
-		if delta <= d:
-			d /= 10.
-			y0 = np.ceil(ymin/d)*d
-			delta = np.abs(ymax-y0)
-		n = np.floor(delta/d)
-		f = 2.**(np.floor(np.log2(n/m))+1)
-		d*=f
-
-		if d<=0: return ()
-
-		y0 = np.ceil(ymin/d)*d
-		delta = np.abs(ymax-y0)
-		n = np.floor(delta/d)
-
-		ticks = np.linspace(y0,y0+n*d,n+1)
-		return ticks
+		d = 10.0**(np.floor(np.log10(delta)))
+		ind = np.arange(1,10)
+		ind = np.concatenate((1./ind[::-1],ind))
+		di = d*ind
+		for i in range(ind.size):
+			if np.floor(delta/di[i]) < m:
+				s = di[i]
+				break
+		y0 = np.ceil(ymin/s)*s
+		delta = ymax - y0
+		n = np.floor(delta/s+1e-10)
+		return y0 + np.arange(n+1)*s
 
 
 	def update_axis_geometry(self):

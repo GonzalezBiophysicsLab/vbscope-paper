@@ -127,7 +127,7 @@ class popout_plot_container_widget(QWidget):
 		pp = self.prefs
 		self.f.subplots_adjust(left=pp['subplots_left'],right=pp['subplots_right'],top=pp['subplots_top'],bottom=pp['subplots_bottom'],hspace=pp['subplots_hspace'],wspace=pp['subplots_wspace'])
 
-		for aa in self.ax:
+		for aa in self.ax.flatten():
 			dpr = self.f.canvas.devicePixelRatio()
 			for asp in ['top','bottom','left','right']:
 				aa.spines[asp].set_linewidth(pp['axes_linewidth']/dpr)

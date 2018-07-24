@@ -361,7 +361,7 @@ class plotter_gui(ui_general.gui):
 		plots.tdp.plot(self)
 
 	def plot_acorr(self):
-		self.raise_plot('plot_acorr', 'Autocorrelation Function Plot', 2,1, lambda: plots.autocorr.plot(self), plots.autocorr.default_prefs)
+		self.raise_plot('plot_acorr', 'Autocorrelation Function Plot', 1,1, lambda: plots.autocorr.plot(self), plots.autocorr.default_prefs, setup=lambda:plots.autocorr.setup(self))
 		plots.autocorr.plot(self)
 
 	def plot_tranM(self):
