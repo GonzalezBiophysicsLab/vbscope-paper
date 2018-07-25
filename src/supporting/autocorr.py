@@ -2,6 +2,40 @@
 import numpy as np
 import numba as nb
 from scipy import stats
+import numpy as np
+
+def gen_acf(tau,nsteps,tmatrix,mu,ppi=None):
+	## Using a transition probability matrix, not a rate matrix, or Q matrix
+	## because this comes straight out of an HMM
+
+	nstates,_ = tmatrix.shape
+	pi0 = np.eye(nstates)
+
+	## get steady state probabilities
+	ninf = nsteps*100
+	pinf = np.dot(np.linalg.matrix_power(tmatrix.T,ninf),pi0[0][:,None]) ## start anywhere...
+
+	## use fluctuations
+	mubar =  (pinf.flatten()*mu).sum()
+	mm = mu - mubar
+
+	n = np.arange(nsteps)
+	t = tau*n
+
+	E_y0yt = np.zeros((nstates,nstates,nsteps))
+	for i in range(nstates): # loop over initial state
+		for j in range(nstates): # loop over final state
+			for k in range(len(n)): # loop over time delay steps
+				## E[y_0*t_t] = \sum_ij m_i * m_j * (A^n \cdot \delta (P_i))_j * P_inf,i
+				E_y0yt[i,j,k] = mm[i]*mm[j] * (np.dot(np.linalg.matrix_power(tmatrix.T,n[k]),pi0[i])[j]) * pinf[i]
+
+	## take expectation value
+	z = E_y0yt.sum((0,1))
+
+	## normalize
+	z /= z[0]
+
+	return t,z
 
 @nb.jit(nopython=True)
 def acorr(d):
