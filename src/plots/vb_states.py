@@ -18,13 +18,13 @@ default_prefs = {
 
 	'textbox_x':0.96,
 	'textbox_y':0.93,
-	'textbox_fontsize':10.0,
+	'textbox_fontsize':8.0,
 	'textbox_nmol':True,
 
-	'fig_width':3.0,
+	'fig_width':2.0,
 	'fig_height':2.0,
 	'subplots_top':0.97,
-	'subplots_left':0.16,
+	'subplots_left':0.2
 }
 
 def plot(gui):
