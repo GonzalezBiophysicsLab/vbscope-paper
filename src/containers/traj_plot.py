@@ -234,7 +234,7 @@ class traj_plot_container():
 		fd = {'rotation':self.gui.prefs['plot_time_rotate'], 'ha':'center'}
 		if fd['rotation'] != 0: fd['ha'] = 'right'
 		xt = self.a[1][0].get_xticks()
-		self.a[1][0].set_xticklabels(["{0:.{1}f}".format(x - self.gui.prefs['plot_time_offset'],self.gui.prefs['plot_time_decimals']) for x in xt],fontdict=fd)
+		self.a[1][0].set_xticklabels(["{0:.{1}f}".format(x-self.gui.prefs['plot_time_offset'],self.gui.prefs['plot_time_decimals']) for x in xt],fontdict=fd)
 
 		fd = {}
 		yt = self.a[1][0].get_yticks()
@@ -272,8 +272,10 @@ class traj_plot_container():
 				self.plot_fret_hist(i,*fret_hists[i])
 
 			self.update_ticks()
+			self.update_axis_limits()
 			self.update_axis_geometry()
 			self.update_lines()
+
 			self.update_axis_labels()
 
 
@@ -284,10 +286,10 @@ class traj_plot_container():
 			self.canvas.update()
 			self.canvas.flush_events()
 
-			yl = self.a[1][0].get_ylim()
+			# yl = self.a[1][0].get_ylim()
 			# if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plot_fret_min'] or yl[1] != self.gui.prefs['plot_fret_max']:
-			if 1:
-				self.update_axis_limits()
+			# if 1:
+
 
 
 			self.draw()
