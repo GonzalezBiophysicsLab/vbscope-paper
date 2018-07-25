@@ -25,6 +25,7 @@ default_prefs = {
 'color_ceiling':.95,
 'color_floor':0.02,
 'color_nticks':5,
+'color_xloc':.75,
 
 'xlabel_rotate':0.,
 'ylabel_rotate':0.,
@@ -157,6 +158,9 @@ def plot(gui):
 		cb.ax.spines[asp].set_linewidth(pp['axes_linewidth']/dpr)
 	cb.solids.set_edgecolor('face')
 	cb.solids.set_rasterized(True)
+
+	pos = popplot.f.axes[1].get_position()
+	popplot.f.axes[1].set_position([popplot.prefs['color_xloc'],pos.y0,pos.width,pos.height])
 
 	####################################################
 	####################################################
