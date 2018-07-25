@@ -272,11 +272,12 @@ class traj_plot_container():
 				self.plot_fret_hist(i,*fret_hists[i])
 
 
-			self.update_axis_limits()
-			self.update_axis_geometry()
 			self.update_ticks()
-			self.update_axis_labels()
+
+			self.update_axis_geometry()
+			self.update_axis_limits()
 			self.update_lines()
+
 
 			[[[aaa.draw_artist(l) for l in aaa.lines] for aaa in aa] for aa in self.a]
 			[[self.f.canvas.blit(aaa.bbox) for aaa in aa] for aa in self.a]
@@ -288,7 +289,7 @@ class traj_plot_container():
 			# yl = self.a[1][0].get_ylim()
 			# if self.a[0][0].get_xlim()[1] != self.gui.data.d.shape[2]*self.gui.prefs['tau'] or yl[0] != self.gui.prefs['plot_fret_min'] or yl[1] != self.gui.prefs['plot_fret_max']:
 			# if 1:
-
+			self.update_axis_labels()
 
 
 			self.draw()
