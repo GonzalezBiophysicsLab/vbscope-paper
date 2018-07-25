@@ -155,7 +155,7 @@ class traj_plot_container():
 			intensities /= q[None,:]
 
 
-		t = np.arange(intensities.shape[1])*self.gui.prefs['tau']
+		t = np.arange(intensities.shape[1])*self.gui.prefs['tau'] + self.gui.prefs['plot_time_offset']
 
 		downsample = int(self.gui.prefs['plot_downsample'])
 		if downsample != 1:
@@ -234,7 +234,7 @@ class traj_plot_container():
 		fd = {'rotation':self.gui.prefs['plot_time_rotate'], 'ha':'center'}
 		if fd['rotation'] != 0: fd['ha'] = 'right'
 		xt = self.a[1][0].get_xticks()
-		self.a[1][0].set_xticklabels(["{0:.{1}f}".format(x-self.gui.prefs['plot_time_offset'],self.gui.prefs['plot_time_decimals']) for x in xt],fontdict=fd)
+		self.a[1][0].set_xticklabels(["{0:.{1}f}".format(x,self.gui.prefs['plot_time_decimals']) for x in xt],fontdict=fd)
 
 		fd = {}
 		yt = self.a[1][0].get_yticks()
@@ -271,13 +271,12 @@ class traj_plot_container():
 			for i in range(len(fret_hists)):
 				self.plot_fret_hist(i,*fret_hists[i])
 
-			self.update_ticks()
+
 			self.update_axis_limits()
 			self.update_axis_geometry()
-			self.update_lines()
-
+			self.update_ticks()
 			self.update_axis_labels()
-
+			self.update_lines()
 
 			[[[aaa.draw_artist(l) for l in aaa.lines] for aaa in aa] for aa in self.a]
 			[[self.f.canvas.blit(aaa.bbox) for aaa in aa] for aa in self.a]
