@@ -244,7 +244,7 @@ def recalc(gui):
 	for i in range(2):
 		popplot.ens.ci[i] = filter(popplot.ens.ci[i],pp)
 	####
-	b = popplot.fpb.mean()**2.
+	b = np.nanmean(popplot.fpb)**2.
 	popplot.ens.y -= b
 	norm = popplot.ens.y[0]
 	popplot.ens.y /= norm
@@ -264,15 +264,18 @@ def recalc(gui):
 
 	popplot.ens.tc = np.sum(popplot.ens.y)
 	popplot.ens.exp_ps = exponential_power_spec(popplot.ens.freq,popplot.ens.k[0])
-	tp = popplot.ens.k2
-	if not np.any(np.isnan(tp[0])):
-		popplot.ens.exp_ps2 = tp[0]*exponential_power_spec(popplot.ens.freq,tp[2]) + tp[1]*exponential_power_spec(popplot.ens.freq,tp[3])
-	tp = popplot.ens.k3
-	if not np.any(np.isnan(tp[0])):
-		popplot.ens.exp_ps3 = tp[0]*exponential_power_spec(popplot.ens.freq,tp[3]) + tp[1]*exponential_power_spec(popplot.ens.freq,tp[4]) + tp[2]*exponential_power_spec(popplot.ens.freq,tp[5])
-	tp = popplot.ens.k4
-	if not np.any(np.isnan(tp[0])):
-		popplot.ens.exp_ps4 = tp[0]*exponential_power_spec(popplot.ens.freq,tp[4]) + tp[1]*exponential_power_spec(popplot.ens.freq,tp[5]) + tp[2]*exponential_power_spec(popplot.ens.freq,tp[6]) + tp[3]*exponential_power_spec(popplot.ens.freq,tp[7])
+	try:
+		tp = popplot.ens.k2
+		if not np.any(np.isnan(tp[0])):
+			popplot.ens.exp_ps2 = tp[0]*exponential_power_spec(popplot.ens.freq,tp[2]) + tp[1]*exponential_power_spec(popplot.ens.freq,tp[3])
+		tp = popplot.ens.k3
+		if not np.any(np.isnan(tp[0])):
+			popplot.ens.exp_ps3 = tp[0]*exponential_power_spec(popplot.ens.freq,tp[3]) + tp[1]*exponential_power_spec(popplot.ens.freq,tp[4]) + tp[2]*exponential_power_spec(popplot.ens.freq,tp[5])
+		tp = popplot.ens.k4
+		if not np.any(np.isnan(tp[0])):
+			popplot.ens.exp_ps4 = tp[0]*exponential_power_spec(popplot.ens.freq,tp[4]) + tp[1]*exponential_power_spec(popplot.ens.freq,tp[5]) + tp[2]*exponential_power_spec(popplot.ens.freq,tp[6]) + tp[3]*exponential_power_spec(popplot.ens.freq,tp[7])
+	except:
+		pass
 
 	#### Individual Data
 	## y - list of ACF means
@@ -289,10 +292,10 @@ def recalc(gui):
 	popplot.ind.y = []
 	for i in range(popplot.fpb.shape[0]):
 		posterior = ensemble_bayes_acorr(popplot.fpb[i].reshape((1,popplot.fpb[i].size)))
-		yyy = filter(posterior[0])
+		yyy = filter(posterior[0],pp)
 		yyy -= b
-		yyy/norm
-		popplot.ind.y.append(yyy,pp)
+		yyy/=norm
+		popplot.ind.y.append(yyy)
 		# popplot.ind.y.append(filter(posterior[0],pp))
 		# popplot.ind.y.append(filter(posterior[0]/posterior[0][0],pp))
 	popplot.ind.y = np.array(popplot.ind.y)
@@ -324,13 +327,16 @@ def recalc(gui):
 	# popplot.ind.exp_ps = np.array(popplot.ind.exp_ps)[:,x]
 	# popplot.ind.exp_ps2 = np.array(popplot.ind.exp_ps2)[:,x]
 
-	ksx = np.isfinite(popplot.ind.k)
-	popplot.ind.k_kde_x = np.linspace(0,popplot.ind.k[ksx].max()*1.2,1000)
-	popplot.ind.k_kde_y = kde(popplot.ind.k_kde_x,popplot.ind.k[ksx],pp['kde_bandwidth'])
+	try:
+		ksx = np.isfinite(popplot.ind.k)
+		popplot.ind.k_kde_x = np.linspace(0,popplot.ind.k[ksx].max()*1.2,1000)
+		popplot.ind.k_kde_y = kde(popplot.ind.k_kde_x,popplot.ind.k[ksx],pp['kde_bandwidth'])
 
-	tcx = np.isfinite(popplot.ind.tc)
-	popplot.ind.tc_kde_x = np.linspace(0,popplot.ind.tc[tcx].max()*1.2,1000)
-	popplot.ind.tc_kde_y = kde(popplot.ind.tc_kde_x,popplot.ind.tc[tcx],pp['kde_bandwidth'])
+		tcx = np.isfinite(popplot.ind.tc)
+		popplot.ind.tc_kde_x = np.linspace(0,popplot.ind.tc[tcx].max()*1.2,1000)
+		popplot.ind.tc_kde_y = kde(popplot.ind.tc_kde_x,popplot.ind.tc[tcx],pp['kde_bandwidth'])
+	except:
+		pass
 
 	#### HMM Data
 	## t - ACF time
@@ -350,6 +356,8 @@ def recalc(gui):
 			tmatrix = hr.result.tmstar
 			ppi = hr.result.ppi
 			popplot.hmm.t,popplot.hmm.y = gen_acf(1.,popplot.ens.y.size,tmatrix,mu,ppi)
+			popplot.hmm.y -= b
+			popplot.hmm.y /= norm
 
 			x,w,f = power_spec(popplot.hmm.t,popplot.hmm.y)
 			popplot.hmm.fft = f[x]
