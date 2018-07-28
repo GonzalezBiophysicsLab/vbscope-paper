@@ -17,7 +17,7 @@ def gen_acf(tau,nsteps,tmatrix,mu,ppi=None):
 
 	## use fluctuations
 	mubar =  (pinf.flatten()*mu).sum()
-	mm = mu - mubar
+	mm = mu #- mubar
 
 	n = np.arange(nsteps)
 	t = tau*n
@@ -33,7 +33,7 @@ def gen_acf(tau,nsteps,tmatrix,mu,ppi=None):
 	z = E_y0yt.sum((0,1))
 
 	## normalize
-	z /= z[0]
+	# z /= z[0]
 
 	return t,z
 
@@ -72,7 +72,8 @@ def ensemble_bayes_acorr(dd):
 	abar = nm1/nm2
 
 	for i in range(N):
-		temp = acorr_counts(dd[i]-abar)
+		# temp = acorr_counts(dd[i]-abar)
+		temp = acorr_counts(dd[i])
 		y += temp[0]
 		n += temp[1]
 
@@ -83,7 +84,7 @@ def ensemble_bayes_acorr(dd):
 	# Priors
 	a0 = .001
 	k0 = .001
-	m0 = 0.
+	m0 = abar**2.
 	b0 = .5
 
 	ybar = y/n

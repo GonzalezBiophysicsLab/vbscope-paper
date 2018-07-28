@@ -63,7 +63,7 @@ default_prefs = {
 
 'show_ens':True,
 'show_ind':True,
-'show_med':False,
+'show_mean':False,
 'show_exp1':False,
 'show_exp2':False,
 'show_exp3':False,
@@ -110,11 +110,15 @@ def exp4fxn(t,a1,a2,a3,a4,k1,k2,k3,k4):
 
 def fit_exp1(t,d):
 	k0 = 1./(t[np.argmax(d<.3679)]+1e-6)
-	p,c = curve_fit(exp1fxn,t,d,p0=[k0])
-	if not np.any(c == np.inf):
-		return p
-	else:
+	try:
+		p,c = curve_fit(exp1fxn,t,d,p0=[k0],maxfev=1000)
+		if not np.any(c == np.inf):
+			return p
+		else:
+			return np.array([np.nan])
+	except:
 		return np.array([np.nan])
+
 
 def fit_exp2(t,d):
 	p = fit_exp1(t,d)
@@ -233,26 +237,30 @@ def recalc(gui):
 	popplot.ens = obj()
 	popplot.ens.posterior = ensemble_bayes_acorr(popplot.fpb)
 
-	norm = popplot.ens.posterior[0][0]
+	norm = 1.#popplot.ens.posterior[0][0]
 	popplot.ens.y = filter(popplot.ens.posterior[0]/norm,pp)
 	popplot.ens.t = t
 	popplot.ens.ci = credible_interval(popplot.ens.posterior)/norm
 	for i in range(2):
 		popplot.ens.ci[i] = filter(popplot.ens.ci[i],pp)
+	####
+	b = popplot.fpb.mean()**2.
+	popplot.ens.y -= b
+	norm = popplot.ens.y[0]
+	popplot.ens.y /= norm
+	popplot.ens.ci -= b
+	popplot.ens.ci /= norm
 
 	x,w,f = power_spec(popplot.ens.t,popplot.ens.y)
 	popplot.ens.fft = f[x]
 	popplot.ens.freq = w[x]
-
-	popplot.ens.k = fit_exp1(popplot.ens.t,popplot.ens.y)
-	popplot.ens.k2 = fit_exp2(popplot.ens.t,popplot.ens.y)
-	popplot.ens.k3 = fit_exp3(popplot.ens.t,popplot.ens.y)
-	popplot.ens.k4 = fit_exp4(popplot.ens.t,popplot.ens.y)
-	print "\n"
-	print popplot.ens.k
-	print popplot.ens.k2
-	print popplot.ens.k
-	np.save('test.npy',popplot.ens.y)
+	try:
+		popplot.ens.k = fit_exp1(popplot.ens.t,popplot.ens.y)
+		popplot.ens.k2 = fit_exp2(popplot.ens.t,popplot.ens.y)
+		popplot.ens.k3 = fit_exp3(popplot.ens.t,popplot.ens.y)
+		popplot.ens.k4 = fit_exp4(popplot.ens.t,popplot.ens.y)
+	except:
+		pass
 
 	popplot.ens.tc = np.sum(popplot.ens.y)
 	popplot.ens.exp_ps = exponential_power_spec(popplot.ens.freq,popplot.ens.k[0])
@@ -281,7 +289,12 @@ def recalc(gui):
 	popplot.ind.y = []
 	for i in range(popplot.fpb.shape[0]):
 		posterior = ensemble_bayes_acorr(popplot.fpb[i].reshape((1,popplot.fpb[i].size)))
-		popplot.ind.y.append(filter(posterior[0]/posterior[0][0],pp))
+		yyy = filter(posterior[0])
+		yyy -= b
+		yyy/norm
+		popplot.ind.y.append(yyy,pp)
+		# popplot.ind.y.append(filter(posterior[0],pp))
+		# popplot.ind.y.append(filter(posterior[0]/posterior[0][0],pp))
 	popplot.ind.y = np.array(popplot.ind.y)
 	popplot.ind.t = t
 
@@ -467,8 +480,9 @@ def plot_autocorrelation(gui,popplot,pp):
 	if pp['show_ind']:
 		for i in range(popplot.ind.y.shape[0]):
 			popplot.ax[0].plot(popplot.ind.t*tau, popplot.ind.y[i], color='k', alpha=pp['line_ind_alpha'])
-	if pp['show_med']:
-		popplot.ax[0].plot(popplot.ind.t*tau, np.median(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+	if pp['show_mean']:
+		# popplot.ax[0].plot(popplot.ind.t*tau, np.median(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+		popplot.ax[0].plot(popplot.ind.t*tau, np.mean(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
 
 	popplot.ax[0].set_xscale('linear')
 	if pp['time_scale'] == 'log':
@@ -501,8 +515,9 @@ def plot_powerspectrum(gui,popplot,pp):
 	if pp['show_ind']:
 		for i in range(popplot.ind.y.shape[0]):
 			popplot.ax[0].semilogy(popplot.ind.freq/tau,np.abs(popplot.ind.fft[i]),color='k',alpha=pp['line_ind_alpha'],zorder=-2)
-	if pp['show_med']:
-		popplot.ax[0].semilogy(popplot.ind.freq/tau, np.median(popplot.ind.fft,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+	if pp['show_mean']:
+		# popplot.ax[0].semilogy(popplot.ind.freq/tau, np.median(popplot.ind.fft,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+		popplot.ax[0].semilogy(popplot.ind.freq/tau, np.mean(popplot.ind.fft,axis=0), color='orange', alpha=pp['line_ens_alpha'])
 
 	popplot.ax[0].set_ylim(pp['power_min'],pp['power_max'])
 	ft = popplot.ind.freq/tau
