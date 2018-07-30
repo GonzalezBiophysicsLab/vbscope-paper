@@ -145,13 +145,15 @@ def fit_exp3(t,d):
 	x0 = [p[0]/2.,p[1]/2.,(p[0]+p[1])/2.,p[2]/2.,p[3]*2,(p[2]+p[3])/2.]
 	# n = -1
 	# while n*-1 < d.size:
-		# try:
 	if 1:
-			p,c = curve_fit(exp3fxn,t[:-2],d[:-2],p0=x0,maxfev=10000)
+		p = x0
+		try:
+	# if 1:
+			p,c = curve_fit(exp3fxn,t[:-2],d[:-2],p0=x0,maxfev=1000)
 			# if not np.any(c == np.inf):
 				# break
-		# except:
-			# pass
+		except:
+			pass
 		# n -= 10
 	return p
 
@@ -220,6 +222,7 @@ def recalc(gui):
 	popplot.fpb = gui.data.get_plot_data(pp['filter_data'])[0].copy() ## FRET from unfiltered intensities
 	popplot.fpb[popplot.fpb > 1.5] = 1.5
 	popplot.fpb[popplot.fpb<-.5] = -.5
+	baseline = np.nanmean(popplot.fpb)
 
 	t = np.arange(popplot.fpb.shape[1])
 
@@ -235,20 +238,20 @@ def recalc(gui):
 	## exp_ps - analytical power spectrum for single exponential from 'k'
 
 	popplot.ens = obj()
-	popplot.ens.posterior = ensemble_bayes_acorr(popplot.fpb)
+	popplot.ens.posterior = ensemble_bayes_acorr(popplot.fpb-baseline)
 
-	norm = 1.#popplot.ens.posterior[0][0]
-	popplot.ens.y = filter(popplot.ens.posterior[0]/norm,pp)
+	norm = popplot.ens.posterior[0][0]
+	popplot.ens.y = filter(popplot.ens.posterior[0],pp)
 	popplot.ens.t = t
 	popplot.ens.ci = credible_interval(popplot.ens.posterior)/norm
 	for i in range(2):
-		popplot.ens.ci[i] = filter(popplot.ens.ci[i],pp)
+		popplot.ens.ci[i] = filter(popplot.ens.ci[i],pp)/norm
 	####
-	b = np.nanmean(popplot.fpb)**2.
-	popplot.ens.y -= b
-	norm = popplot.ens.y[0]
+
+	# popplot.ens.y -= baseline
+	# norm = popplot.ens.y[0]
 	popplot.ens.y /= norm
-	popplot.ens.ci -= b
+	# popplot.ens.ci -= baseline
 	popplot.ens.ci /= norm
 
 	x,w,f = power_spec(popplot.ens.t,popplot.ens.y)
@@ -291,10 +294,10 @@ def recalc(gui):
 	popplot.ind = obj()
 	popplot.ind.y = []
 	for i in range(popplot.fpb.shape[0]):
-		posterior = ensemble_bayes_acorr(popplot.fpb[i].reshape((1,popplot.fpb[i].size)))
+		ff = popplot.fpb[i].reshape((1,popplot.fpb[i].size))
+		posterior = ensemble_bayes_acorr(ff-np.nanmean(ff))
 		yyy = filter(posterior[0],pp)
-		yyy -= b
-		yyy/=norm
+		yyy/=yyy[0]
 		popplot.ind.y.append(yyy)
 		# popplot.ind.y.append(filter(posterior[0],pp))
 		# popplot.ind.y.append(filter(posterior[0]/posterior[0][0],pp))
@@ -356,8 +359,8 @@ def recalc(gui):
 			tmatrix = hr.result.tmstar
 			ppi = hr.result.ppi
 			popplot.hmm.t,popplot.hmm.y = gen_acf(1.,popplot.ens.y.size,tmatrix,mu,ppi)
-			popplot.hmm.y -= b
-			popplot.hmm.y /= norm
+			# popplot.hmm.y -= b
+			# popplot.hmm.y /= norm
 
 			x,w,f = power_spec(popplot.hmm.t,popplot.hmm.y)
 			popplot.hmm.fft = f[x]
@@ -489,7 +492,6 @@ def plot_autocorrelation(gui,popplot,pp):
 		for i in range(popplot.ind.y.shape[0]):
 			popplot.ax[0].plot(popplot.ind.t*tau, popplot.ind.y[i], color='k', alpha=pp['line_ind_alpha'])
 	if pp['show_mean']:
-		# popplot.ax[0].plot(popplot.ind.t*tau, np.median(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
 		popplot.ax[0].plot(popplot.ind.t*tau, np.mean(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
 
 	popplot.ax[0].set_xscale('linear')
@@ -501,6 +503,7 @@ def plot_autocorrelation(gui,popplot,pp):
 	popplot.ax[0].set_ylim(pp['acorr_min'],pp['acorr_max'])
 
 	if pp['show_hmm']:
+
 		if not gui.data.hmm_result is None and not popplot.hmm is None:
 			hr = gui.data.hmm_result
 			if hr.type == 'consensus vbfret':
@@ -524,8 +527,9 @@ def plot_powerspectrum(gui,popplot,pp):
 		for i in range(popplot.ind.y.shape[0]):
 			popplot.ax[0].semilogy(popplot.ind.freq/tau,np.abs(popplot.ind.fft[i]),color='k',alpha=pp['line_ind_alpha'],zorder=-2)
 	if pp['show_mean']:
-		# popplot.ax[0].semilogy(popplot.ind.freq/tau, np.median(popplot.ind.fft,axis=0), color='orange', alpha=pp['line_ens_alpha'])
-		popplot.ax[0].semilogy(popplot.ind.freq/tau, np.mean(popplot.ind.fft,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+		q = np.mean(popplot.ind.y,axis=0)
+		x,w,f = power_spec(popplot.ens.t,q)
+		popplot.ax[0].semilogy(w[x]/tau, f[x], color='orange', alpha=pp['line_ens_alpha'])
 
 	popplot.ax[0].set_ylim(pp['power_min'],pp['power_max'])
 	ft = popplot.ind.freq/tau

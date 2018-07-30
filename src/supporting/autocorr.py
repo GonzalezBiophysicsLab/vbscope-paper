@@ -17,7 +17,7 @@ def gen_acf(tau,nsteps,tmatrix,mu,ppi=None):
 
 	## use fluctuations
 	mubar =  (pinf.flatten()*mu).sum()
-	mm = mu #- mubar
+	mm = mu - mubar
 
 	n = np.arange(nsteps)
 	t = tau*n
@@ -33,7 +33,7 @@ def gen_acf(tau,nsteps,tmatrix,mu,ppi=None):
 	z = E_y0yt.sum((0,1))
 
 	## normalize
-	# z /= z[0]
+	z /= z[0]
 
 	return t,z
 
