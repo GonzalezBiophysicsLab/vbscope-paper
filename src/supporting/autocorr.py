@@ -4,7 +4,7 @@ import numba as nb
 from scipy import stats
 import numpy as np
 
-def gen_acf(tau,nsteps,tmatrix,mu,ppi=None):
+def gen_acf(tau,nsteps,tmatrix,mu,var,ppi=None):
 	## Using a transition probability matrix, not a rate matrix, or Q matrix
 	## because this comes straight out of an HMM
 
@@ -31,6 +31,10 @@ def gen_acf(tau,nsteps,tmatrix,mu,ppi=None):
 
 	## take expectation value
 	z = E_y0yt.sum((0,1))
+
+	## Add Gaussian noise term
+	for i in range(nstates):
+		z[0] += var[i]*pinf[i]
 
 	## normalize
 	z /= z[0]

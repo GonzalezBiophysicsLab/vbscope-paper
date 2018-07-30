@@ -241,18 +241,18 @@ def recalc(gui):
 	popplot.ens.posterior = ensemble_bayes_acorr(popplot.fpb-baseline)
 
 	norm = popplot.ens.posterior[0][0]
-	popplot.ens.y = filter(popplot.ens.posterior[0],pp)
+	popplot.ens.y = filter(popplot.ens.posterior[0],pp) / norm
 	popplot.ens.t = t
-	popplot.ens.ci = credible_interval(popplot.ens.posterior)/norm
+	popplot.ens.ci = credible_interval(popplot.ens.posterior)
 	for i in range(2):
 		popplot.ens.ci[i] = filter(popplot.ens.ci[i],pp)/norm
 	####
 
 	# popplot.ens.y -= baseline
 	# norm = popplot.ens.y[0]
-	popplot.ens.y /= norm
+	# popplot.ens.y /= norm
 	# popplot.ens.ci -= baseline
-	popplot.ens.ci /= norm
+	# popplot.ens.ci /= norm
 
 	x,w,f = power_spec(popplot.ens.t,popplot.ens.y)
 	popplot.ens.fft = f[x]
@@ -294,10 +294,10 @@ def recalc(gui):
 	popplot.ind = obj()
 	popplot.ind.y = []
 	for i in range(popplot.fpb.shape[0]):
-		ff = popplot.fpb[i].reshape((1,popplot.fpb[i].size))
+		ff = popplot.fpb[i].reshape((1,popplot.fpb[i].size)) - baseline
 		posterior = ensemble_bayes_acorr(ff-np.nanmean(ff))
-		yyy = filter(posterior[0],pp)
-		yyy/=yyy[0]
+		inorm = posterior[0][0]
+		yyy = filter(posterior[0],pp)/inorm
 		popplot.ind.y.append(yyy)
 		# popplot.ind.y.append(filter(posterior[0],pp))
 		# popplot.ind.y.append(filter(posterior[0]/posterior[0][0],pp))
@@ -358,7 +358,8 @@ def recalc(gui):
 			var = hr.result.var
 			tmatrix = hr.result.tmstar
 			ppi = hr.result.ppi
-			popplot.hmm.t,popplot.hmm.y = gen_acf(1.,popplot.ens.y.size,tmatrix,mu,ppi)
+			var = hr.result.var
+			popplot.hmm.t,popplot.hmm.y = gen_acf(1.,popplot.ens.y.size,tmatrix,mu,var,ppi)
 			# popplot.hmm.y -= b
 			# popplot.hmm.y /= norm
 
