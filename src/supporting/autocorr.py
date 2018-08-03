@@ -5,11 +5,10 @@ from scipy import stats
 import numpy as np
 
 #### testing
-# import numpy as np
 # dt = 0.025
-# emissions = np.array((.1,.3,.6,.9))
+# mu = np.array((.1,.3,.6,.9))
 # noise = 0.01
-# var = np.zeros_like(emissions) + noise**2.
+# var = np.zeros_like(mu) + noise**2.
 # rates = 10. * np.array(((0.,.005,.003,.001),(.001,0.,.002,.002),(.004,.003,.0,.004),(0.002,.003,.001,0.)))
 # from scipy.linalg import expm
 # q = rates.copy()
@@ -17,45 +16,74 @@ import numpy as np
 # 	q[i,i] = - q[i].sum()
 # tmatrix = expm(q*dt)
 # tinf = 1000./np.abs(q).min()
-# pinf = expm(q*tinf)[0]
+# popplot.hmm.t,popplot.hmm.y = gen_mc_acf(1.,popplot.ens.y.size,tmatrix,mu,var,ppi)
+# popplot.hmm.t,popplot.hmm.y = gen_mc_acf_q(dt,popplot.ens.y.size,q,mu,var,ppi)
+# popplot.hmm.t /= dt
 
+def gen_mc_acf_q(tau,nsteps,q,mu,var,ppi):
+	## Using a Q matrix, not a transition probability matrix
+	## note..... these are transposed relative to tmatrix out of hmm routines
 
-def gen_acf(tau,nsteps,tmatrix,mu,var,ppi=None):
-	## Using a transition probability matrix, not a rate matrix, or Q matrix
-	## because this comes straight out of an HMM
-
-	nstates,_ = tmatrix.shape
+	nstates,_ = q.shape
 	pi0 = np.eye(nstates)
 
 	## get steady state probabilities
-	ninf = nsteps*100
-	pinf = np.dot(np.linalg.matrix_power(tmatrix.T,ninf),pi0[0][:,None]).flatten() ## start anywhere...
+	from scipy.linalg import expm
+	tinf = 1000./np.abs(q).min()
+	pinf = expm(q*tinf)[0]
 
 	## use fluctuations
 	mubar =  (pinf*mu).sum()
 	mm = mu - mubar
 
-	n = np.arange(nsteps)
-	t = tau*n
+	### expectation here
+	E_y0yt = np.zeros(nsteps)
+	for k in range(nsteps): # loop over time delay steps
+		tp = expm(q*tau*k)
+		for i in range(nstates): # loop over initial state
+			for j in range(nstates): # loop over final state
+				E_y0yt[k] += mm[i]*mm[j] * np.dot(tp.T,pi0[i])[j] * pinf[i]
 
-	E_y0yt = np.zeros((nstates,nstates,nsteps))
+	## add gaussian noise terms
+	for i in range(nstates):
+		E_y0yt[0] += var[i]*pinf[i]
+	## normalize
+	E_y0yt /= E_y0yt[0]
+
+	t = tau*np.arange(nsteps)
+	return t,E_y0yt
+
+@nb.njit
+def gen_mc_acf(tau,nsteps,tmatrix,mu,var,ppi):
+	## Using a transition probability matrix, not a rate matrix, or Q matrix
+	## because this comes straight out of an HMM.... so not quick exact
+
+	nstates,_ = tmatrix.shape
+	pi0 = np.eye(nstates)
+
+	## get steady state probabilities
+	pinf = np.linalg.matrix_power(tmatrix.T,100*int(1./tmatrix.min()))[:,0]
+
+	## use fluctuations
+	mubar =  (pinf*mu).sum()
+	mm = mu - mubar
+
+	### expectation here
+	E_y0yt = np.zeros(nsteps)
 	for i in range(nstates): # loop over initial state
 		for j in range(nstates): # loop over final state
-			for k in range(len(n)): # loop over time delay steps
+			for k in range(nsteps): # loop over time delay steps
 				## E[y_0*t_t] = \sum_ij m_i * m_j * (A^n \cdot \delta (P_i))_j * P_inf,i
-				E_y0yt[i,j,k] = mm[i]*mm[j] * (np.dot(np.linalg.matrix_power(tmatrix.T,n[k]),pi0[i])[j]) * pinf[i]
+				E_y0yt[k] += mm[i]*mm[j] * (np.dot(np.linalg.matrix_power(tmatrix.T,k),pi0[i])[j]) * pinf[i]
 
-	## take expectation value
-	z = E_y0yt.sum((0,1))
-
-	## Add Gaussian noise term
+	## add gaussian noise terms
 	for i in range(nstates):
-		z[0] += var[i]*pinf[i]
-
+		E_y0yt[0] += var[i]*pinf[i]
 	## normalize
-	z /= z[0]
+	E_y0yt /= E_y0yt[0]
 
-	return t,z
+	t = tau*np.arange(nsteps)
+	return t,E_y0yt
 
 @nb.jit(nopython=True)
 def acorr(d):

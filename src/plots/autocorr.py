@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit,minimize
 from PyQt5.QtWidgets import QPushButton, QComboBox
 from matplotlib import ticker
+import numba as nb
 
 default_prefs = {
 'subplots_left':.15,
@@ -88,6 +89,7 @@ def filter(x,pp):
 		pass
 	return x
 
+@nb.njit
 def exp1fxn(t,c1,k1,ev):
 	norm = ev + c1
 	if ev/norm <= 0.01 or k1 > 1.: return t*0. + np.inf
@@ -95,6 +97,7 @@ def exp1fxn(t,c1,k1,ev):
 	y[np.nonzero(t==0.)] += ev
 	return y/norm
 
+@nb.njit
 def exp2fxn(t,c1,c2,k1,k2,ev):
 	norm = ev + c1 + c2
 	if ev/norm <= 0.01 or k1 > 1. or k2 > 1.: return t*0. + np.inf
@@ -102,6 +105,7 @@ def exp2fxn(t,c1,c2,k1,k2,ev):
 	y[np.nonzero(t==0.)] += ev
 	return y/norm
 
+@nb.njit
 def exp3fxn(t,c1,c2,c3,k1,k2,k3,ev):
 	norm = ev + c1 + c2 + c3
 	if ev/norm <= 0.01 or k1 > 1. or k2 > 1. or k3 > 1.: return t*0. + np.inf
@@ -109,6 +113,7 @@ def exp3fxn(t,c1,c2,c3,k1,k2,k3,ev):
 	y[np.nonzero(t==0.)] += ev
 	return y/norm
 
+@nb.njit
 def exp4fxn(t,c1,c2,c3,c4,k1,k2,k3,k4,ev):
 	norm = ev + c1 + c2 + c3 + c4
 	if ev/norm <= 0.01 or k1 > 1. or k2 > 1. or k3 > 1. or k4 > 1.: return t*0. + np.inf
@@ -266,7 +271,7 @@ def recalc(gui):
 	if gui.ncolors != 2:
 		return
 
-	from ..supporting.autocorr import ensemble_bayes_acorr,credible_interval,gen_acf
+	from ..supporting.autocorr import ensemble_bayes_acorr,credible_interval,gen_mc_acf,gen_mc_acf_q
 	from scipy.ndimage import gaussian_filter1d
 
 	## get data
@@ -378,7 +383,7 @@ def recalc(gui):
 			var = hr.result.var
 			tmatrix = hr.result.tmstar
 			ppi = hr.result.ppi
-			popplot.hmm.t,popplot.hmm.y = gen_acf(1.,popplot.ens.y.size,tmatrix,mu,var,ppi)
+			popplot.hmm.t,popplot.hmm.y = gen_mc_acf(1.,popplot.ens.y.size,tmatrix,mu,var,ppi)
 			popplot.hmm.freq,popplot.hmm.fft = power_spec(popplot.hmm.t,popplot.hmm.y)
 			popplot.hmm.tc = np.sum(popplot.hmm.y)
 
