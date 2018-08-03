@@ -113,7 +113,6 @@ class popout_plot_container_widget(QWidget):
 		self.f.resizeEvent = lambda e: e.ignore()
 		self.resizeEvent = lambda e: e.ignore()
 
-
 	def open_preferences(self):
 		try:
 			if not self.qd_prefs.isVisible():
@@ -121,7 +120,6 @@ class popout_plot_container_widget(QWidget):
 			self.qd_prefs.raise_()
 		except:
 			self.qd_prefs.show()
-
 
 	def fix_ax(self):
 		pp = self.prefs

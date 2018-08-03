@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 
 default_prefs = {
 'subplots_top':0.97,
@@ -189,8 +190,10 @@ def plot(gui):
 	fd = {'rotation':pp['xlabel_rotate'], 'ha':'center'}
 	if fd['rotation'] != 0: fd['ha'] = 'right'
 	popplot.ax[0].set_xticklabels(["{0:.{1}f}".format(x, pp['xlabel_decimals']) for x in popplot.ax[0].get_xticks()], fontdict=fd)
+	popplot.ax[0].xaxis.set_major_formatter(ticker.FuncFormatter(lambda x,pos: "{0:.{1}f}".format(x,pp['xlabel_decimals'])))
 
 	fd = {'rotation':pp['ylabel_rotate']}
 	popplot.ax[0].set_yticklabels(["{0:.{1}f}".format(y, pp['ylabel_decimals']) for y in popplot.ax[0].get_yticks()], fontdict=fd)
+	popplot.ax[0].yaxis.set_major_formatter(ticker.FuncFormatter(lambda y,pos: "{0:.{1}f}".format(y,pp['ylabel_decimals'])))
 
 	popplot.f.canvas.draw()

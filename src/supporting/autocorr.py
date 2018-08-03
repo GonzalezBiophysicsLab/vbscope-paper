@@ -4,6 +4,22 @@ import numba as nb
 from scipy import stats
 import numpy as np
 
+#### testing
+# import numpy as np
+# dt = 0.025
+# emissions = np.array((.1,.3,.6,.9))
+# noise = 0.01
+# var = np.zeros_like(emissions) + noise**2.
+# rates = 10. * np.array(((0.,.005,.003,.001),(.001,0.,.002,.002),(.004,.003,.0,.004),(0.002,.003,.001,0.)))
+# from scipy.linalg import expm
+# q = rates.copy()
+# for i in range(q.shape[0]):
+# 	q[i,i] = - q[i].sum()
+# tmatrix = expm(q*dt)
+# tinf = 1000./np.abs(q).min()
+# pinf = expm(q*tinf)[0]
+
+
 def gen_acf(tau,nsteps,tmatrix,mu,var,ppi=None):
 	## Using a transition probability matrix, not a rate matrix, or Q matrix
 	## because this comes straight out of an HMM
@@ -13,10 +29,10 @@ def gen_acf(tau,nsteps,tmatrix,mu,var,ppi=None):
 
 	## get steady state probabilities
 	ninf = nsteps*100
-	pinf = np.dot(np.linalg.matrix_power(tmatrix.T,ninf),pi0[0][:,None]) ## start anywhere...
+	pinf = np.dot(np.linalg.matrix_power(tmatrix.T,ninf),pi0[0][:,None]).flatten() ## start anywhere...
 
 	## use fluctuations
-	mubar =  (pinf.flatten()*mu).sum()
+	mubar =  (pinf*mu).sum()
 	mm = mu - mubar
 
 	n = np.arange(nsteps)

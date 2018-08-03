@@ -20,7 +20,7 @@ class traj_container():
 
 	def filter(self,y):
 		from scipy import signal
-		from scipy.ndimage import gaussian_filter1d
+		from scipy.ndimage import gaussian_filter1d,median_filter
 
 		method = self.gui.prefs['filter_method']
 		w = float(self.gui.prefs['filter_width'])
@@ -32,6 +32,9 @@ class traj_container():
 			w = int(np.floor(w/2)*2+1)
 			w = np.max((w,3))
 			return signal.wiener(y,mysize=w)
+		elif method == 2:
+			w = int(np.max((1,w)))
+			return median_filter(y,w)
 		else:
 			if w < 2: w = 2.
 			b, a = signal.bessel(8, 1./w)

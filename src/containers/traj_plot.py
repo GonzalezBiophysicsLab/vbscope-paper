@@ -5,6 +5,7 @@ from matplotlib.patches import RegularPolygon
 from matplotlib.collections import PatchCollection
 from matplotlib.widgets import  RectangleSelector
 from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget
+from matplotlib import ticker
 
 import numpy as np
 
@@ -231,16 +232,20 @@ class traj_plot_container():
 		self.update_decimals()
 
 	def update_decimals(self):
+
 		fd = {'rotation':self.gui.prefs['plot_time_rotate'], 'ha':'center'}
 		if fd['rotation'] != 0: fd['ha'] = 'right'
 		xt = self.a[1][0].get_xticks()
 		self.a[1][0].set_xticklabels(["{0:.{1}f}".format(x,self.gui.prefs['plot_time_decimals']) for x in xt],fontdict=fd)
+		self.a[1][0].xaxis.set_major_formatter(ticker.FuncFormatter(lambda x,pos: "{0:.{1}f}".format(x,self.gui.prefs['plot_time_decimals'])))
 
 		fd = {}
 		yt = self.a[1][0].get_yticks()
 		self.a[1][0].set_yticklabels(["{0:.{1}f}".format(y,self.gui.prefs['plot_fret_decimals']) for y in yt],fontdict=fd)
+		self.a[1][0].yaxis.set_major_formatter(ticker.FuncFormatter(lambda x,pos: "{0:.{1}f}".format(x,self.gui.prefs['plot_fret_decimals'])))
 		yt = self.a[0][0].get_yticks()
 		self.a[0][0].set_xticklabels(["{0:.{1}f}".format(y,self.gui.prefs['plot_intensity_decimals']) for y in yt],fontdict=fd)
+		self.a[0][0].xaxis.set_major_formatter(ticker.FuncFormatter(lambda x,pos: "{0:.{1}f}".format(x,self.gui.prefs['plot_intensity_decimals'])))
 
 	## Plot current trajectory
 	def update_plots(self):
