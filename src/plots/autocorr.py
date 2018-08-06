@@ -235,12 +235,15 @@ def kde(x,d,bw=None):
 def power_spec(t,y):
 	dt = t[1]-t[0]
 
-	tt = np.linspace(-t.max(),t.max(),t.size*2-1)
-	yy = np.zeros_like(tt)
-	yy[:t.size] = y[::-1]
-	yy[t.size:] = y[1:]
-	f = np.fft.fft(yy)*dt/np.sqrt(2.*np.pi)
-	w = np.fft.fftfreq(tt.size)*2.*np.pi/dt
+	# tt = np.linspace(-t.max(),t.max(),t.size*2-1)
+	# yy = np.zeros_like(tt)
+	# yy[:t.size] = y[::-1]
+	# yy[t.size:] = y[1:]
+	# f = np.fft.fft(yy)*dt/np.sqrt(2.*np.pi)
+	# w = np.fft.fftfreq(tt.size)*2.*np.pi/dt
+
+	f = np.fft.fft(y)*dt/np.sqrt(2.*np.pi)
+	w = np.fft.fftfreq(t.size)*2.*np.pi/dt
 	# f /= f[0] ## normalize to zero frequency
 	x = w.argsort()
 	return w[x],np.abs(f)[x]
@@ -258,7 +261,7 @@ def setup(gui):
 	recalcbutton.clicked.connect(lambda x: recalc(gui))
 
 	gui.popout_plots['plot_acorr'].ui.combo_plot = QComboBox()
-	gui.popout_plots['plot_acorr'].ui.combo_plot.addItems(['ACF','Power','k Hist','Tc Hist'])
+	gui.popout_plots['plot_acorr'].ui.combo_plot.addItems(['ACF','Power','Randomness'])
 	gui.popout_plots['plot_acorr'].ui.buttonbox.insertWidget(2,gui.popout_plots['plot_acorr'].ui.combo_plot)
 	gui.popout_plots['plot_acorr'].ui.combo_plot.setCurrentIndex(0)
 
@@ -275,11 +278,26 @@ def recalc(gui):
 	from scipy.ndimage import gaussian_filter1d
 
 	## get data
-	# popplot.fpb = gui.data.get_plot_data(True)[0].copy() ## FRET from filtered intensities
-	popplot.fpb = gui.data.get_plot_data(pp['filter_data'])[0].copy() ## FRET from unfiltered intensities
-	popplot.fpb[np.greater(popplot.fpb,1.5)] = 1.5
-	popplot.fpb[np.less(popplot.fpb,-.5)] = -.5
-	np.save('tmp.npy',popplot.fpb)
+	popplot.fpb = gui.data.get_plot_data(pp['filter_data'])[0].copy()
+	popplot.fpb[np.greater(popplot.fpb,1.25)] = 1.25
+	popplot.fpb[np.less(popplot.fpb,-.25)] = -.25
+	hr = gui.data.hmm_result
+	if not hr is None:
+		if hr.type == 'consensus vbfret':
+			mu = hr.result.mu
+			for i in range(popplot.fpb.shape[0]):
+				v = hr.result.viterbi[i]
+				pre = gui.data.pre_list[hr.ran[i]]
+				popplot.fpb[i,pre:pre+v.size] -= mu[v]
+		elif hr.type == 'vb' or hr.type == 'ml':
+			for i in range(popplot.fpb.shape[0]):
+				mu = hr.results[i].mu
+				v = hr.results[i].viterbi
+				pre = gui.data.pre_list[hr.ran[i]]
+				popplot.fpb[i,pre:pre+v.size] -= mu[v]
+
+
+
 
 	baseline = np.nanmean(popplot.fpb)
 
@@ -332,10 +350,11 @@ def recalc(gui):
 	popplot.ind.y = []
 	for i in range(popplot.fpb.shape[0]):
 		ff = popplot.fpb[i].reshape((1,popplot.fpb[i].size)) - baseline
-		posterior = ensemble_bayes_acorr(ff-np.nanmean(ff))
-		inorm = posterior[0][0]
-		yyy = filter(posterior[0],pp)/inorm
-		popplot.ind.y.append(yyy)
+		if not np.all(np.isnan(ff)):
+			posterior = ensemble_bayes_acorr(ff)#-np.nanmean(ff))
+			inorm = posterior[0][0]
+			yyy = filter(posterior[0],pp)/inorm
+			popplot.ind.y.append(yyy)
 	popplot.ind.y = np.array(popplot.ind.y)
 	popplot.ind.t = t
 
@@ -411,9 +430,11 @@ def plot(gui):
 	elif method_index == 1:
 		plot_powerspectrum(gui,popplot,pp)
 
-	## histogram of ACF decay rates
-	elif method_index in [2,3]:
-		plot_histogram(gui,popplot,pp,method_index)
+	# ## histogram of ACF decay rates
+	# elif method_index in [2,3]:
+	# 	plot_histogram(gui,popplot,pp,method_index)
+	elif method_index == 2:
+		plot_randomness(gui,popplot,pp)
 
 	# ####################################################
 	# ####################################################
@@ -435,14 +456,15 @@ def plot(gui):
 		popplot.ax[0].set_xlabel(pp['xlabel_text2'],fontdict=font)
 		popplot.ax[0].set_ylabel(pp['ylabel_text2'],fontdict=font)
 	elif method_index == 2:
-		popplot.ax[0].set_xlabel(r'ACF Relaxation Rate (sec$^{-1}$)',fontdict=font)
-		popplot.ax[0].set_ylabel(r'Probability',fontdict=font)
-	elif method_index == 3:
-		popplot.ax[0].set_xlabel(r'ACF inverse Correlation Time (sec$^{-1}$)',fontdict=font)
-		popplot.ax[0].set_ylabel(r'Probability',fontdict=font)
-	elif method_index == 4:
-		popplot.ax[0].set_xlabel(r'ACF Single Exponential Relaxation Rate (sec$^{-1}$)',fontdict=font)
-		popplot.ax[0].set_ylabel(r'ACF Correlation Time Relaxation Rate (sec$^{-1}$)',fontdict=font)
+		popplot.ax[0].set_xlabel(r'Time (sec)',fontdict=font)
+		popplot.ax[0].set_ylabel(r'Randomness, r',fontdict=font)
+	# 	popplot.ax[0].set_ylabel(r'Probability',fontdict=font)
+	# elif method_index == 3:
+	# 	popplot.ax[0].set_xlabel(r'ACF inverse Correlation Time (sec$^{-1}$)',fontdict=font)
+	# 	popplot.ax[0].set_ylabel(r'Probability',fontdict=font)
+	# elif method_index == 4:
+	# 	popplot.ax[0].set_xlabel(r'ACF Single Exponential Relaxation Rate (sec$^{-1}$)',fontdict=font)
+	# 	popplot.ax[0].set_ylabel(r'ACF Correlation Time Relaxation Rate (sec$^{-1}$)',fontdict=font)
 
 	popplot.ax[0].yaxis.set_label_coords(pp['ylabel_offset'], 0.5)
 	popplot.ax[0].xaxis.set_label_coords(0.5, pp['xlabel_offset'])
@@ -553,3 +575,14 @@ def plot_histogram(gui,popplot,pp,method_index):
 	popplot.ax[0].hist(d,bins=pp['hist_nbins'],density=True,color='b',histtype='stepfilled',alpha=.6)
 	popplot.ax[0].plot(x,y,'k',alpha=pp['line_ens_alpha'])
 	popplot.ax[0].set_ylim(pp['hist_pmin'],pp['hist_pmax'])
+
+def plot_randomness(gui,popplot,pp):
+	tau = pp['time_dt']
+
+	y = np.nanmean(popplot.fpb,axis=0)
+	r = (np.nanmean(popplot.fpb**2.,axis=0)-y**2.)/y ## randomness parameter (Schnitzer/Block)
+	t = tau * np.arange(y.size)
+	popplot.ax[0].axhline(y=np.nanmean(r), color='k', lw=1., alpha=pp['line_ens_alpha'])
+	popplot.ax[0].plot(t,r, color='blue', lw=1., alpha=pp['line_ens_alpha'])
+	popplot.ax[0].set_xlim(t.min(),t.max())
+	popplot.ax[0].set_ylim(-.2,1.2)

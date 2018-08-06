@@ -154,48 +154,13 @@ def ensemble_bayes_acorr(dd):
 	posterior[2] = an
 	posterior[3] = bn
 
+	## messing up FFT
+	# for i in range(y.size):
+	# 	if n[i] == 0:
+	# 		posterior[0,i] = np.nan
+
 	return posterior
 
-	# return posterior
-
-@nb.jit(nopython=True)
-def single_bayes_acorr(d):
-	out = acorr_counts(d)
-
-	## Calculate the posterior of the autocorrelation function
-	## Normal Gamma Parameterization
-	# y is sums
-	# n is counts
-	y = out[0]
-	n = out[1]
-
-	## mn,kn,an,bn
-	posterior = np.zeros((4,y.size))
-
-	# Priors
-	a0 = .001
-	k0 = .001
-	m0 = 0.5
-	b0 = .5
-
-	# Evaluate Posteriors
-	ybar = y/n
-
-	an = a0 + n/2.
-	kn = k0 + n
-	mn = (k0*m0 + y)/kn
-	bn = b0 + k0*n*(ybar-m0)**2. / (2.*kn)
-
-	for i in range(d.size):
-		for j in range(0,d.size-i):
-			yy = d[j]*d[i+j]
-			if not np.isnan(yy): ## these datapoints do
-				bn[i] += .5*(yy - ybar[i])**2.
-	posterior[0] = mn
-	posterior[1] = kn
-	posterior[2] = an
-	posterior[3] = bn
-	return posterior
 
 def credible_interval(posterior,p=.95):
 	## generate credible interval lower and upper lines from a posterior
