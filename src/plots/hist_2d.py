@@ -165,6 +165,8 @@ def colormap(gui):
 	return cm
 
 def plot(gui):
+	if gui.data.d is None:
+		return
 	popplot = gui.popout_plots['plot_hist2d'].ui
 	pp = popplot.prefs
 	popplot.ax[0].cla()

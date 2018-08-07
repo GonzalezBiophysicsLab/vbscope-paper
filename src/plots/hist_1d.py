@@ -73,7 +73,9 @@ def setup(gui):
 	recalcbutton.clicked.connect(lambda x: recalc(gui))
 
 	gui.popout_plots['plot_hist1d'].ui.gmm_result = None
-	recalc(gui)
+
+	if not gui.data.d is None:
+		recalc(gui)
 
 def fit_vb(gui):
 	if not gui.data.d is None:
@@ -315,6 +317,8 @@ def recalc(gui):
 
 
 def plot(gui):
+	if gui.data.d is None:
+		return
 	popplot = gui.popout_plots['plot_hist1d'].ui
 	pp = popplot.prefs
 	popplot.ax[0].cla()

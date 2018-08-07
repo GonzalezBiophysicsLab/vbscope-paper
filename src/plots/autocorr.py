@@ -267,7 +267,8 @@ def setup(gui):
 	gui.popout_plots['plot_acorr'].ui.buttonbox.insertWidget(2,gui.popout_plots['plot_acorr'].ui.combo_plot)
 	gui.popout_plots['plot_acorr'].ui.combo_plot.setCurrentIndex(0)
 
-	recalc(gui)
+	if not gui.data.d is None:
+		recalc(gui)
 
 def recalc(gui):
 	popplot = gui.popout_plots['plot_acorr'].ui
@@ -427,6 +428,8 @@ def recalc(gui):
 
 
 def plot(gui):
+	if gui.data.d is None:
+		return
 	popplot = gui.popout_plots['plot_acorr'].ui
 	pp = popplot.prefs
 	popplot.ax[0].cla()

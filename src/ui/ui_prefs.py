@@ -1,7 +1,7 @@
 from __future__ import print_function
-from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut, QFileDialog, QHeaderView,QPushButton
+from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut, QFileDialog, QHeaderView,QPushButton, QStyle, QStyleOptionButton
 from PyQt5.QtCore import  QRegExp, QSortFilterProxyModel, Qt
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QKeySequence
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QColor, QPalette
 
 import numpy as np
 import multiprocessing as mp
@@ -62,7 +62,26 @@ class precision_delegate(QStyledItemDelegate):
 		editor = super(precision_delegate,self).createEditor(parent,option,index)
 		if isinstance(value, float):
 			editor.setDecimals(self.precision)
+		if isinstance(value,command_obj):
+			value.fxn()
+			return None
 		return editor
+
+	def paint(self,painter,option,index):
+		if (index.column() == 1) and type(index.data()) is command_obj:
+			button = QStyleOptionButton()
+			button.text = "Execute"
+			button.rect = option.rect
+			button.features = QStyleOptionButton.Flat
+			QApplication.style().drawControl(QStyle.CE_PushButton,button,painter)
+		else:
+			super(precision_delegate,self).paint(painter,option,index)
+
+class command_obj(object): ## generic class to take anything you throw at it...
+	def __init__(self,name,fxn,*args):
+		self.name = name
+		self.fxn = fxn
+		self.args = args
 
 
 class preferences(QWidget):
@@ -110,30 +129,32 @@ class preferences(QWidget):
 		undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"),self)
 		undo_shortcut.activated.connect(self.undo)
 
-		self.commands = {'load':self.load_preferences,'save':self.save_preferences,'hello':(lambda : print('hello world'))}
-		self.add_commands(self.commands)
-
+		self.commands = {'load pref':self.load_preferences,'save pref':self.save_preferences,'hello world':(lambda : print('hello world'))}
+		self.update_commands()
 		self.proxy_view.doubleClicked.connect(self.clicked)
 
 	def clicked(self,index):
-		clicksign = '$'
-		# if index.column() == 0:
-		if 1:
+		clicksign = 'Execute'
+		if index.column() == 1:
 			if self.proxy_model.itemData(self.proxy_model.index(index.row(),1))[0] == clicksign:
-				key = self.proxy_model.itemData(self.proxy_model.index(index.row(),0))[0]
-				if key in self.commands:
-					self.commands[key]()
+				co = self.proxy_model.itemData(self.proxy_model.index(index.row(),1))
+				co.fxn()
+				self.le_filter.clear()
+				self.proxy_view.clearSelection()
+				self.le_filter.setFocus()
 
-	def add_commands(self,dictionary):
+	def update_commands(self):
 		self.model.blockSignals(True)
-		for k,v in dictionary.items():
-			self.commands[k] = v
+		for k,v in self.commands.items():
 			x = self.model.findItems(k)
 			if len(x) == 0:
 				self.model.insertRow(0)
 				self.model.setData(self.model.index(0,0),k)
 				self.model.item(0,0).setEditable(False)
-				self.model.setData(self.model.index(0,1),'$')
+				co = command_obj(k,v)
+				self.model.setData(self.model.index(0,1),co)
+				# self.model.item(0,1).setIcon(self.style().standardIcon(getattr(QStyle,'SP_MediaPlay')))
+				# self.model.item(0,1).setEditable(False)
 		self.proxy_model.setSourceModel(self.model)
 		self.proxy_view.sortByColumn(0, Qt.AscendingOrder)
 		self.model.blockSignals(False)
@@ -149,20 +170,17 @@ class preferences(QWidget):
 			super(preferences,self).keyPressEvent(event)
 
 		elif event.key() == Qt.Key_Return and self.le_filter.hasFocus():
-			if self.run_command(self.le_filter.text()):
-				return
-			elif self.proxy_model.rowCount() > 0:
+			clicksign = 'Execute'
+			if self.proxy_model.rowCount() > 0:
+				# if self.proxy_model.itemData(self.proxy_model.index(0,0))[0] == self.le_filter.text():
+					# self.proxy_model.itemData(self.proxy_model.index(0,1))[0].fxn()
+					# self.le_filter.clear()
+					# self.proxy_view.clearSelection()
+					# self.le_filter.setFocus()
+				# else:
 				self.focusNextChild()
+				self.proxy_view.setCurrentIndex(self.proxy_model.index(0,1))
 				return
-
-	def run_command(self,s):
-		if s in self.commands:
-			self.commands[s]()
-			self.le_filter.clear()
-			self.proxy_view.clearSelection()
-			self.le_filter.setFocus()
-			return 1
-		return 0
 
 	def edit(self,a):
 		name = self.model.data(self.model.index(a.row(),0))
