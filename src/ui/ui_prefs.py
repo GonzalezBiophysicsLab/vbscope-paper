@@ -1,5 +1,5 @@
 from __future__ import print_function
-from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut, QFileDialog, QHeaderView
+from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut, QFileDialog, QHeaderView,QPushButton
 from PyQt5.QtCore import  QRegExp, QSortFilterProxyModel, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QKeySequence
 
@@ -64,6 +64,7 @@ class precision_delegate(QStyledItemDelegate):
 			editor.setDecimals(self.precision)
 		return editor
 
+
 class preferences(QWidget):
 	def __init__(self,parent=None):
 		super(preferences, self).__init__()
@@ -110,6 +111,33 @@ class preferences(QWidget):
 		undo_shortcut.activated.connect(self.undo)
 
 		self.commands = {'load':self.load_preferences,'save':self.save_preferences,'hello':(lambda : print('hello world'))}
+		self.add_commands(self.commands)
+
+		self.proxy_view.doubleClicked.connect(self.clicked)
+
+	def clicked(self,index):
+		clicksign = '$'
+		# if index.column() == 0:
+		if 1:
+			if self.proxy_model.itemData(self.proxy_model.index(index.row(),1))[0] == clicksign:
+				key = self.proxy_model.itemData(self.proxy_model.index(index.row(),0))[0]
+				if key in self.commands:
+					self.commands[key]()
+
+	def add_commands(self,dictionary):
+		self.model.blockSignals(True)
+		for k,v in dictionary.items():
+			self.commands[k] = v
+			x = self.model.findItems(k)
+			if len(x) == 0:
+				self.model.insertRow(0)
+				self.model.setData(self.model.index(0,0),k)
+				self.model.item(0,0).setEditable(False)
+				self.model.setData(self.model.index(0,1),'$')
+		self.proxy_model.setSourceModel(self.model)
+		self.proxy_view.sortByColumn(0, Qt.AscendingOrder)
+		self.model.blockSignals(False)
+		self.resize_columns()
 
 	def keyPressEvent(self,event):
 		if event.key() == Qt.Key_Escape:

@@ -99,6 +99,7 @@ class plotter_gui(ui_general.gui):
 		self.prefs.commands['hist2d'] = self.plot_hist2d
 		self.prefs.commands['acorr'] = self.plot_acorr
 		self.prefs.commands['cycle'] = self.cycle_batch
+		self.prefs.add_commands(self.prefs.commands)
 
 	def update_pref_callback(self):
 		try:
