@@ -74,6 +74,8 @@ default_prefs = {
 'show_zero':True,
 'show_textbox':True,
 
+'remove_viterbi':True
+
 }
 
 class obj(object): ## generic class to take anything you throw at it...
@@ -281,8 +283,9 @@ def recalc(gui):
 	popplot.fpb = gui.data.get_plot_data(pp['filter_data'])[0].copy()
 	popplot.fpb[np.greater(popplot.fpb,1.25)] = 1.25
 	popplot.fpb[np.less(popplot.fpb,-.25)] = -.25
+
 	hr = gui.data.hmm_result
-	if not hr is None:
+	if not hr is None and pp['remove_viterbi']:
 		if hr.type == 'consensus vbfret':
 			mu = hr.result.mu
 			for i in range(popplot.fpb.shape[0]):
@@ -385,6 +388,8 @@ def recalc(gui):
 	except:
 		pass
 
+	popplot.ind.y[np.bitwise_and((popplot.ind.y != 0), (np.roll(popplot.ind.y,-1,axis=1)-popplot.ind.y == 0.))] = np.nan
+
 	#### HMM Data
 	## t - ACF time
 	## y - ACF
@@ -406,8 +411,18 @@ def recalc(gui):
 			popplot.hmm.freq,popplot.hmm.fft = power_spec(popplot.hmm.t,popplot.hmm.y)
 			popplot.hmm.tc = np.sum(popplot.hmm.y)
 
-		elif hr.type == 'vb':
-			pass
+		# elif hr.type == 'vb':
+		# 	popplot.hmm.y = np.zeros_like(popplot.ens.y)
+		# 	for i in range(popplot.fpb.shape[0]):
+		# 		mu = hr.results[i].mu
+		# 		var = hr.results[i].var
+		# 		tmatrix = hr.results[i].tmstar
+		# 		ppi = hr.results[i].ppi
+		# 		t,y = gen_mc_acf(1.,popplot.ens.y.size,tmatrix,mu,var,ppi)
+		# 		popplot.hmm.y += y/popplot.fpb.shape[0]
+		# 	popplot.hmm.t = t
+		# 	popplot.hmm.freq,popplot.hmm.fft = power_spec(popplot.hmm.t,popplot.hmm.y)
+		# 	popplot.hmm.tc = np.sum(popplot.hmm.y)
 
 
 
@@ -509,7 +524,7 @@ def plot_autocorrelation(gui,popplot,pp):
 		for i in range(popplot.ind.y.shape[0]):
 			popplot.ax[0].plot(popplot.ind.t*tau, popplot.ind.y[i], color='k', alpha=pp['line_ind_alpha'])
 	if pp['show_mean']:
-		popplot.ax[0].plot(popplot.ind.t*tau, np.mean(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+		popplot.ax[0].plot(popplot.ind.t*tau, np.nanmean(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
 
 	popplot.ax[0].set_xscale('linear')
 	if pp['time_scale'] == 'log':
@@ -522,7 +537,7 @@ def plot_autocorrelation(gui,popplot,pp):
 	if pp['show_hmm']:
 		if not gui.data.hmm_result is None and not popplot.hmm is None:
 			hr = gui.data.hmm_result
-			if hr.type == 'consensus vbfret':
+			if hr.type in ['consensus vbfret']:
 				popplot.ax[0].plot(popplot.hmm.t*tau, popplot.hmm.y, color='g',alpha=pp['line_ens_alpha'])
 
 def plot_powerspectrum(gui,popplot,pp):
@@ -544,7 +559,7 @@ def plot_powerspectrum(gui,popplot,pp):
 		for i in range(popplot.ind.y.shape[0]):
 			popplot.ax[0].semilogy(popplot.ind.freq/tau,np.abs(popplot.ind.fft[i]),color='k',alpha=pp['line_ind_alpha'],zorder=-2)
 	if pp['show_mean']:
-		q = np.mean(popplot.ind.y,axis=0)
+		q = np.nanmean(popplot.ind.y,axis=0)
 		w,f = power_spec(popplot.ens.t,q)
 		popplot.ax[0].semilogy(w/tau, f, color='orange', alpha=pp['line_ens_alpha'])
 
@@ -557,7 +572,7 @@ def plot_powerspectrum(gui,popplot,pp):
 	if pp['show_hmm']:
 		if not gui.data.hmm_result is None and not popplot.hmm is None:
 			hr = gui.data.hmm_result
-			if hr.type == 'consensus vbfret':
+			if hr.type in ['consensus vbfret']:
 				popplot.ax[0].plot(popplot.hmm.freq/tau, popplot.hmm.fft, color='g',alpha=pp['line_ens_alpha'])
 
 def plot_histogram(gui,popplot,pp,method_index):

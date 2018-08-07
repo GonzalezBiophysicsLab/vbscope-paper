@@ -130,10 +130,11 @@ def ensemble_bayes_acorr(dd):
 	posterior = np.zeros((4,y.shape[0]))
 
 	# Priors
-	a0 = .001
+	a0 = 1.
 	k0 = .001
-	m0 = abar**2.
-	b0 = .5
+	# m0 = abar**2.
+	m0 = 0.
+	b0 = 1.
 
 	ybar = y/n
 
