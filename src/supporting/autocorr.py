@@ -129,12 +129,13 @@ def ensemble_bayes_acorr(dd):
 	## mn,kn,an,bn
 	posterior = np.zeros((4,y.shape[0]))
 
+	#### Regular analysis
 	# Priors
 	a0 = 1.
-	k0 = .001
+	k0 = .1
 	# m0 = abar**2.
 	m0 = 0.
-	b0 = 1.
+	b0 = 10.
 
 	ybar = y/n
 
@@ -150,6 +151,21 @@ def ensemble_bayes_acorr(dd):
 				yy = d[j]*d[i+j]
 				if not np.isnan(yy): ## these datapoints do
 					bn[i] += .5*(yy - ybar[i])**2.
+	# #### Reference Analysis
+	# ybar = y/n
+	# mn = ybar
+	# kn = n
+	# an = (n-1.)/2.
+	# bn = 0.*n
+	# for k in range(N):
+	# 	d = dd[k]
+	# 	for i in range(d.size):
+	# 		for j in range(0,d.size-i):
+	# 			yy = d[j]*d[i+j]
+	# 			if not np.isnan(yy): ## these datapoints do
+	# 				bn[i] += .5*(yy - ybar[i])**2.
+
+
 	posterior[0] = mn
 	posterior[1] = kn
 	posterior[2] = an
