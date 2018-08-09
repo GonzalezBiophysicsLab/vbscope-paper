@@ -56,6 +56,7 @@ class precision_delegate(QStyledItemDelegate):
 	def __init__(self,*args):
 		super(precision_delegate,self).__init__(*args)
 		self.precision = default_prefs['pref_precision']
+		self.refocus = lambda : None
 
 	def createEditor(self, parent, option, index):
 		value = index.data()
@@ -64,6 +65,7 @@ class precision_delegate(QStyledItemDelegate):
 			editor.setDecimals(self.precision)
 		if isinstance(value,command_obj):
 			value.fxn()
+			self.refocus()
 			return None
 		return editor
 
@@ -99,6 +101,7 @@ class preferences(QWidget):
 
 		self.proxy_view = QTableView()
 		self.delegate = precision_delegate()
+		self.delegate.refocus = self.refocus_le
 		self.proxy_view.setItemDelegate(self.delegate)
 
 		self.proxy_view.setModel(self.proxy_model)
@@ -131,17 +134,22 @@ class preferences(QWidget):
 
 		self.commands = {'load pref':self.load_preferences,'save pref':self.save_preferences,'hello world':(lambda : print('hello world'))}
 		self.update_commands()
-		self.proxy_view.doubleClicked.connect(self.clicked)
+	# 	# self.proxy_view.doubleClicked.connect(self.clicked)
+	# 	# self.proxy_view.activated.connect(self.clicked)
+	#
+	# def clicked(self,index):
+	# 	clicksign = 'Execute'
+	# 	print('asdf')
+	# 	if index.column() == 1:
+	# 		if self.proxy_model.itemData(self.proxy_model.index(index.row(),1))[0] == clicksign:
+	# 			co = self.proxy_model.itemData(self.proxy_model.index(index.row(),1))
+	# 			co.fxn()
+	# 			self.refocus_le()
 
-	def clicked(self,index):
-		clicksign = 'Execute'
-		if index.column() == 1:
-			if self.proxy_model.itemData(self.proxy_model.index(index.row(),1))[0] == clicksign:
-				co = self.proxy_model.itemData(self.proxy_model.index(index.row(),1))
-				co.fxn()
-				self.le_filter.clear()
-				self.proxy_view.clearSelection()
-				self.le_filter.setFocus()
+	def refocus_le(self):
+		self.le_filter.clear()
+		self.proxy_view.clearSelection()
+		self.le_filter.setFocus()
 
 	def update_commands(self):
 		self.model.blockSignals(True)

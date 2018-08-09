@@ -113,6 +113,13 @@ class popout_plot_container_widget(QWidget):
 		self.f.resizeEvent = lambda e: e.ignore()
 		self.resizeEvent = lambda e: e.ignore()
 
+	def keyPressEvent(self,event):
+		if event.key() == Qt.Key_Escape and not self.prefs.le_filter.hasFocus():
+			self.open_preferences()
+			self.prefs.le_filter.setFocus()
+			return
+		super(popout_plot_container_widget,self).keyPressEvent(event)
+
 	def open_preferences(self):
 		try:
 			if not self.qd_prefs.isVisible():
