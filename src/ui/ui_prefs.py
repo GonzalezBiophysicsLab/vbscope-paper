@@ -288,7 +288,8 @@ class preferences(QWidget):
 				val = "{0:.{1}f}".format(val,self['pref_precision'])
 			elif type(val) is type(u'a'):
 				val = "\"%s\""%(str(val))
-			total += "%s:%s\n"%(key,val)
+			if not key in self.commands:
+				total += "%s:%s\n"%(key,val)
 		return str(total)
 
 	def load_str(self,s):
