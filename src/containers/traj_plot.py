@@ -58,7 +58,8 @@ default_prefs = {
 	'plot_time_decimals':0,
 	'plot_intensity_decimals':0,
 	'plot_fret_decimals':2,
-	'normalize_intensities':False
+	'normalize_intensities':False,
+	'plot_remove_viterbi':False
 }
 
 
@@ -119,7 +120,10 @@ class traj_plot_container():
 	def plot_no_hmm(self):
 		self.a[1,0].lines[-1].set_data([0,0],[0,0])
 
-	def plot_hmm(self,t,state_means,vitpath,pretime,pbtime):
+	def plot_hmm(self,t,state_means,vitpath,pretime,pbtime,remove_viterbi=False):
+		if remove_viterbi:
+			d = self.a[1,0].lines[-3].get_data()
+			self.a[1,0].lines[-3].set_data(t[pretime:pbtime],d[1]-state_means[vitpath])
 		self.a[1,0].lines[-1].set_data(t[pretime:pbtime],state_means[vitpath])
 
 	def plot_traj(self,t,intensities,rel,pretime,pbtime):
@@ -268,7 +272,7 @@ class traj_plot_container():
 				if state_means is None:
 					self.plot_no_hmm()
 				else:
-					self.plot_hmm(t,state_means,vitpath,pretime,pbtime)
+					self.plot_hmm(t,state_means,vitpath,pretime,pbtime,self.gui.prefs['plot_remove_viterbi'])
 
 			intensity_hists,fret_hists = self.calc_histograms(intensities,rel,pretime,pbtime)
 			for i in range(len(intensity_hists)):

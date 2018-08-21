@@ -4,6 +4,8 @@ from scipy.optimize import curve_fit,minimize
 from PyQt5.QtWidgets import QPushButton, QComboBox
 from matplotlib import ticker
 import numba as nb
+from math import lgamma,gamma
+from scipy.special import gammaln
 
 default_prefs = {
 'subplots_left':.15,
@@ -22,8 +24,6 @@ default_prefs = {
 'acorr_nticks':6,
 'acorr_min':-0.1,
 'acorr_max':1.0,
-# 'acorr_filter':1.0,
-# 'acorr_highpass':0.,
 
 'power_nticks':6,
 'power_min':.1,
@@ -66,22 +66,75 @@ default_prefs = {
 'show_ind':True,
 'show_mean':False,
 'show_tc':True,
-# 'show_exp1':False,
-# 'show_exp2':False,
-# 'show_exp3':False,
-# 'show_exp4':False,
+'show_stretch':True,
 'show_hmm':True,
 'show_zero':True,
 'show_textbox':True,
 'remove_viterbi':True,
 
-'tc_cut':-1
+'tc_cut':-1,
+
+'beta_showens':False,
+'beta_showmean':True,
+'beta_nbins':41,
+'tc_max':-1.,
+'tc_min':-1.,
+'tc_showgauss':True,
+'tc_showkde':True,
+'tc_nbins':41,
+'tc_showens':False,
+'tc_showmean':True,
+'tc_fit_ymin':0.1,
+'tc_ymax':0.5,
+'tc_fitcut':3.,
+
+'acorr_ind':0,
 
 }
 
 class obj(object): ## generic class to take anything you throw at it...
 	def __init__(self,*args):
 		self.args = args
+
+def setup(gui):
+	recalcbutton = QPushButton("Recalculate")
+	gui.popout_plots['plot_acorr'].ui.buttonbox.insertWidget(1,recalcbutton)
+	recalcbutton.clicked.connect(lambda x: recalc(gui))
+
+	gui.popout_plots['plot_acorr'].ui.combo_plot = QComboBox()
+	gui.popout_plots['plot_acorr'].ui.combo_plot.addItems(['ACF','Power','Mean','t_c','beta','tc v b','ind acf'])
+	gui.popout_plots['plot_acorr'].ui.buttonbox.insertWidget(2,gui.popout_plots['plot_acorr'].ui.combo_plot)
+	gui.popout_plots['plot_acorr'].ui.combo_plot.setCurrentIndex(0)
+
+	gui.popout_plots['plot_acorr'].ui.nmol = 0
+
+	pp = gui.popout_plots['plot_acorr'].ui.prefs
+	clear_memory(gui)
+	pp.commands['add to memory'] = lambda: add_to_memory(gui)
+	pp.commands['clear memory'] = lambda: clear_memory(gui)
+	pp.commands['cull short tc'] = lambda: cull_traces(gui)
+	pp.update_commands()
+
+	gui.popout_plots['plot_acorr'].ui.filter = None
+	if not gui.data.d is None:
+		recalc(gui)
+
+def add_to_memory(gui):
+	popplot = gui.popout_plots['plot_acorr'].ui
+	popplot.prefs.memory.append([popplot.ens.t,popplot.ens.y,None,popplot.ens.freq,popplot.ens.fft,popplot.prefs['line_color']])
+
+def clear_memory(gui):
+	gui.popout_plots['plot_acorr'].ui.prefs.memory = []
+
+def cull_traces(gui):
+	if gui.popout_plots['plot_acorr'].ui.filter is None:
+		gui.popout_plots['plot_acorr'].ui.filter = np.nonzero(np.bitwise_or(gui.popout_plots['plot_acorr'].ui.ind.tfit >= gui.popout_plots['plot_acorr'].ui.prefs['tc_fitcut'],~np.isnan(gui.popout_plots['plot_acorr'].ui.ind.tc)))[0]
+		recalc(gui)
+
+#############################################################################
+@nb.vectorize
+def vgamma(x):
+	return gamma(x)
 
 def filter(x,pp):
 	from scipy.ndimage import gaussian_filter1d
@@ -91,160 +144,131 @@ def filter(x,pp):
 	except:
 		pass
 	return x
-#
-# @nb.njit
-# def exp1fxn(t,c1,k1,ev):
-# 	norm = ev + c1
-# 	if ev/norm <= 0.01 or k1 > 1.: return t*0. + np.inf
-# 	y = c1*np.exp(-k1*t) #+ b
-# 	y[np.nonzero(t==0.)] += ev
-# 	return y/norm
-#
-# @nb.njit
-# def exp2fxn(t,c1,c2,k1,k2,ev):
-# 	norm = ev + c1 + c2
-# 	if ev/norm <= 0.01 or k1 > 1. or k2 > 1.: return t*0. + np.inf
-# 	y = c1*np.exp(-k1*t) + c2*np.exp(-k2*t) #+ b
-# 	y[np.nonzero(t==0.)] += ev
-# 	return y/norm
-#
-# @nb.njit
-# def exp3fxn(t,c1,c2,c3,k1,k2,k3,ev):
-# 	norm = ev + c1 + c2 + c3
-# 	if ev/norm <= 0.01 or k1 > 1. or k2 > 1. or k3 > 1.: return t*0. + np.inf
-# 	y = c1*np.exp(-k1*t) + c2*np.exp(-k2*t) + c3*np.exp(-k3*t) #+ b
-# 	y[np.nonzero(t==0.)] += ev
-# 	return y/norm
-#
-# @nb.njit
-# def exp4fxn(t,c1,c2,c3,c4,k1,k2,k3,k4,ev):
-# 	norm = ev + c1 + c2 + c3 + c4
-# 	if ev/norm <= 0.01 or k1 > 1. or k2 > 1. or k3 > 1. or k4 > 1.: return t*0. + np.inf
-# 	y = c1*np.exp(-k1*t) + c2*np.exp(-k2*t) + c3*np.exp(-k3*t) + c4*np.exp(-k4*t) #+ b
-# 	y[np.nonzero(t==0.)] += ev
-# 	return y/norm
-#
-# def lor1fxn(w,c1,k1,ev):
-# 	norm = ev + c1
-# 	# b = 0.
-# 	# ev = 1.-c1
-# 	if ev <= 0. or ev > 1.:# or k1 < 0.:# or c1 < 0:
-# 		return w*0. + np.inf
-# 	y = c1*S_exp(w,k1) + ev/np.sqrt(2.*np.pi)
-# 	# y[np.nonzero(w==0.)] += b*np.sqrt(2.*np.pi)
-# 	return y/norm
-#
-# def lor2fxn(w,c1,c2,k1,k2,ev):
-# 	# b = 1. - c1 - c2 - ev
-# 	# ev = 1.-c1-c2
-# 	norm = ev + c1 + c2
-# 	if ev <= 0. or ev > 1.:# or k1 < 0. or k2 < 0.:# or c1 < 0 or c2 < 0:
-# 		return w*0. + np.inf
-# 	y = c1*S_exp(w,k1) + c2*S_exp(w,k2) + ev/np.sqrt(2.*np.pi)
-# 	# y[np.nonzero(w==0.)] += b*np.sqrt(2.*np.pi)
-# 	return y/norm
-#
-# def lor3fxn(w,c1,c2,c3,k1,k2,k3,ev):
-# 	# b = 1. - c1 - c2 - c3 - ev
-# 	norm = ev + c1 + c2 + c3
-# 	if ev <= 0. or ev > 1.:# or k1 < 0. or k2 < 0. or k3 < 0.:# or c1 < 0 or c2 < 0 or c3 < 0:
-# 		return w*0. + np.inf
-# 	y = c1*S_exp(w,k1) + c2*S_exp(w,k2) + c3*S_exp(w,k3) + ev/np.sqrt(2.*np.pi)
-# 	# y[np.nonzero(w==0.)] += b*np.sqrt(2.*np.pi)
-# 	return y/norm
-#
-# def lor4fxn(w,c1,c2,c3,c4,k1,k2,k3,k4,ev):
-# 	# b = 1. - c1 - c2 - c3 - ev
-# 	norm = ev + c1 + c2 + c3 + c4
-# 	if ev <= 0. or ev > 1.:# or k1 < 0. or k2 < 0. or k3 < 0. or k4 < 0.:# or c1 < 0 or c2 < 0 or c3 < 0 or c4 < 0:
-# 		return w*0. + np.inf
-# 	y = c1*S_exp(w,k1) + c2*S_exp(w,k2) + c3*S_exp(w,k3) + c4*S_exp(w,k4) + ev/np.sqrt(2.*np.pi)
-# 	# y[np.nonzero(w==0.)] += b*np.sqrt(2.*np.pi)
-# 	return y/norm
-#
-# def fit_exp1(t,d):
-# 	c = 1.-(d[0]-d[1])
-# 	x0 = np.array((c,10./t.max(),1.-c))
-# 	out = minimize(lambda x: np.sum(np.square(exp1fxn(t,*x)-d)),x0=x0,method='Nelder-Mead')
-# 	print 1,out.success,out.x
-# 	return out.x
-#
-# def fit_exp2(t,d):
-# 	c = 1.-(d[0]-d[1])
-# 	x0 = np.array((c*.5,c*.5,30./t.max(),10./t.max(),1.-c))
-# 	out = minimize(lambda x: np.sum(np.square(exp2fxn(t,*x)-d)),x0=x0,method='Nelder-Mead')
-# 	print 2,out.success,out.x
-# 	return out.x
-#
-# def fit_exp3(t,d):
-# 	c = 1.-(d[0]-d[1])
-# 	x0 = np.array((c/3.,c/3.,c/3.,100./t.max(),30./t.max(),10./t.max(),1.-c))
-# 	out = minimize(lambda x: np.sum(np.square(exp3fxn(t,*x)-d)),x0=x0,method='Nelder-Mead')
-# 	print 3,out.success,out.x
-# 	return out.x
-#
-# def fit_exp4(t,d):
-# 	c = 1.-(d[0]-d[1])
-# 	x0 = np.array((c/4.,c/4.,c/4.,c/4.,100./t.max(),60./t.max(),30./t.max(),10./t.max(),1.-c))
-# 	out = minimize(lambda x: np.sum(np.square(exp4fxn(t,*x)-d)),x0=x0,method='Nelder-Mead')
-# 	print 4,out.success,out.x
-# 	return out.x
-#
-# def fit_lor1(w,d):
-# 	c = 1.-d[-50].mean()
-# 	x0 = np.array((c,w.max()/5.,1.-c))
-# 	keep = w >= 0
-# 	out = minimize(lambda x: np.sum(np.square(lor1fxn(w[keep],*x)-d[keep])),x0=x0,method='Nelder-Mead')
-# 	print 1,out.success,out.x
-# 	print out
-# 	return out.x
-#
-# def fit_lor2(w,d):
-# 	c = 1.-d[-50].mean()
-# 	x0 = np.array((c*.5,c*.5,w.max()/5.,w.max()/80.,1.-c))
-# 	keep = w >= 0
-# 	out = minimize(lambda x: np.sum(np.square(lor2fxn(w[keep],*x)-d[keep])),x0=x0,method='Nelder-Mead')
-# 	print 2,out.success,out.x
-# 	print out
-# 	return out.x
-#
-# def fit_lor3(w,d):
-# 	c = 1.-d[-50].mean()
-# 	x0 = np.array((c*.25,c*.5,c*.25,w.max()/5.,w.max()/8.,w.max()/11.,1.-c))
-# 	keep = w >= 0
-# 	out = minimize(lambda x: np.sum(np.square(lor3fxn(w[keep],*x)-d[keep])),x0=x0,method='Nelder-Mead')
-# 	print 3,out.success,out.x
-# 	print out
-# 	return out.x
-#
-# def fit_lor4(w,d):
-# 	c = 1.-d[-50].mean()
-# 	x0 = np.array((c*.2,c*.3,c*.3,c*.2,w.max()/5.,w.max()/8.,w.max()/11.,w.max()/15.,1.-c))
-# 	keep = w >= 0
-# 	out = minimize(lambda x: np.sum(np.square(lor4fxn(w[keep],*x)-d[keep])),x0=x0,method='Nelder-Mead')
-# 	print 4,out.success,out.x
-# 	print out
-# 	return out.x
-#
-# def kde(x,d,bw=None):
-# 	from scipy.stats import gaussian_kde
-# 	if bw is None:
-# 		kernel = gaussian_kde(d)
-# 	else:
-# 		kernel = gaussian_kde(d,bw)
-# 	y = kernel(x)
-# 	return y
+
+def kde(x,d,bw=None):
+	from scipy.stats import gaussian_kde
+	if bw is None:
+		kernel = gaussian_kde(d)
+	else:
+		kernel = gaussian_kde(d,bw)
+	y = kernel(x)
+	return y
+
+#### Following Kaufman Lab - Mackowiak JCP 2009
+@nb.njit
+def stretched_exp(t,k,t0,b):
+	if  b < 0 or t0 <= 0:
+		return t*0 + np.inf
+	# if t0 >= t[1]:
+	else:
+		return k*np.exp(-(t/t0)**b)
+	# else:
+		# q = np.zeros_like(t+k)
+	# 	q[0] = 1.
+		# return q
+@nb.njit
+def reg_exp(t,k,t0):
+	if t0 <= 0:
+		return t*0 + np.inf
+	else:
+		return k*np.exp(-(t/t0))
+
+@nb.njit
+def minfxn_stretch(t,y,x):
+	k,t0,b = x
+	f = stretched_exp(t[0],k,t0,b)
+	tc = t0/b*vgamma(1./b)
+	if b < 0. or f > 2.0 or f < 0.0 or t0 >= y.size*2. or tc > y.size or tc < 1.:
+		return np.inf
+	return np.sum(np.square(stretched_exp(t,k,t0,b) - y))
+
+@nb.njit
+def minfxn_reg(t,y,x):
+	k,t0 = x
+	f = reg_exp(t[0],k,t0)
+	if f > 2.0 or f < 0.0 or t0 >= y.size*2. or t0 < 1.:
+		return np.inf
+	return np.sum(np.square(reg_exp(t,k,t0) - y))
+
+# def line(t,c,tf):
+# 	return c*(1. - t/tf)
+
+def fit_acf(t,y,ymin = 0.05):
+	yy = y<ymin
+	if np.any(yy > 0):
+		cutoff = np.argmax(yy)
+		if cutoff > y.size:
+			cutoff = -1
+	else:
+		cutoff = -1
+	start = 1
+	dt = t[1]-t[0]
+
+	if y[start:cutoff].size >3:
+		#### streched exponential
+		m = np.max((dt,(y[start:cutoff]*t[start:cutoff]).sum()/y[start:cutoff].sum()))
+		x0 = np.array((y[start],m,1.))
+		out = minimize(lambda x: minfxn_stretch(t[start:cutoff],y[start:cutoff],x),x0,method='Nelder-Mead',options={'maxiter':1000})
+		if out.success:
+			return out.x
+		#### exponential
+		out = minimize(lambda x: minfxn_reg(t[start:cutoff],y[start:cutoff],x),x0[:-1],method='Nelder-Mead',options={'maxiter':1000})
+		if out.success:
+			return np.append(out.x,1.)
+
+	# 	p,c = curve_fit(stretched_exp,t[start:cutoff],y[start:cutoff],p0=x0,maxfev=1000)
+	# 	if np.all(np.isfinite(c)):
+	# 		# if p[1] < (cutoff-start) and p[1] > 3:
+	# 			return p
+	# 	# x0 = x0[:-1]
+	# 	# p,c = curve_fit(reg_exp,t[start:cutoff],y[start:cutoff],p0=x0,maxfev=1000)
+	# 	# if np.all(np.isfinite(c)):
+	# 	# 	# if p[1] < (cutoff-start) and p[1] > 3:
+	# 	# 		return np.array((p[0],p[1],1.))
+	#
+	#
+	#
+	# 		else: ## linear fit
+	# 			start = 1
+	# 			m = (y[cutoff] - y[start])/(t[cutoff]-t[start])
+	# 			c = y[start]-m*t[start]
+	# 			x0 = np.array((c,-m/c))
+	# 			p,c = curve_fit(line,t[start:cutoff],y[start:cutoff],p0=x0,maxfev=1000)
+	# 			if np.all(np.isfinite(c)):
+	# 				if p[1] < cutoff:
+	# 					r = np.array((p[0],p[1],np.nan))
+	# 					return r
+	# except:
+	# 	pass
+	#
+	#
+	# 	if calc_tc(r) > (cutoff-start):
+	# 		r = np.array((1.,1.,np.nan))
+	# 	return r
+	#
+	out = np.array((1.,1.,np.nan))
+	return out
+
+def calc_tc(p):
+	if p.ndim == 1:
+		k,t,b = p
+		if np.isnan(b):
+			if t < 1: return 1.
+			return t
+		else:
+			return t/b*vgamma(1./b)
+	elif p.ndim == 2.:
+		k,t,b = p
+		out = np.zeros_like(k)
+		xline = np.nonzero(np.isnan(b))[0]
+		x = np.nonzero(np.isfinite(b))[0]
+		out[xline] = t[xline]
+		out[x] = (t[x]/b[x])*vgamma(1./b[x])
+		# out[out < 1.] = 1.
+		return out
 
 def power_spec(t,y):
 	dt = t[1]-t[0]
-
-	# tt = np.linspace(-t.max(),t.max(),t.size*2-1)
-	# yy = np.zeros_like(tt)
-	# yy[:t.size] = y[::-1]
-	# yy[t.size:] = y[1:]
-	# f = np.fft.fft(yy)*dt/np.sqrt(2.*np.pi)
-	# w = np.fft.fftfreq(tt.size)*2.*np.pi/dt
-
 	f = np.fft.fft(y)*dt/np.sqrt(2.*np.pi)
 	w = np.fft.fftfreq(t.size)*2.*np.pi/dt
 	# f /= f[0] ## normalize to zero frequency
@@ -252,41 +276,10 @@ def power_spec(t,y):
 	return w[x],np.abs(f)[x]
 
 def S_exp(w,k):
-	# analytic = k/(k*k+4.*np.pi*np.pi*w*w)
-	# analytic *= k ## normalize to zero freq point
-	# analytic = k/np.sqrt(2.*np.pi)/(k**2.+w**2.)
 	analytic = np.sqrt(2./np.pi)*k/(k**2.+w**2.)
 	return analytic
 
-def correlation_time(y,cut=-1):
-	return np.nansum(y[:cut])
-
-
-def setup(gui):
-	recalcbutton = QPushButton("Recalculate")
-	gui.popout_plots['plot_acorr'].ui.buttonbox.insertWidget(1,recalcbutton)
-	recalcbutton.clicked.connect(lambda x: recalc(gui))
-
-	gui.popout_plots['plot_acorr'].ui.combo_plot = QComboBox()
-	gui.popout_plots['plot_acorr'].ui.combo_plot.addItems(['ACF','Power','Mean'])
-	gui.popout_plots['plot_acorr'].ui.buttonbox.insertWidget(2,gui.popout_plots['plot_acorr'].ui.combo_plot)
-	gui.popout_plots['plot_acorr'].ui.combo_plot.setCurrentIndex(0)
-
-	if not gui.data.d is None:
-		recalc(gui)
-
-	pp = gui.popout_plots['plot_acorr'].ui.prefs
-	clear_memory(gui)
-	pp.commands['add to memory'] = lambda: add_to_memory(gui)
-	pp.commands['clear memory'] = lambda: clear_memory(gui)
-	pp.update_commands()
-
-def add_to_memory(gui):
-	popplot = gui.popout_plots['plot_acorr'].ui
-	popplot.prefs.memory.append([popplot.ens.t,popplot.ens.y,popplot.ens.ci,popplot.ens.freq,popplot.ens.fft,popplot.prefs['line_color']])
-
-def clear_memory(gui):
-	gui.popout_plots['plot_acorr'].ui.prefs.memory = []
+#############################################################################
 
 def recalc(gui):
 	popplot = gui.popout_plots['plot_acorr'].ui
@@ -295,12 +288,12 @@ def recalc(gui):
 	if gui.ncolors != 2:
 		return
 
-	from ..supporting.autocorr import ensemble_bayes_acorr,credible_interval,gen_mc_acf,gen_mc_acf_q
+	from ..supporting.autocorr import acf_estimator, gen_mc_acf
 
 	## get data
 	popplot.fpb = gui.data.get_plot_data(pp['filter_data'])[0].copy()
-	popplot.fpb[np.greater(popplot.fpb,1.5)] = 1.5
-	popplot.fpb[np.less(popplot.fpb,-.5)] = -.5
+	popplot.fpb[np.greater(popplot.fpb,1.5)] = .5 ### won't skew ACFs
+	popplot.fpb[np.less(popplot.fpb,-.5)] = .5 ### won't skew ACFs
 
 	hr = gui.data.hmm_result
 	if not hr is None and pp['remove_viterbi']:
@@ -317,88 +310,69 @@ def recalc(gui):
 				pre = gui.data.pre_list[hr.ran[i]]
 				popplot.fpb[i,pre:pre+v.size] -= mu[v]
 
-	baseline = np.nanmean(popplot.fpb)
+	if not popplot.filter is None:
+		if len(popplot.filter) > 0:
+			popplot.fpb = popplot.fpb[popplot.filter]
+			popplot.filter = None
 
+	baseline = np.nanmean(popplot.fpb)
 	t = np.arange(popplot.fpb.shape[1])
 
 	#### Ensemble Data
-	## posterior - m,k,a,b vs time
-	## ci - credible intervals vs time
 	## y - ACF vs time
 	## t - time
 	## fft - power spectrum
 	## freq - power spectrum frequency axis
 	## tc - correlation time
-	## psp - lorentzian fits of PS to markov chain w/ normal emissions model
+	## beta - stretched parameter
 
 	popplot.ens = obj()
-	popplot.ens.posterior = ensemble_bayes_acorr(popplot.fpb-baseline)
-
-	norm = popplot.ens.posterior[0][0]
-	popplot.ens.y = filter(popplot.ens.posterior[0],pp) / norm
+	popplot.ens.y = filter(acf_estimator(popplot.fpb),pp)
+	popplot.ens.y /= popplot.ens.y[0] ## filtering can mess it up a little, therefore renormalize
 	popplot.ens.t = t
-	popplot.ens.ci = credible_interval(popplot.ens.posterior)
-	for i in range(2):
-		popplot.ens.ci[i] = filter(popplot.ens.ci[i],pp)/norm
 
 	popplot.ens.freq,popplot.ens.fft = power_spec(popplot.ens.t,popplot.ens.y)
 
-	popplot.ens.tc = correlation_time(popplot.ens.y,pp['tc_cut'])
-	# # popplot.ens.psp1 = fit_lor1(popplot.ens.freq,popplot.ens.fft)
-	# # popplot.ens.psp2 = fit_lor2(popplot.ens.freq,popplot.ens.fft)
-	# # popplot.ens.psp3 = fit_lor3(popplot.ens.freq,popplot.ens.fft)
-	# # popplot.ens.psp4 = fit_lor4(popplot.ens.freq,popplot.ens.fft)
-	# popplot.ens.psp1 = fit_exp1(popplot.ens.t,popplot.ens.y)
-	# popplot.ens.psp2 = fit_exp2(popplot.ens.t,popplot.ens.y)
-	# popplot.ens.psp3 = fit_exp3(popplot.ens.t,popplot.ens.y)
-	# popplot.ens.psp4 = fit_exp4(popplot.ens.t,popplot.ens.y)
+	popplot.ens.stretch_params = fit_acf(popplot.ens.t,popplot.ens.y,pp['tc_fit_ymin'])
+	popplot.ens.tfit = popplot.ens.stretch_params[1]
+	popplot.ens.tc = calc_tc(popplot.ens.stretch_params)
+	popplot.ens.beta = popplot.ens.stretch_params[2]
 
 	#### Individual Data
 	## y - list of ACF means
 	## t - ACF time
-	## k - array of single exp fit ACF rate constants
 	## tc - correlation time
+	## beta - stretched exponent
 	## fft - array of power spectra
 	## freq - power spectrum freqs
-	## k_kde_x - rate constant axis
-	## k_kde_y - probability of rate constant
-	## exp_ps - analytical power spectrum for single exponential from 'k'
 
 	popplot.ind = obj()
 	popplot.ind.y = []
 	for i in range(popplot.fpb.shape[0]):
-		ff = popplot.fpb[i].reshape((1,popplot.fpb[i].size)) - baseline
+		ff = popplot.fpb[i].reshape((1,popplot.fpb.shape[1]))
 		if not np.all(np.isnan(ff)):
-			posterior = ensemble_bayes_acorr(ff)#-np.nanmean(ff))
-			inorm = posterior[0][0]
-			yyy = filter(posterior[0],pp)/inorm
-			popplot.ind.y.append(yyy)
+			popplot.ind.y.append(filter(acf_estimator(ff),pp))
 	popplot.ind.y = np.array(popplot.ind.y)
+	popplot.ind.y /= popplot.ind.y[:,0][:,None]
 	popplot.ind.t = t
 
-	# popplot.ind.psp1 = []
 	popplot.ind.fft = []
+	popplot.ind.tfit = []
 	popplot.ind.tc = []
+	popplot.ind.beta = []
 	for i in range(popplot.ind.y.shape[0]):
 		ft,f = power_spec(popplot.ind.t,popplot.ind.y[i])
-		# popplot.ind.psp1.append(fit_lor1(ft[x],f[x]))
 		popplot.ind.fft.append(f)
-		popplot.ind.tc.append(correlation_time(popplot.ind.y[i],pp['tc_cut']))
+		stretch_params = fit_acf(popplot.ind.t,popplot.ind.y[i],pp['tc_fit_ymin'])
+		popplot.ind.tfit.append(stretch_params[1])
+		popplot.ind.tc.append(calc_tc(stretch_params))
+		popplot.ind.beta.append(stretch_params[2])
 	popplot.ind.freq = ft
-	popplot.ind.fft = np.array(popplot.ind.fft)
-	# popplot.ind.psp1 = np.array(popplot.ind.psp1)
-	popplot.ind.tc = np.array(popplot.ind.tc)
 
-	# try:
-	# 	ksx = np.isfinite(popplot.ind.k1[:,1])
-	# 	popplot.ind.k_kde_x = np.linspace(0,popplot.ind.psp[:,1][ksx].max()*1.2,1000)
-	# 	popplot.ind.k_kde_y = kde(popplot.ind.k_kde_x,popplot.ind.psp[:,1][ksx],pp['kde_bandwidth'])
-	#
-	# 	tcx = np.isfinite(popplot.ind.tc)
-	# 	popplot.ind.tc_kde_x = np.linspace(0,popplot.ind.tc[tcx].max()*1.2,1000)
-	# 	popplot.ind.tc_kde_y = kde(popplot.ind.tc_kde_x,popplot.ind.tc[tcx],pp['kde_bandwidth'])
-	# except:
-	# 	pass
+	popplot.ind.fft = np.array(popplot.ind.fft)
+	popplot.ind.tc = np.array(popplot.ind.tc)
+	popplot.ind.tfit = np.array(popplot.ind.tfit)
+	popplot.ind.beta = np.array(popplot.ind.beta)
 
 	popplot.ind.y[np.bitwise_and((popplot.ind.y != 0), (np.roll(popplot.ind.y,-1,axis=1)-popplot.ind.y == 0.))] = np.nan
 
@@ -407,9 +381,8 @@ def recalc(gui):
 	## y - ACF
 	## freq - Power spectrum frequency
 	## fft - Power spectrum
-	## k - single exponential fit rate constant
 	## tc - correlation time
-	## exp_ps - analytical power spectrum for single exponential from 'k'
+	## beta - stretched exponent
 	hr = gui.data.hmm_result
 	popplot.hmm = None
 	if not hr is None:
@@ -421,8 +394,10 @@ def recalc(gui):
 			ppi = hr.result.ppi
 			popplot.hmm.t,popplot.hmm.y = gen_mc_acf(1.,popplot.ens.y.size,tmatrix,mu,var,ppi)
 			popplot.hmm.freq,popplot.hmm.fft = power_spec(popplot.hmm.t,popplot.hmm.y)
-			popplot.hmm.tc = np.sum(popplot.hmm.y)
-
+			popplot.hmm.stretch_params = fit_acf(popplot.hmm.t,popplot.hmm.y,pp['tc_fit_ymin'])
+			popplot.hmm.tc = calc_tc(popplot.hmm.stretch_params)
+			popplot.hmm.tfit = popplot.hmm.stretch_params[1]
+			popplot.hmm.beta = popplot.hmm.stretch_params[2]
 		# elif hr.type == 'vb':
 		# 	popplot.hmm.y = np.zeros_like(popplot.ens.y)
 		# 	for i in range(popplot.fpb.shape[0]):
@@ -435,8 +410,6 @@ def recalc(gui):
 		# 	popplot.hmm.t = t
 		# 	popplot.hmm.freq,popplot.hmm.fft = power_spec(popplot.hmm.t,popplot.hmm.y)
 		# 	popplot.hmm.tc = np.sum(popplot.hmm.y)
-
-
 
 def plot(gui):
 	if gui.data.d is None:
@@ -459,11 +432,16 @@ def plot(gui):
 	elif method_index == 1:
 		plot_powerspectrum(gui,popplot,pp)
 
-	# ## histogram of ACF decay rates
-	# elif method_index in [2,3]:
-	# 	plot_histogram(gui,popplot,pp,method_index)
 	elif method_index == 2:
 		plot_mean(gui,popplot,pp)
+	elif method_index == 3:
+		plot_tc(gui,popplot,pp)
+	elif method_index == 4:
+		plot_beta(gui,popplot,pp)
+	elif method_index == 5:
+		plot_scatter(gui,popplot,pp)
+	elif method_index == 6:
+		plot_indacf(gui,popplot,pp)
 
 	# ####################################################
 	# ####################################################
@@ -487,21 +465,24 @@ def plot(gui):
 	elif method_index == 2:
 		popplot.ax[0].set_xlabel(r'Time (sec)',fontdict=font)
 		popplot.ax[0].set_ylabel(r'Mean',fontdict=font)
-	# 	popplot.ax[0].set_ylabel(r'Probability',fontdict=font)
-	# elif method_index == 3:
-	# 	popplot.ax[0].set_xlabel(r'ACF inverse Correlation Time (sec$^{-1}$)',fontdict=font)
-	# 	popplot.ax[0].set_ylabel(r'Probability',fontdict=font)
-	# elif method_index == 4:
-	# 	popplot.ax[0].set_xlabel(r'ACF Single Exponential Relaxation Rate (sec$^{-1}$)',fontdict=font)
-	# 	popplot.ax[0].set_ylabel(r'ACF Correlation Time Relaxation Rate (sec$^{-1}$)',fontdict=font)
+	elif method_index == 3:
+		popplot.ax[0].set_xlabel(r'$ln(t_c)$',fontdict=font)
+		popplot.ax[0].set_ylabel('Probability',fontdict=font)
+	elif method_index == 4:
+		popplot.ax[0].set_xlabel(r'$\beta$',fontdict=font)
+		popplot.ax[0].set_ylabel('Counts',fontdict=font)
+	elif method_index == 5:
+		popplot.ax[0].set_ylabel(r'$t_c$',fontdict=font)
+		popplot.ax[0].set_xlabel(r'$\beta$',fontdict=font)
+
 
 	popplot.ax[0].yaxis.set_label_coords(pp['ylabel_offset'], 0.5)
 	popplot.ax[0].xaxis.set_label_coords(0.5, pp['xlabel_offset'])
 
 	if pp['show_textbox']:
 		bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./dpr)
-		lstr = r'N = %d'%(popplot.fpb.shape[0])
-		print popplot.ens.tc*pp['time_dt'],np.median(popplot.ind.tc)*pp['time_dt']
+		lstr = r'N = %d'%(popplot.nmol)
+		# print popplot.ens.tc*pp['time_dt'],np.median(popplot.ind.tc)*pp['time_dt']
 
 		if pp['show_tc']:
 			lstr += r', $t_c$=%.2f sec'%(np.around(popplot.ens.tc*pp['time_dt'],2))
@@ -515,8 +496,6 @@ def plot(gui):
 	fd = {'rotation':pp['ylabel_rotate']}
 	popplot.ax[0].set_yticklabels(["{0:.{1}f}".format(y, pp['ylabel_decimals']) for y in popplot.ax[0].get_yticks()], fontdict=fd)
 	popplot.ax[0].yaxis.set_major_formatter(ticker.FuncFormatter(lambda x,pos: "{0:.{1}f}".format(x,pp['ylabel_decimals'])))
-
-
 	popplot.f.canvas.draw()
 
 
@@ -529,27 +508,21 @@ def plot_autocorrelation(gui,popplot,pp):
 	## Ensemble plots
 	if pp['show_ens']:
 		for mm in pp.memory:
-			popplot.ax[0].fill_between(mm[0]*tau, mm[2][0], mm[2][1], alpha=.3, color=mm[5],zorder=-2)
+			# popplot.ax[0].fill_between(mm[0]*tau, mm[2][0], mm[2][1], alpha=.3, color=mm[5],zorder=-2)
 			popplot.ax[0].plot(mm[0]*tau, mm[1], color=mm[5], lw=1., alpha=pp['line_ens_alpha'],zorder=-1)
 
-		popplot.ax[0].fill_between(popplot.ens.t*tau, popplot.ens.ci[0], popplot.ens.ci[1], alpha=.3, color=pp['line_color'],zorder=0)
+		# popplot.ax[0].fill_between(popplot.ens.t*tau, popplot.ens.ci[0], popplot.ens.ci[1], alpha=.3, color=pp['line_color'],zorder=0)
 		popplot.ax[0].plot(popplot.ens.t*tau, popplot.ens.y, color=pp['line_color'], lw=1., alpha=pp['line_ens_alpha'],zorder=1)
+	if pp['show_stretch']:
+		popplot.ax[0].plot(popplot.ens.t*tau,stretched_exp(popplot.ens.t,*popplot.ens.stretch_params),color='r',lw=1,alpha=pp['line_ens_alpha'])
 
-
-	# if pp['show_exp1']:
-	# 	popplot.ax[0].plot(popplot.ens.t*tau, exp1fxn(popplot.ens.t,*popplot.ens.psp1), color='red', lw=1., alpha=pp['line_ens_alpha'])
-	# if pp['show_exp2']:
-	# 	popplot.ax[0].plot(popplot.ens.t*tau, exp2fxn(popplot.ens.t,*popplot.ens.psp2), color='red', lw=1., alpha=pp['line_ens_alpha'])
-	# if pp['show_exp3']:
-	# 	popplot.ax[0].plot(popplot.ens.t*tau, exp3fxn(popplot.ens.t,*popplot.ens.psp3), color='red', lw=1., alpha=pp['line_ens_alpha'])
-	# if pp['show_exp4']:
-	# 	popplot.ax[0].plot(popplot.ens.t*tau, exp4fxn(popplot.ens.t,*popplot.ens.psp4), color='red', lw=1., alpha=pp['line_ens_alpha'])
 	if pp['show_ind']:
 		for i in range(popplot.ind.y.shape[0]):
 			popplot.ax[0].plot(popplot.ind.t*tau, popplot.ind.y[i], color='k', alpha=pp['line_ind_alpha'])
 	if pp['show_mean']:
-		# popplot.ax[0].plot(popplot.ind.t*tau, np.nanmean(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
-		popplot.ax[0].plot(popplot.ind.t*tau, np.median(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+		popplot.ax[0].plot(popplot.ind.t*tau, np.nanmean(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+		# popplot.ax[0].plot(popplot.ind.t*tau, np.median(popplot.ind.y,axis=0), color='orange', alpha=pp['line_ens_alpha'])
+	popplot.nmol = popplot.fpb.shape[0]
 
 	popplot.ax[0].set_xscale('linear')
 	if pp['time_scale'] == 'log':
@@ -565,6 +538,25 @@ def plot_autocorrelation(gui,popplot,pp):
 			if hr.type in ['consensus vbfret']:
 				popplot.ax[0].plot(popplot.hmm.t*tau, popplot.hmm.y, color='g',alpha=pp['line_ens_alpha'])
 
+				# dt = 0.025
+				# mu = np.array((.1,.3,.6,.9))
+				# noise = 0.11
+				# var = np.zeros_like(mu) + noise**2.
+				# rates = 10. * np.array(((0.,.005,.003,.001),(.001,0.,.002,.002),(.004,.003,.0,.004),(0.002,.003,.001,0.)))
+				# from scipy.linalg import expm
+				# q = rates.copy()
+				# for i in range(q.shape[0]):
+				# 	q[i,i] = - q[i].sum()
+				# tmatrix = expm(q*dt)
+				# tinf = 1000./np.abs(q).min()
+				# ppi = expm(q*tinf)[0]
+				# from ..supporting.autocorr import gen_mc_acf_q
+				# t,y = gen_mc_acf_q(dt,popplot.ens.y.size,q,mu,var,ppi)
+				# t /= dt
+				# print y
+				# print t[:10]
+				# popplot.ax[0].plot(t,y/y[0],color='r',alpha=pp['line_ens_alpha'])
+
 def plot_powerspectrum(gui,popplot,pp):
 	tau = pp['time_dt']
 	f = popplot.ens.freq
@@ -574,16 +566,11 @@ def plot_powerspectrum(gui,popplot,pp):
 			popplot.ax[0].semilogy(mm[3]/tau, mm[4],lw=1.,color=mm[5],alpha=pp['line_ens_alpha'],zorder=0)
 
 		popplot.ax[0].semilogy(f/tau, popplot.ens.fft,lw=1.,color=pp['line_color'],alpha=pp['line_ens_alpha'],zorder=1)
-
-	# if pp['show_exp1']:
-	# 	popplot.ax[0].semilogy(f/tau,lor1fxn(f,*popplot.ens.psp1),color='red',lw=1,alpha=pp['line_ens_alpha'])
-	# if pp['show_exp2']:
-	# 	popplot.ax[0].semilogy(f/tau,lor2fxn(f,*popplot.ens.psp2),color='red',lw=1,alpha=pp['line_ens_alpha'])
-	# if pp['show_exp3']:
-	# 	popplot.ax[0].semilogy(f/tau,lor3fxn(f,*popplot.ens.psp3),color='red',lw=1,alpha=pp['line_ens_alpha'])
-	# if pp['show_exp4']:
-	# 	popplot.ax[0].semilogy(f/tau,lor4fxn(f,*popplot.ens.psp4),color='red',lw=1,alpha=pp['line_ens_alpha'])
-
+	if pp['show_stretch']:
+		y = stretched_exp(popplot.ens.t,*popplot.ens.stretch_params)
+		t = popplot.ens.t*tau
+		w,f = power_spec(t,y)
+		popplot.ax[0].semilogy(w, f, lw=1., color='red', alpha=pp['line_ens_alpha'], zorder=1)
 	if pp['show_ind']:
 		for i in range(popplot.ind.y.shape[0]):
 			popplot.ax[0].semilogy(popplot.ind.freq/tau,np.abs(popplot.ind.fft[i]),color='k',alpha=pp['line_ind_alpha'],zorder=-2)
@@ -603,30 +590,133 @@ def plot_powerspectrum(gui,popplot,pp):
 			hr = gui.data.hmm_result
 			if hr.type in ['consensus vbfret']:
 				popplot.ax[0].plot(popplot.hmm.freq/tau, popplot.hmm.fft, color='g',alpha=pp['line_ens_alpha'])
-
-# def plot_histogram(gui,popplot,pp,method_index):
-# 	tau = pp['time_dt']
-#
-# 	if method_index == 2:
-# 		d = popplot.ind.psp1[:,1]/tau
-# 		x = popplot.ind.k_kde_x / tau
-# 		y = popplot.ind.k_kde_y
-# 	elif method_index == 3:
-# 		d = popplot.ind.tc/tau
-# 		x = popplot.ind.tc_kde_x / tau
-# 		y = popplot.ind.tc_kde_y
-# 	print d.min(),np.mean(d),d.max()
-# 	popplot.ax[0].hist(d,bins=pp['hist_nbins'],density=True,color='b',histtype='stepfilled',alpha=.6)
-# 	popplot.ax[0].plot(x,y,'k',alpha=pp['line_ens_alpha'])
-# 	popplot.ax[0].set_ylim(pp['hist_pmin'],pp['hist_pmax'])
+	popplot.nmol = popplot.fpb.shape[0]
 
 def plot_mean(gui,popplot,pp):
 	tau = pp['time_dt']
 
 	y = np.nanmean(popplot.fpb,axis=0)
-	# r = (np.nanmean(popplot.fpb**2.,axis=0)-y**2.)/y ## randomness parameter (Schnitzer/Block)
 	t = tau * np.arange(y.size)
-	# popplot.ax[0].axhline(y=np.nanmean(r), color='k', lw=1., alpha=pp['line_ens_alpha'])
 	popplot.ax[0].plot(t,y, color='blue', lw=1., alpha=pp['line_ens_alpha'])
 	popplot.ax[0].set_xlim(t.min(),t.max())
 	popplot.ax[0].set_ylim(-.25,1.25)
+
+	popplot.nmol = popplot.fpb.shape[0]
+
+def plot_tc(gui,popplot,pp):
+	tau = pp['time_dt']
+	beta = popplot.ind.beta.copy()
+	tc = popplot.ind.tc.copy()
+	tf = popplot.ind.tfit.copy()
+	tf_cut = pp['tc_fitcut']
+	# x = tf >= tf_cut
+	# tc = tc[x]
+	y = np.log(tc*tau)
+	y = y[np.isfinite(y)]
+	ymin = np.log(pp['tc_fitcut']*tau)
+	popplot.nmol = (y[y>ymin]).size
+
+	if pp['tc_min'] > 0 :
+		rmin = np.log(pp['tc_min'])
+	else:
+		rmin = np.log(tau/2.)
+	if pp['tc_max'] > 0:
+		rmax = np.log(pp['tc_max'])
+	else:
+		rmax = np.min((np.nanmax(y),np.log(popplot.ens.t.size/1.)))
+	hy = popplot.ax[0].hist(y[y>ymin],bins=pp['tc_nbins'],range=(rmin,rmax),histtype='stepfilled',density=True)[0]
+	# if pp['tc_showens']:
+		# popplot.ax[0].axvline(x=np.log(popplot.ens.tc*tau),color='k')
+	if pp['tc_showmean']:
+		popplot.ax[0].axvline(x=np.nanmean(np.exp(y[y>ymin])),color='k',alpha=.9)
+
+	if not gui.data.hmm_result is None and not popplot.hmm is None:
+		hr = gui.data.hmm_result
+		if hr.type in ['consensus vbfret']:
+			popplot.ax[0].axvline(x=np.log(popplot.hmm.tc*tau),color='green',alpha=.9)
+
+	# if pp['tc_showmean']:
+	# 	ltc =  np.linspace(rmin,rmax,1000)
+	# 	v = np.nanvar(np.log(tc*tau))
+	# 	m = np.nanmean(np.log(tc*tau))
+	# 	lp = (2.*np.pi*v)**-.5 * np.exp(-.5/v*(ltc-m)**2.)
+	# 	popplot.ax[0].plot(ltc,lp,color='k',lw=1,alpha=.9)
+	if pp['tc_showkde']:
+		ltc =  np.linspace(rmin,rmax,1000)
+		lp = kde(ltc,y[y>ymin])
+		popplot.ax[0].plot(ltc,lp,color='k',lw=1,alpha=.9)
+	popplot.ax[0].set_xlim(rmin,rmax)
+	popplot.ax[0].set_ylim(0.,pp['tc_ymax'])
+
+def plot_beta(gui,popplot,pp):
+	beta = popplot.ind.beta.copy()
+	tc = popplot.ind.tc.copy()
+	tf = popplot.ind.tfit.copy()
+	tf_cut = pp['tc_fitcut']
+	x = tf >= tf_cut
+	beta = beta[x]
+	popplot.ax[0].hist(beta,bins=pp['beta_nbins'],range=(0,2),histtype='stepfilled')
+	if pp['beta_showens']:
+		popplot.ax[0].axvline(x=popplot.ens.beta,color='k')
+	if pp['beta_showmean']:
+		popplot.ax[0].axvline(x=np.nanmean(beta),color='k')
+	popplot.ax[0].set_xlim(0,2.)
+	popplot.nmol = beta.size
+
+def plot_scatter(gui,popplot,pp):
+	tau = pp['time_dt']
+	beta = popplot.ind.beta.copy()
+	tc = popplot.ind.tc.copy()
+	tf = popplot.ind.tfit.copy()
+	tf_cut = pp['tc_fitcut']
+	x = (tf >= tf_cut)*	np.isfinite(beta)
+	popplot.ax[0].loglog(beta[x],tc[x]*tau,'o',alpha=.5)
+	x = (tf < tf_cut)
+	popplot.ax[0].loglog(beta[x],tc[x]*tau,'o',alpha=.5,color='r')
+	x = np.isnan(beta)
+	popplot.ax[0].loglog(np.ones(int(x.sum())),tc[x]*tau,'o',alpha=.5,color='r')
+
+	popplot.ax[0].set_xlim(.1,3.)
+	popplot.ax[0].set_ylim(tau,tau*popplot.fpb.shape[1])
+	bb = np.linspace(.1,3.,10000)
+	p = np.array((np.ones(bb.size),np.zeros(bb.size)+tf_cut,bb))
+	tt = calc_tc(p)*tau
+	popplot.ax[0].plot(bb,tt,color='k',ls='--',lw=1.,alpha=.9)
+	popplot.nmol = beta[x].size
+
+	if not gui.data.hmm_result is None and not popplot.hmm is None:
+		hr = gui.data.hmm_result
+		if hr.type in ['consensus vbfret']:
+			popplot.ax[0].axhline(y=popplot.hmm.tc*tau,color='green',alpha=.9)
+			popplot.ax[0].axvline(x=popplot.hmm.beta,color='green',alpha=.9)
+
+def plot_indacf(gui,popplot,pp):
+	tau = pp['time_dt']
+
+	ind = pp['acorr_ind']
+	if ind < 0:
+		pp['acorr_ind'] = 0
+		plot_indacf(gui,popplot,pp)
+		return
+	elif ind >= popplot.ind.y.shape[0]:
+		pp['acorr_ind'] = popplot.ind.y.shape[0] - 1
+		plot_indacf(gui,popplot,pp)
+		return
+	popplot.ax[0].axhline(y=0,color='k',alpha=.5)
+
+	popplot.ax[0].plot(popplot.ind.t*tau, popplot.ind.y[ind], color='k', alpha=pp['line_alpha'])
+	stretch_params = fit_acf(popplot.ind.t,popplot.ind.y[ind],pp['tc_fit_ymin'])
+	if np.isnan(stretch_params[2]):
+		stretch_params[2] = 1.
+	q = stretched_exp(popplot.ind.t,*stretch_params)
+	popplot.ax[0].plot(popplot.ind.t*tau,q,color='r',alpha=pp['line_alpha'])
+
+	popplot.ax[0].set_xscale('linear')
+	if pp['time_scale'] == 'log':
+		popplot.ax[0].set_xscale('log')
+		if pp['time_min'] < pp['time_dt']:
+			pp['time_min'] = pp['time_dt']
+	popplot.ax[0].set_xlim(pp['time_min'],pp['time_max'])
+	popplot.ax[0].set_ylim(pp['acorr_min'],pp['acorr_max'])
+	k,t,b = stretch_params
+	popplot.ax[0].set_title("%.3f: %.2f, %.3f, %.2f"%(calc_tc(stretch_params),k,t,b))
