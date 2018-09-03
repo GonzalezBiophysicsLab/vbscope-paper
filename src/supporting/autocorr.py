@@ -2,7 +2,8 @@
 import numpy as np
 import numba as nb
 from scipy import stats
-import numpy as np
+from math import lgamma
+from scipy.optimize import minimize
 
 #### testing
 # dt = 0.025
@@ -19,6 +20,10 @@ import numpy as np
 # popplot.hmm.t,popplot.hmm.y = gen_mc_acf(1.,popplot.ens.y.size,tmatrix,mu,var,ppi)
 # popplot.hmm.t,popplot.hmm.y = gen_mc_acf_q(dt,popplot.ens.y.size,q,mu,var,ppi)
 # popplot.hmm.t /= dt
+
+@nb.vectorize
+def vgamma(x):
+	return np.exp(lgamma(x))
 
 def gen_mc_acf_q(tau,nsteps,q,mu,var,ppi):
 	## Using a Q matrix, not a transition probability matrix
@@ -84,6 +89,8 @@ def gen_mc_acf(tau,nsteps,tmatrix,mu,var,ppi):
 
 	t = tau*np.arange(nsteps)
 	return t,E_y0yt
+
+################################################################################
 
 # @nb.jit(nopython=True)
 # def acorr(d):
@@ -266,3 +273,301 @@ def acf_estimator(x):
 # 	plt.xlim(0.0,100.)
 # 	plt.ylim(-1,1)
 # 	plt.show()
+
+################################################################################
+
+#### Following Kaufman Lab - Mackowiak JCP 2009
+@nb.njit
+def stretched_exp(t,k,t0,b):
+	if  b < 0 or t0 <= 0:
+		return t*0 + np.inf
+	# if t0 >= t[1]:
+	else:
+		return k*np.exp(-(t/t0)**b)
+	# else:
+		# q = np.zeros_like(t+k)
+	# 	q[0] = 1.
+		# return q
+@nb.njit
+def single_exp(t,k,t0):
+	if t0 <= 0:
+		return t*0 + np.inf
+	else:
+		return k*np.exp(-t/t0)
+
+@nb.njit
+def bi_exp(t,k1,k2,t1,t2):
+	if t1 <= 0 or t2 <= 0:
+		return t*0 + np.inf
+	else:
+		return k1*np.exp(-t/t1) + k2*np.exp(-t/t2)
+
+@nb.njit
+def linearfxn(t,k,t0):
+	q = k*(1.-t/t0)
+	q[q<0] = 0.
+	q[t == 0] = 1.
+	return q
+
+################################################################################
+
+@nb.njit
+def minfxn_stretch(t,y,x):
+	k,t0,b = x
+	f = stretched_exp(t[0],k,t0,b)
+	tc = t0/b*vgamma(1./b)
+	if b < 0. or tc < t[0]:
+		return np.inf
+	return np.sum(np.square(stretched_exp(t,k,t0,b) - y)/(1.+t))
+
+@nb.njit
+def minfxn_single(t,y,x):
+	k,t0 = x
+	f = single_exp(t[0],k,t0)
+	if f > 2.0 or f < 0.0 or t0 >= y.size*2. or t0 < 1.:
+		return np.inf
+	return np.sum(np.square(single_exp(t,k,t0) - y)/(1.+t))
+
+@nb.njit
+def minfxn_bi(t,y,x):
+	k1,k2,t1,t2 = x
+	f = bi_exp(t[0],k1,k2,t1,t2)
+	if f > 2.0 or f < 0.0 or t1 >= y.size*2. or t2 >= y.size*2. or k1 < 0 or k2 < 0:
+		return np.inf
+	return np.sum(np.square(bi_exp(t,k1,k2,t1,t2) - y)/(1.+t))
+
+@nb.njit
+def minfxn_linear(t,y,x):
+	k,t0 = x
+	if t0 < 0:
+		return np.inf
+	return np.sum(np.square(linearfxn(t,k,t0) - y)/(1.+t))
+
+################################################################################
+
+class obj(object): ## generic class to take anything you throw at it...
+	def __init__(self,*args):
+		self.args = args
+
+class fit_solution(obj):
+	def __call__(self,t):
+		 if not self.fxn is None and not self.params is None:
+			return self.fxn(t,*self.params)
+
+################################################################################
+
+class fit_flat(fit_solution):
+	def __init__(self):
+		self.type = "flat"
+		self.fxn = self.f
+		self.params = np.array(())
+		self.tau = 1.
+
+	def f(self,t):
+		if type(t) is np.ndarray:
+			if t.size > 1:
+				y = np.zeros_like(t)
+				y[t==0] = 1.
+				return y
+		if t == 0: return 1.
+		return 0.
+
+	def calc_tc(self):
+		return 1.*self.tau
+
+	def __str__(self):
+		return r"$\delta (t)$"
+
+class fit_exponential(fit_solution):
+	def __init__(self,t,y):
+		self.type = "single exponential"
+		self.fxn = single_exp
+		self.params = None
+		self.fit(t,y)
+		self.tau = 1.
+
+	def set(self,k,t0):
+		self.params = np.array((k,t0))
+
+	def fit(self,t,y,x0=None):
+		if x0 is None:
+			dt = t[1]-t[0]
+			m = np.max((dt,(y*t).sum()/y.sum()))
+			x0 = np.array((y[0],m))
+
+		self.fit_result = minimize(lambda x: minfxn_single(t,y,x),x0,method='Nelder-Mead',options={'maxiter':1000})
+
+		if self.fit_result.success:
+			self.params = self.fit_result.x
+			self.func_val = self.fit_result.fun
+		else:
+			self.params = None
+			self.func_val = np.inf
+
+	def calc_tc(self):
+		if not self.params is None:
+			return self.params[1]*self.tau
+		return 0.
+
+	def __str__(self):
+		return r"$k=%.3f, t_0=%.3f$"%(self.params[0],self.tau*self.params[1])
+
+class fit_linear(fit_solution):
+	def __init__(self,t,y):
+		self.type = "single exponential linear"
+		self.fxn = linearfxn
+		self.params = None
+		self.fit(t,y)
+		self.tau = 1.
+
+	def set(self,k,t0):
+		self.params = np.array((k,t0))
+
+	def fit(self,t,y,x0=None):
+		if x0 is None:
+			dt = t[1]-t[0]
+			if np.any(y<0):
+				m = t[np.nonzero(y<0)[0][0]]
+			else:
+				m = np.max((dt,(y*t).sum()/y.sum()))
+			x0 = np.array((y[0],m))
+
+		self.fit_result = minimize(lambda x: minfxn_linear(t,y,x),x0,method='Nelder-Mead',options={'maxiter':1000})
+
+		if self.fit_result.success:
+			self.params = self.fit_result.x
+			self.func_val = self.fit_result.fun
+		else:
+			self.params = None
+			self.func_val = np.inf
+
+	def calc_tc(self):
+		if not self.params is None:
+			return self.params[1]*self.tau
+		return 0.
+
+	def __str__(self):
+		return r"$k=%.3f, t_0=%.3f$"%(self.params[0],self.tau*self.params[1])
+
+
+class fit_biexponential(fit_solution):
+	def __init__(self,t,y):
+		self.type = "bi exponential"
+		self.fxn = bi_exp
+		self.params = None
+		self.fit(t,y)
+		self.tau = 1.
+
+	def set(self,k1,k2,t1,t2):
+		self.params = np.array((k1,k2,t1,t2))
+
+	def fit(self,t,y,x0=None):
+		if x0 is None:
+			## initial guess from a single exponential fit
+			dt = t[1]-t[0]
+			m = np.max((dt,(y*t).sum()/y.sum()))
+			x0 = np.array((y[0],m))
+			out = minimize(lambda x: minfxn_single(t,y,x),x0,method='Nelder-Mead',options={'maxiter':1000})
+			if out.success:
+				x0 = np.array((.5,.5,out.x[1],5.))
+			else:
+				x0 = np.array((y[0]*.8,y[0]*.2,m,5.))
+
+		self.fit_result = minimize(lambda x: minfxn_bi(t,y,x),x0,method='Nelder-Mead',options={'maxiter':1000})
+
+		if self.fit_result.success:
+			p = self.fit_result.x.copy()
+			if p[2] > p[3]:
+				p[0] = self.fit_result.x[1]
+				p[1] = self.fit_result.x[0]
+				p[2] = self.fit_result.x[3]
+				p[3] = self.fit_result.x[2]
+			self.params = p
+			self.func_val = self.fit_result.fun
+		else:
+			self.params = None
+			self.func_val = np.inf
+
+	def calc_tc(self):
+		if not self.params is None:
+			k1,k2,t1,t2 = self.params
+			f = k1/(k1+k2)
+			return (f*t1 + (1.-f)*t2)*self.tau
+		return 0.
+
+	def __str__(self):
+		return r"$k_1=%.3f, k_2=%.3f, t_1=%.3f, t_2=%.3f$"%(self.params[0],self.params[1],self.tau*self.params[2],self.tau*self.params3)
+
+class fit_stretched(fit_solution):
+	def __init__(self,t,y):
+		self.type = "stretched exponential"
+		self.fxn = stretched_exp
+		self.params = None
+		self.fit(t,y)
+		self.tau = 1.
+
+	def set(self,k,t,b):
+		self.params = np.array((k,t,b))
+
+	def fit(self,t,y,x0=None):
+		if x0 is None:
+			dt = t[1]-t[0]
+			m = np.max((dt,(y*t).sum()/y.sum()))
+			x0 = np.array((y[0],m,1.))
+
+		self.fit_result = minimize(lambda x: minfxn_stretch(t,y,x),x0,method='Nelder-Mead',options={'maxiter':10000})
+
+		if self.fit_result.success:
+			self.params = self.fit_result.x
+			self.func_val = self.fit_result.fun
+
+		else:
+			self.params = None
+			self.func_val = np.inf
+
+	def calc_tc(self):
+		if not self.params is None:
+			k,t,b = self.params
+			return t/b*vgamma(1./b)*self.tau
+		return 0.
+
+	def __str__(self):
+		return r"$k=%.3f, t_0=%.3f, \beta =%.3f $"%(self.params[0],self.params[1]*self.tau,self.params[2])
+
+################################################################################
+
+def fit_acf(t,y,ymin = 0.05,biexp=False):
+	yy = y<ymin
+	if np.any(yy > 0):
+		cutoff = np.argmax(yy)
+		if cutoff > y.size:
+			cutoff = -1
+	else:
+		cutoff = -1
+	start = 1
+
+	if y[start:cutoff].size > 3:
+		f1 = fit_exponential(t[start:cutoff],y[start:cutoff])
+		f2 = fit_linear(t[start:cutoff],y[start:cutoff])
+		f3 = fit_stretched(t[start:cutoff],y[start:cutoff])
+		ff = np.array((f1.func_val,f2.func_val,f3.func_val))
+		if np.any(np.isfinite(ff)):
+			f = [f1,f2,f3][ff.argmin()]
+			if f.calc_tc() <= t.max():
+				return f
+	return fit_linear(t,y)
+	# return fit_flat()
+
+################################################################################
+
+def power_spec(t,y):
+	dt = t[1]-t[0]
+	f = np.fft.fft(y)*dt/np.sqrt(2.*np.pi)
+	w = np.fft.fftfreq(t.size)*2.*np.pi/dt
+	# f /= f[0] ## normalize to zero frequency
+	x = w.argsort()
+	return w[x],np.abs(f)[x]
+
+def S_exp(w,k):
+	analytic = np.sqrt(2./np.pi)*k/(k**2.+w**2.)
+	return analytic
