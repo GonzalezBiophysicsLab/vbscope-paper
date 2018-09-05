@@ -85,6 +85,8 @@ default_prefs = {
 'tc_showmean':True,
 'tc_fit_ymin':0.1,
 'tc_ymax':0.5,
+'tc_ynticks':5,
+'tc_xnticks':5,
 'tc_fitcut':1.,
 
 'acorr_ind':0,
@@ -351,6 +353,10 @@ def plot(gui):
 	elif method_index == 3:
 		popplot.ax[0].set_xlabel(r'$ln(t_c)$',fontdict=font)
 		popplot.ax[0].set_ylabel('Probability',fontdict=font)
+		xlim = popplot.ax[0].get_xlim()
+		popplot.ax[0].set_xticks(popplot.figure_out_ticks(xlim[0],xlim[1],pp['tc_xnticks']))
+		popplot.ax[0].set_yticks(popplot.figure_out_ticks(0,pp['tc_ymax'],pp['tc_ynticks']))
+
 	elif method_index == 4:
 		popplot.ax[0].set_xlabel(r'$\beta$',fontdict=font)
 		popplot.ax[0].set_ylabel('Counts',fontdict=font)
@@ -488,7 +494,7 @@ def plot_tc(gui,popplot,pp):
 		rmax = np.log(pp['tc_max'])
 	else:
 		rmax = np.min((np.nanmax(y),np.log(popplot.ens.t.size/1.)))
-	hy = popplot.ax[0].hist(y[y>ymin],bins=pp['tc_nbins'],range=(rmin,rmax),histtype='stepfilled',density=True,color=pp['hist_color'])[0]
+	hy = popplot.ax[0].hist(y[y>ymin],bins=pp['tc_nbins'],range=(rmin,rmax),histtype='stepfilled',density=True,color=pp['hist_color'],alpha=.5)[0]
 	# if pp['tc_showens']:
 		# popplot.ax[0].axvline(x=np.log(popplot.ens.tc*tau),color='k')
 	if pp['tc_showmean']:
@@ -496,12 +502,12 @@ def plot_tc(gui,popplot,pp):
 		yy = yy[yy>rmin]
 		yy = yy[yy<rmax]
 		qq = np.log(np.nanmean(np.exp(yy)))
-		popplot.ax[0].axvline(x=qq,color='k',alpha=.9)
+		popplot.ax[0].axvline(x=qq,color=pp['hist_color'],alpha=.9,lw=1.)
 
 	if not gui.data.hmm_result is None and not popplot.hmm is None:
 		hr = gui.data.hmm_result
 		if hr.type in ['consensus vbfret']:
-			popplot.ax[0].axvline(x=np.log(popplot.hmm.tc*tau),color=pp['line_hmmcolor'],alpha=.9)
+			popplot.ax[0].axvline(x=np.log(popplot.hmm.tc*tau),color=pp['hist_color'],alpha=.9,linestyle='--',lw=1.)
 
 	# if pp['tc_showmean']:
 	# 	ltc =  np.linspace(rmin,rmax,1000)
@@ -512,9 +518,10 @@ def plot_tc(gui,popplot,pp):
 	if pp['tc_showkde']:
 		ltc =  np.linspace(rmin,rmax,1000)
 		lp = kde(ltc,y[y>ymin])
-		popplot.ax[0].plot(ltc,lp,color='k',lw=1,alpha=.9)
+		popplot.ax[0].plot(ltc,lp,color=pp['hist_color'],lw=1,alpha=.9)
 	popplot.ax[0].set_xlim(rmin,rmax)
 	popplot.ax[0].set_ylim(0.,pp['tc_ymax'])
+
 	popplot.nmol = (y[y>ymin]).size
 
 def plot_beta(gui,popplot,pp):
