@@ -2,7 +2,6 @@ from src.ui import launch_plotter
 
 gui = launch_plotter(False)
 
-
 # # sample script
 # gui = launch_plotter(True)
 # gui.load_traces(filename='_traces.dat')
@@ -12,4 +11,3 @@ gui = launch_plotter(False)
 # popplot.prefs['plot_fret_min']=-.25
 # popplot.prefs['plot_fret_max']=1.25
 # gui.plot_hist1d()
-# popplot.f.savefig('test.pdf'

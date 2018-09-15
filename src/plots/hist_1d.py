@@ -4,6 +4,10 @@ from scipy.signal import wiener
 from PyQt5.QtWidgets import QPushButton
 import multiprocessing as mp
 
+class obj(object): ## generic class to take anything you throw at it...
+	def __init__(self,*args):
+		self.args = args
+
 default_prefs = {
 	'fig_height':2.0,
 	'fig_width':3.5,
@@ -64,6 +68,10 @@ def setup(gui):
 	# gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(2,fitvbbutton)
 	# fitvbbutton.clicked.connect(lambda x: fit_vb(gui))
 
+	# fithistbutton = QPushButton("Fit Hist")
+	# gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(2,fithistbutton)
+	# fithistbutton.clicked.connect(lambda x: fit_hist(gui))
+
 	fitmlbutton = QPushButton("ML gmm Fit")
 	gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(2,fitmlbutton)
 	fitmlbutton.clicked.connect(lambda x: fit_ml(gui))
@@ -73,9 +81,45 @@ def setup(gui):
 	recalcbutton.clicked.connect(lambda x: recalc(gui))
 
 	gui.popout_plots['plot_hist1d'].ui.gmm_result = None
+	gui.popout_plots['plot_hist1d'].ui.hist = obj()
 
 	if not gui.data.d is None:
 		recalc(gui)
+
+# def normal_mixture(t,x0,nstates):
+# 	q = np.zeros_like(t)
+# 	for i in range(nstates-1):
+# 		q += x0[3*i+2]*normal(t,x0[3*i+0],x0[3,i+1])
+# 	q += (1.-x0[2::3].sum())*normal(t,x0[-2],x0[-1])
+# 	return q
+#
+# def minfxn(t,y,x0,nstates):
+# 	if x0[2::3].sum() > 1. or np.any(x0[2::3] < 0):
+# 		return np.inf
+# 	q = normal_mixture(t,x0,nstates)
+# 	return np.sum(np.square(q-y))
+#
+# def fit_hist(gui):
+# 	from scipy.optimize import minimize
+# 	popplot = gui.popout_plots['plot_hist1d'].ui
+# 	prefs = gui.popout_plots['plot_hist1d'].ui.prefs
+#
+# 	success,nstates = gui.data.get_nstates()
+# 	if success:
+# 		hx = .5*(popplot.hist.x[1:]+popplot.hist.x[:-1])
+# 		fxn = lambda x0: minfxn(hx,popplot.hist.y,x0,nstates)
+# 		x0 = np.zeros(nstates*3-1)
+# 		delta = (prefs['fret_max']-prefs['fret_min'])
+# 		x0[::3] = delta*(np.arange(nstates)+1)/(nstates+2.) + prefs['fret_min']
+# 		x0[1::3] = delta/nstates
+# 		x0[2::3] = 1./nstates
+# 		out = minimize(fxn,x0=x0,method='Nelder-mead',options={'maxiters':1000})
+# 		if out.success:
+# 			t = np.linspace(prefs['fret_min'],prefs['fret_max'],1000)
+# 			y = normal_mixture(t,out.x,nstates)
+# 		gui.popout_plots['plot_hist1d'].ui.ax[0].plot(t,y,color='r',lw=1)
+# 		gui.popout_plots['plot_hist1d'].ui.f.draw()
+
 
 def fit_vb(gui):
 	if not gui.data.d is None:
@@ -329,9 +373,9 @@ def plot(gui):
 		fpb = gui.popout_plots['plot_hist1d'].ui.fpb
 		if pp['hist_on']:
 			try:
-				popplot.ax[0].hist(popplot.fpb.flatten(),bins=pp['fret_nbins'],range=(pp['fret_min'],pp['fret_max']),histtype=pp['hist_type'],alpha=.8,density=True,color=pp['hist_color'],edgecolor=pp['hist_edgecolor'],log=pp['hist_log_y'])
+				popplot.hist.y, popplot.hist.x = popplot.ax[0].hist(popplot.fpb.flatten(),bins=pp['fret_nbins'],range=(pp['fret_min'],pp['fret_max']),histtype=pp['hist_type'],alpha=.8,density=True,color=pp['hist_color'],edgecolor=pp['hist_edgecolor'],log=pp['hist_log_y'])[:2]
 			except:
-				popplot.ax[0].hist(fpb.flatten(),bins=pp['fret_nbins'],range=(pp['fret_min'],pp['fret_max']),histtype='stepfilled',alpha=.8,density=True,color='steelblue',edgecolor='k',log=pp['hist_log_y'])
+				popplot.hist.y, popplot.hist.x = popplot.ax[0].hist(fpb.flatten(),bins=pp['fret_nbins'],range=(pp['fret_min'],pp['fret_max']),histtype='stepfilled',alpha=.8,density=True,color='steelblue',edgecolor='k',log=pp['hist_log_y'])[:2]
 		else:
 			if pp['hist_log_y']:
 				popplot.ax[0].set_yscale('log')
