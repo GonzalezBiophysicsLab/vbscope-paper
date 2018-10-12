@@ -153,8 +153,8 @@ class dock_transform(QWidget):
 		# else:
 		# 	self.gui.plot.colorlist = self.gui.plot.colorlist_ordered
 
-		self.gui.docks['spotfind'][1].show_spins()
-		
+		# self.gui.docks['spotfind'][1].show_spins()
+
 		if self.gui.data.flag_movie:
 			c = self.gui.prefs['channels_colors']#self.gui.plot.colorlist
 			alpha = .4

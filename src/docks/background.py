@@ -12,7 +12,7 @@ default_prefs = {
 	'background_smooth_dist':3
 }
 
-from ..supporting import gpu_flatfield as gf
+# from ..supporting import gpu_flatfield as gf
 
 class dock_background(QWidget):
 	def __init__(self,parent=None):
@@ -49,29 +49,29 @@ class dock_background(QWidget):
 		layout.addWidget(self.le_radius2,2,1)
 		layout.addWidget(self.button_preview,3,1)
 
-		self.button_flat = QPushButton("Flat Field")
-		self.button_pseudo = QPushButton("Pseudo Flat Field")
-		self.button_dynamic = QPushButton("Dynamic Imaging")
-		self.button_differential = QPushButton("Differential Imaging")
-		self.button_ratiometric = QPushButton("Ratiometric Imaging")
-		self.button_normalize = QPushButton("Normalize Power")
-		self.button_bin = QPushButton("Bin 2x")
-
-		layout.addWidget(self.button_flat,4,0)
-		layout.addWidget(self.button_pseudo,4,1)
-		layout.addWidget(self.button_normalize,4,2)
-		layout.addWidget(self.button_bin,4,3)
-		layout.addWidget(self.button_differential,5,0)
-		layout.addWidget(self.button_dynamic,5,1)
-		layout.addWidget(self.button_ratiometric,5,2)
-
-		self.button_flat.clicked.connect(self.flat)
-		self.button_pseudo.clicked.connect(self.pseudo)
-		self.button_normalize.clicked.connect(self.normalize)
-		self.button_bin.clicked.connect(self.bin)
-		self.button_differential.clicked.connect(self.differential)
-		self.button_dynamic.clicked.connect(self.dynamic)
-		self.button_ratiometric.clicked.connect(self.ratiometric)
+		# self.button_flat = QPushButton("Flat Field")
+		# self.button_pseudo = QPushButton("Pseudo Flat Field")
+		# self.button_dynamic = QPushButton("Dynamic Imaging")
+		# self.button_differential = QPushButton("Differential Imaging")
+		# self.button_ratiometric = QPushButton("Ratiometric Imaging")
+		# self.button_normalize = QPushButton("Normalize Power")
+		# self.button_bin = QPushButton("Bin 2x")
+		#
+		# layout.addWidget(self.button_flat,4,0)
+		# layout.addWidget(self.button_pseudo,4,1)
+		# layout.addWidget(self.button_normalize,4,2)
+		# layout.addWidget(self.button_bin,4,3)
+		# layout.addWidget(self.button_differential,5,0)
+		# layout.addWidget(self.button_dynamic,5,1)
+		# layout.addWidget(self.button_ratiometric,5,2)
+		#
+		# self.button_flat.clicked.connect(self.flat)
+		# self.button_pseudo.clicked.connect(self.pseudo)
+		# self.button_normalize.clicked.connect(self.normalize)
+		# self.button_bin.clicked.connect(self.bin)
+		# self.button_differential.clicked.connect(self.differential)
+		# self.button_dynamic.clicked.connect(self.dynamic)
+		# self.button_ratiometric.clicked.connect(self.ratiometric)
 
 		self.setLayout(layout)
 
@@ -89,67 +89,67 @@ class dock_background(QWidget):
 		self.gui.data.movie = self.gui.data.movie.astype('float32')
 		self.gui.plot.image.set_array(self.gui.plot.image.get_array().astype('float32'))
 		return nc,regions,shifts,prefs
-
-	def flat(self):
-		nc,regions,shifts,p = self.prep()
-
-		for i in range(nc):
-			r = regions[i]
-			mtype = self.gui.data.movie.dtype
-			d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
-			self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.flat_field(d,d[:-1])#.astype(mtype)
-
-
-	def pseudo(self):
-		nc,regions,shifts,p = self.prep()
-
-		for i in range(nc):
-			r = regions[i]
-			mtype = self.gui.data.movie.dtype
-			d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
-			self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.pseudo_flat_field(d,11)#.astype(mtype)
-
-
-	def normalize(self):
-		nc,regions,shifts,p = self.prep()
-
-		for i in range(nc):
-			r = regions[i]
-			mtype = self.gui.data.movie.dtype
-			d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
-			self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.normalize_movie_power(d)#.astype(mtype)
-
-	def bin(self):
-		self.gui.data.movie = gf.bin2x(self.gui.data.movie)
-
-	def differential(self):
-		nc,regions,shifts,p = self.prep()
-
-		for i in range(nc):
-			r = regions[i]
-			mtype = self.gui.data.movie.dtype
-			n = 99
-			d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
-			self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.differential_imaging(d,n)#.astype(mtype)
-			self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = 0
-
-	def dynamic(self):
-		nc,regions,shifts,p = self.prep()
-
-		for i in range(nc):
-			r = regions[i]
-			mtype = self.gui.data.movie.dtype
-			d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
-			self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.dynamic_imaging(d)#.astype(mtype)
-
-	def ratiometric(self):
-		nc,regions,shifts,p = self.prep()
-
-		for i in range(nc):
-			r = regions[i]
-			mtype = self.gui.data.movie.dtype
-			d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
-			self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.ratiometric_imaging(d,20)#.astype(mtype)
+	# 
+	# def flat(self):
+	# 	nc,regions,shifts,p = self.prep()
+	#
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		mtype = self.gui.data.movie.dtype
+	# 		d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
+	# 		self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.flat_field(d,d[:-1])#.astype(mtype)
+	#
+	#
+	# def pseudo(self):
+	# 	nc,regions,shifts,p = self.prep()
+	#
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		mtype = self.gui.data.movie.dtype
+	# 		d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
+	# 		self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.pseudo_flat_field(d,11)#.astype(mtype)
+	#
+	#
+	# def normalize(self):
+	# 	nc,regions,shifts,p = self.prep()
+	#
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		mtype = self.gui.data.movie.dtype
+	# 		d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
+	# 		self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.normalize_movie_power(d)#.astype(mtype)
+	#
+	# def bin(self):
+	# 	self.gui.data.movie = gf.bin2x(self.gui.data.movie)
+	#
+	# def differential(self):
+	# 	nc,regions,shifts,p = self.prep()
+	#
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		mtype = self.gui.data.movie.dtype
+	# 		n = 99
+	# 		d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
+	# 		self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.differential_imaging(d,n)#.astype(mtype)
+	# 		self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = 0
+	#
+	# def dynamic(self):
+	# 	nc,regions,shifts,p = self.prep()
+	#
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		mtype = self.gui.data.movie.dtype
+	# 		d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
+	# 		self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.dynamic_imaging(d)#.astype(mtype)
+	#
+	# def ratiometric(self):
+	# 	nc,regions,shifts,p = self.prep()
+	#
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		mtype = self.gui.data.movie.dtype
+	# 		d = self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
+	# 		self.gui.data.movie[:,r[0][0]:r[0][1],r[1][0]:r[1][1]] = gf.ratiometric_imaging(d,20)#.astype(mtype)
 
 
 	def update_radius1(self):

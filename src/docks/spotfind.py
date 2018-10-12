@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QSizePolicy,QPushButton,QHBoxLayout,QVBoxLayout,QSlider,QLabel,QSpinBox,QFileDialog,QMessageBox,QFrame
+from PyQt5.QtWidgets import QWidget, QSizePolicy,QPushButton,QHBoxLayout,QVBoxLayout,QSlider,QLabel,QSpinBox,QFileDialog,QMessageBox,QFrame,QInputDialog
 from PyQt5.QtCore import Qt
 from PyQt5.Qt import QFont
 
@@ -17,9 +17,9 @@ import sys
 default_prefs = {
 	'spotfind_nsearch':3,
 	'spotfind_clip_border':8,
-	'spotfind_threshold':1e-10,
-	'spotfind_maxiterations':2000,
-	'spotfind_nstates':8
+	'spotfind_threshold':1e-5,
+	'spotfind_maxiterations':200,
+	'spotfind_nstates':3
 }
 
 
@@ -33,9 +33,10 @@ class dock_spotfind(QWidget):
 		self.flag_spots = False
 
 		self.gui = parent
-		self.gmms = None
+		# self.gmms = None
 		self.priors = None
 		self.xys = None
+		self.spotprobs = None
 
 		### Menu Widgets
 		self.button_toggle = QPushButton('Toggle Spots')
@@ -51,9 +52,12 @@ class dock_spotfind(QWidget):
 		self.spin_start = QSpinBox()
 		label_end = QLabel('End:')
 		self.spin_end = QSpinBox()
-		self.button_search = QPushButton('Range Find')
-		self.button_find = QPushButton('Sum Find')
-		self.button_quick = QPushButton('Quick Find')
+		# self.button_search = QPushButton('Range Find')
+		# self.button_find = QPushButton('Sum Find')
+		# self.button_quick = QPushButton('Quick Find')
+		self.button_threshold = QPushButton('Threshold')
+		self.button_vb = QPushButton('VBGMM')
+		self.button_vbmax = QPushButton('MaxVal+VBGMM')
 
 		self.label_bb = QLabel()
 		self.label_pp = QLabel()
@@ -84,19 +88,19 @@ class dock_spotfind(QWidget):
 		layout_priorsp.addStretch(1)
 		wlpp.setLayout(layout_priorsp)
 
-		wls1 = QWidget()
-		layout_slider1 = QVBoxLayout()
-		layout_slider1.addWidget(QLabel('Background Class Threshold'))
-		whboxs1 = QWidget()
-		hbox_sliders1 = QHBoxLayout()
-		self.spins = [QSpinBox() for i in range(4)]
-		for sss in self.spins:
-			hbox_sliders1.addWidget(sss)
-		# hbox_sliders1.addWidget(self.label_bb)
-		whboxs1.setLayout(hbox_sliders1)
-
-		layout_slider1.addWidget(whboxs1)
-		wls1.setLayout(layout_slider1)
+		# wls1 = QWidget()
+		# layout_slider1 = QVBoxLayout()
+		# layout_slider1.addWidget(QLabel('Background Class Threshold'))
+		# whboxs1 = QWidget()
+		# hbox_sliders1 = QHBoxLayout()
+		# self.spins = [QSpinBox() for i in range(4)]
+		# for sss in self.spins:
+		# 	hbox_sliders1.addWidget(sss)
+		# # hbox_sliders1.addWidget(self.label_bb)
+		# whboxs1.setLayout(hbox_sliders1)
+		#
+		# layout_slider1.addWidget(whboxs1)
+		# wls1.setLayout(layout_slider1)
 
 		wls2 = QWidget()
 		layout_slider2 = QVBoxLayout()
@@ -126,9 +130,12 @@ class dock_spotfind(QWidget):
 		whff = QWidget()
 		hbox_ff = QHBoxLayout()
 		hbox_ff.addStretch(1)
-		hbox_ff.addWidget(self.button_search)
-		hbox_ff.addWidget(self.button_find)
-		hbox_ff.addWidget(self.button_quick)
+		# hbox_ff.addWidget(self.button_search)
+		# hbox_ff.addWidget(self.button_find)
+		# hbox_ff.addWidget(self.button_quick)
+		hbox_ff.addWidget(self.button_threshold)
+		hbox_ff.addWidget(self.button_vb)
+		hbox_ff.addWidget(self.button_vbmax)
 		whff.setLayout(hbox_ff)
 
 
@@ -138,7 +145,7 @@ class dock_spotfind(QWidget):
 		sep.setFrameStyle(4)
 		sep.setLineWidth(1)
 		total_layout.addWidget(sep)
-		total_layout.addWidget(wls1)
+		# total_layout.addWidget(wls1)
 		total_layout.addWidget(wls2)
 		total_layout.addWidget(whf)
 		sep = QFrame()
@@ -154,25 +161,25 @@ class dock_spotfind(QWidget):
 		self.setup_sliders()
 		self.connect_things()
 
-	def show_spins(self):
-		for i in range(4):
-			if i < self.gui.data.ncolors:
-				self.spins[i].setVisible(True)
-			else:
-				self.spins[i].setVisible(False)
+	# def show_spins(self):
+	# 	for i in range(4):
+	# 		if i < self.gui.data.ncolors:
+	# 			self.spins[i].setVisible(True)
+	# 		else:
+	# 			self.spins[i].setVisible(False)
 
 	def setup_sliders(self):
-		for sss in self.spins:
-			sss.setMaximum(100)
-			sss.setMinimum(0)
-			sss.setValue(0)
-		self.show_spins()
+		# for sss in self.spins:
+		# 	sss.setMaximum(100)
+		# 	sss.setMinimum(0)
+		# 	sss.setValue(0)
+		# self.show_spins()
 		self.sliders[0].setMinimum(0)
 		self.sliders[0].setMaximum(1000)
 
 		# Initialize thresholds
 		self.sliders[0].setValue(500) # p = .5
-		self.change_slide1(self.sliders[0].value())
+		self.change_slide1()
 
 		[s.setValue(1) for s in [self.spin_prior,self.spin_start]]
 
@@ -182,13 +189,16 @@ class dock_spotfind(QWidget):
 
 	def connect_things(self):
 
-		self.sliders[0].valueChanged.connect(self.change_slide1)
+		self.sliders[0].sliderReleased.connect(self.change_slide1)
 		[s.sliderReleased.connect(self.update) for s in self.sliders]
-		[s.valueChanged.connect(self.update) for s in self.spins]
+		# [s.valueChanged.connect(self.update) for s in self.spins]
 
-		self.button_find.clicked.connect(self.findspots)
-		self.button_quick.clicked.connect(self.quick_find)
-		self.button_search.clicked.connect(self.searchspots)
+		self.button_threshold.clicked.connect(self.thresholdfind)
+		self.button_vb.clicked.connect(self.vbtestfind)
+		self.button_vbmax.clicked.connect(self.vbmaxtestfind)
+		# self.button_find.clicked.connect(self.findspots)
+		# self.button_quick.clicked.connect(self.quick_find)
+		# self.button_search.clicked.connect(self.searchspots)
 		self.button_toggle.clicked.connect(self.togglespots)
 		self.button_export.clicked.connect(self.exportspots)
 		self.button_loadpriors.clicked.connect(self.loadpriors)
@@ -210,95 +220,95 @@ class dock_spotfind(QWidget):
 		except:
 			pass
 
-	def findspots(self):
-		if self.gui.data.flag_movie:
-			# if not self.flag_priorsloaded:
-				# self.get_priors()
-			# self.gmms,self.locs = self.setup_spot_find(self.gui.data.current_frame)
-			self.gmms,self.locs = self.setup_spot_find()
-
-			if self.gui.prefs['computer_ncpu'] > 1 and not _windows:
-				pool = mp.Pool(self.gui.prefs['computer_ncpu'])
-				self.gmms = pool.map(_run,self.gmms)
-				pool.close()
-			else:
-				self.gmms = map(_run,self.gmms)
-			# for i in range(self.gui.data.ncolors):
-			# 	self.gmms[i].run()
-			self.update_spots()
-			self.gui.plot.clear_collections()
-			self.plot_spots()
-			self.flag_spots = True
-			self.print_spotnum()
-			self.gui.docks['contrast'][1].update_image_contrast()
-			# self.gui.statusbar.showMessage('Spot finding complete')
-
-	def update_spots(self):
-		self.xys = [None for _ in range(self.gui.data.ncolors)]
-		self.gui.plot.clear_collections()
-		r,shifts = self.gui.data.regions_shifts()
-		if len(self.gmms) == self.gui.data.ncolors:
-			for i in range(self.gui.data.ncolors):
-				v = self.spot_cutoff(self.gmms[i], self.pp, bg_cutoff = self.spins[i].value()).astype('i')
-				cut = np.nonzero(v)[0]
-				x = self.locs[i][0][cut]
-				y = self.locs[i][1][cut]
-				self.xys[i] = np.array([x+shifts[i][0],y+shifts[i][1]])
-			self.remove_duplicates()
-		else:
-			n = len(self.gmms)/2
-			self.xys = []
-			for j in range(self.gui.data.ncolors):
-				self.xys.append(np.array(()).reshape((2,0)))
-				for i in range(n):
-					g = self.gmms[2*i+j]
-					l = self.locs[2*i+j]
-					v = self.spot_cutoff(g, self.pp, bg_cutoff = self.spins[j].value()).astype('i')
-					cut = np.nonzero(v)[0]
-					x = l[0][cut]
-					y = l[1][cut]
-					self.xys[j] = np.append(self.xys[j],np.array((x+shifts[j][0],y+shifts[j][1])),axis=1)
-					# self.xys[j][0] = np.append(self.xys[j][0],x+shifts[j][0])
-					# self.xys[j][1] = np.append(self.xys[j][1],y+shifts[j][1])
-					# np.array([x+shifts[i][0],y+shifts[i][1]])))
-			self.compile_spots()
-
-
-	def searchspots(self):
-		if self.gui.data.flag_movie:
-			if not self.flag_priorsloaded:
-				self.get_priors()
-
-			start = self.spin_start.value() - 1
-			end = self.spin_end.value() - 1
-			# print start,end
-			gmms = []
-			locs = []
-			for i in range(start,end+1):
-				g,l = self.setup_spot_search(i)
-				for j in range(self.gui.data.ncolors):
-					gmms.append(g[j])
-					locs.append(l[j])
-
-			if self.gui.prefs['computer_ncpu'] > 1 and not _windows:
-				pool = mp.Pool(self.gui.prefs['computer_ncpu'])
-				gmms = pool.map(_run,gmms)
-				pool.close()
-			else:
-				gmms = map(_run,gmms)
-
-			# for g in gmms:
-			# 	print g.color,g.frame
-
-			self.gmms = gmms#[-2:]
-			self.locs = locs#[-2:]
-
-			self.update_spots()
-			self.gui.plot.clear_collections()
-			self.plot_spots()
-			self.print_spotnum()
-			self.flag_spots = True
-			# self.gui.statusbar.showMessage('Spot finding complete')
+	# def findspots(self):
+	# 	if self.gui.data.flag_movie:
+	# 		# if not self.flag_priorsloaded:
+	# 			# self.get_priors()
+	# 		# self.gmms,self.locs = self.setup_spot_find(self.gui.data.current_frame)
+	# 		self.gmms,self.locs = self.setup_spot_find()
+	#
+	# 		if self.gui.prefs['computer_ncpu'] > 1 and not _windows:
+	# 			pool = mp.Pool(self.gui.prefs['computer_ncpu'])
+	# 			self.gmms = pool.map(_run,self.gmms)
+	# 			pool.close()
+	# 		else:
+	# 			self.gmms = map(_run,self.gmms)
+	# 		# for i in range(self.gui.data.ncolors):
+	# 		# 	self.gmms[i].run()
+	# 		self.update_spots()
+	# 		self.gui.plot.clear_collections()
+	# 		self.plot_spots()
+	# 		self.flag_spots = True
+	# 		self.print_spotnum()
+	# 		self.gui.docks['contrast'][1].update_image_contrast()
+	# 		# self.gui.statusbar.showMessage('Spot finding complete')
+	#
+	# def update_spots(self):
+	# 	self.xys = [None for _ in range(self.gui.data.ncolors)]
+	# 	self.gui.plot.clear_collections()
+	# 	r,shifts = self.gui.data.regions_shifts()
+	# 	if len(self.gmms) == self.gui.data.ncolors:
+	# 		for i in range(self.gui.data.ncolors):
+	# 			v = self.spot_cutoff(self.gmms[i], self.pp, bg_cutoff = self.spins[i].value()).astype('i')
+	# 			cut = np.nonzero(v)[0]
+	# 			x = self.locs[i][0][cut]
+	# 			y = self.locs[i][1][cut]
+	# 			self.xys[i] = np.array([x+shifts[i][0],y+shifts[i][1]])
+	# 		self.remove_duplicates()
+	# 	else:
+	# 		n = len(self.gmms)/2
+	# 		self.xys = []
+	# 		for j in range(self.gui.data.ncolors):
+	# 			self.xys.append(np.array(()).reshape((2,0)))
+	# 			for i in range(n):
+	# 				g = self.gmms[2*i+j]
+	# 				l = self.locs[2*i+j]
+	# 				v = self.spot_cutoff(g, self.pp, bg_cutoff = self.spins[j].value()).astype('i')
+	# 				cut = np.nonzero(v)[0]
+	# 				x = l[0][cut]
+	# 				y = l[1][cut]
+	# 				self.xys[j] = np.append(self.xys[j],np.array((x+shifts[j][0],y+shifts[j][1])),axis=1)
+	# 				# self.xys[j][0] = np.append(self.xys[j][0],x+shifts[j][0])
+	# 				# self.xys[j][1] = np.append(self.xys[j][1],y+shifts[j][1])
+	# 				# np.array([x+shifts[i][0],y+shifts[i][1]])))
+	# 		self.compile_spots()
+	#
+	#
+	# def searchspots(self):
+	# 	if self.gui.data.flag_movie:
+	# 		if not self.flag_priorsloaded:
+	# 			self.get_priors()
+	#
+	# 		start = self.spin_start.value() - 1
+	# 		end = self.spin_end.value() - 1
+	# 		# print start,end
+	# 		gmms = []
+	# 		locs = []
+	# 		for i in range(start,end+1):
+	# 			g,l = self.setup_spot_search(i)
+	# 			for j in range(self.gui.data.ncolors):
+	# 				gmms.append(g[j])
+	# 				locs.append(l[j])
+	#
+	# 		if self.gui.prefs['computer_ncpu'] > 1 and not _windows:
+	# 			pool = mp.Pool(self.gui.prefs['computer_ncpu'])
+	# 			gmms = pool.map(_run,gmms)
+	# 			pool.close()
+	# 		else:
+	# 			gmms = map(_run,gmms)
+	#
+	# 		# for g in gmms:
+	# 		# 	print g.color,g.frame
+	#
+	# 		self.gmms = gmms#[-2:]
+	# 		self.locs = locs#[-2:]
+	#
+	# 		self.update_spots()
+	# 		self.gui.plot.clear_collections()
+	# 		self.plot_spots()
+	# 		self.print_spotnum()
+	# 		self.flag_spots = True
+	# 		# self.gui.statusbar.showMessage('Spot finding complete')
 
 	# def compile_spots(self):
 		# self.xys = [None for _ in range(self.gui.data.ncolors)]
@@ -373,13 +383,10 @@ class dock_spotfind(QWidget):
 
 	def loadpriors(self):
 		if self.gui.data.flag_movie:
-			fname = QFileDialog.getOpenFileName(self,'Choose priors to load','./')#,filter='TIF File (*.tif *.TIF)')
+			fname = QFileDialog.getOpenFileName(self,'Choose priors to load -- PRIORS ARE BUSTED RIGHT NOW','./')#,filter='TIF File (*.tif *.TIF)')
 			if fname[0] != "":
 				try:
-					f = open(fname[0],'r')
-					p = pickle.load(f)
-					f.close()
-					self.priors = p
+					self.priors = np.loadtxt(fname[0])
 					self.flag_priorsloaded = True
 					self.gui.statusbar.showMessage('Priors loaded from  %s'%(fname[0]))
 				except:
@@ -388,14 +395,19 @@ class dock_spotfind(QWidget):
 
 	def savepriors(self):
 		if self.gui.data.flag_movie:
-			oname = QFileDialog.getSaveFileName(self, 'Save Priors', self.gui.data.filename[:-4]+'_priors_%i.dat'%(self.spin_prior.value()),'*.dat')
+			oname = QFileDialog.getSaveFileName(self, 'Save Priors -- PRIORS ARE BUSTED RIGHT NOW', self.gui.data.filename[:-4]+'_priors_%i.dat'%(self.spin_prior.value()),'*.dat')
 			if oname[0] != "":
 				try:
+					p = self.posterior
+					n = p.mu.size
+					z = np.zeros((4,n))
+					z[0] = p.m
+					z[1] = p.beta
+					z[2] = p.a
+					z[3] = p.b
+					print z
 					## Save Normal
-					self.get_priors()
-					f = open(oname[0],'w')
-					pickle.dump(self.priors,f)
-					f.close()
+					np.savetxt(oname[0],z)
 				except:
 					QMessageBox.critical(self,'Save Status','There was a problem trying to save the priors of frame %d'%(self.spin_prior.value()-1))
 
@@ -406,12 +418,14 @@ class dock_spotfind(QWidget):
 			colors = self.gui.prefs['channels_colors']
 		if not self.xys is None:
 			for i in range(self.gui.data.ncolors):
-				self.gui.plot.scatter(self.xys[i][0],self.xys[i][1],color=colors[i])
+				if not self.xys[i] is None:
+					self.gui.plot.scatter(self.xys[i][0],self.xys[i][1],color=colors[i])
 			self.gui.plot.canvas.draw()
 
-	def change_slide1(self,p):
-		self.pp = float(p)/1000.
+	def change_slide1(self):
+		self.pp = float(self.sliders[0].value())/1000.
 		self.label_pp.setText('%.4f'%self.pp)
+		self.update_spots()
 		# if not self.gmms is None:
 			# self.update_spots()
 
@@ -426,55 +440,60 @@ class dock_spotfind(QWidget):
 	#
 	# 	return l
 
-	def spot_cutoff(self,gmm,p_cutoff,bg_cutoff=0,class_list=None):
-		if class_list is None:
-			# class_list = self.not_background_class(gmm,bg_cutoff)
-			class_list = np.arange(gmm.post.m.size)
-			class_list = class_list[class_list >= bg_cutoff]
-			print class_list,gmm.r.shape
-
-		probs = (gmm.r[:,class_list]).sum(1)/gmm.r.sum(1)
-		spots = probs > p_cutoff
-		return spots
+	# def spot_cutoff(self,gmm,p_cutoff,bg_cutoff=0,class_list=None):
+	# 	if class_list is None:
+	# 		# class_list = self.not_background_class(gmm,bg_cutoff)
+	# 		class_list = np.arange(gmm.post.m.size)
+	# 		class_list = class_list[class_list >= bg_cutoff]
+	# 		print class_list,gmm.r.shape
+	#
+	# 	probs = (gmm.r[:,class_list]).sum(1)/gmm.r.sum(1)
+	# 	spots = probs > p_cutoff
+	# 	return spots
 
 	def update(self):
-		if self.gui.data.flag_movie and not self.gmms is None:
+		try:
 			self.update_spots()
-			self.plot_spots()
-			self.print_spotnum()
-
-	def setup_gmm(self,dd,prior=None,max_frames = 1):
-		p = self.gui.prefs
-
-		#bg = self.gui.docks['background'][1].calc_background(dd)
-		image = dd#-bg
-
-		## Find local mins and local maxes
-		from ..supporting import minmax
-		mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
-
-		## Estimate background distribution from local mins
-
-		if not 'src.supporting.normal_minmax_dist' in sys.modules:
-			self.gui.set_status('Compiling...')
-		from ..supporting import normal_minmax_dist as nd
-		from ..supporting import vbem_gmm as vb
-		self.gui.set_status('Finding spots...')
-		bgfit = nd.estimate_from_min(image[mmin],p['spotfind_nsearch']**2 * max_frames)
-		background = vb.background(p['spotfind_nsearch']**2 * max_frames,*bgfit)
-
-		## Classify local maxes
-		if not prior is None:
-			gmm = vb.vbem_gmm(image[mmax], p['spotfind_nstates'], bg=background, prior=prior)
-		else:
-			gmm = vb.vbem_gmm(image[mmax], p['spotfind_nstates'], bg=background)
-		gmm.threshold = p['spotfind_threshold']
-		gmm.maxiters = p['spotfind_maxiterations']
-		gmm._debug = False
-
-		locs = np.nonzero(mmax)
-
-		return gmm,locs
+		except:
+			pass
+		# if self.gui.data.flag_movie and not self.gmms is None:
+		# 	self.update_spots()
+		# 	# self.update_spots()
+		# 	# self.plot_spots()
+		# 	# self.print_spotnum()
+	#
+	# def setup_gmm(self,dd,prior=None,max_frames = 1):
+	# 	p = self.gui.prefs
+	#
+	# 	#bg = self.gui.docks['background'][1].calc_background(dd)
+	# 	image = dd#-bg
+	#
+	# 	## Find local mins and local maxes
+	# 	from ..supporting import minmax
+	# 	mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
+	#
+	# 	## Estimate background distribution from local mins
+	#
+	# 	if not 'src.supporting.normal_minmax_dist' in sys.modules:
+	# 		self.gui.set_status('Compiling...')
+	# 	from ..supporting import normal_minmax_dist as nd
+	# 	from ..supporting import vbem_gmm as vb
+	# 	self.gui.set_status('Finding spots...')
+	# 	bgfit = nd.estimate_from_min(image[mmin],p['spotfind_nsearch']**2 * max_frames)
+	# 	background = vb.background(p['spotfind_nsearch']**2 * max_frames,*bgfit)
+	#
+	# 	## Classify local maxes
+	# 	if not prior is None:
+	# 		gmm = vb.vbem_gmm(image[mmax], p['spotfind_nstates'], bg=background, prior=prior)
+	# 	else:
+	# 		gmm = vb.vbem_gmm(image[mmax], p['spotfind_nstates'], bg=background)
+	# 	gmm.threshold = p['spotfind_threshold']
+	# 	gmm.maxiters = p['spotfind_maxiterations']
+	# 	gmm._debug = False
+	#
+	# 	locs = np.nonzero(mmax)
+	#
+	# 	return gmm,locs
 
 	def get_priors(self):
 		self.gui.statusbar.showMessage('Finding priors from frame %d'%(self.spin_prior.value()))
@@ -492,115 +511,115 @@ class dock_spotfind(QWidget):
 			gmm,locs = self.setup_gmm(ddp,prior=None)
 			self.priors[i] = gmm.prior
 
-	# def setup_spot_find(self,frame):
-	def setup_spot_find(self):
-		nc = self.gui.data.ncolors
-		# d = self.gui.data.movie[frame].astype('f')
+	# # def setup_spot_find(self,frame):
+	# def setup_spot_find(self):
+	# 	nc = self.gui.data.ncolors
+	# 	# d = self.gui.data.movie[frame].astype('f')
+	#
+	# 	start = self.spin_start.value() - 1
+	# 	end = self.spin_end.value() - 1
+	# 	total = end + 1 - start
+	# 	# d = np.max(self.gui.data.movie[start:end+1],axis=0).astype('f')
+	# 	d = np.sum(self.gui.data.movie[start:end+1],axis=0).astype('f') / float(total)
+	# 	# dmin = np.min(self.gui.data.movie[start:end+1],axis=0).astype('f')
+	#
+	# 	bg = self.gui.docks['background'][1].calc_background(d)
+	# 	self.disp_image = d-bg
+	# 	self.gui.plot.image.set_array(self.disp_image)
+	# 	self.gui.docks['contrast'][1].update_image_contrast()
+	#
+	# 	regions,shifts = self.gui.data.regions_shifts()
+	# 	locs = [None for _ in range(nc)]
+	# 	gmms = [None for _ in range(nc)]
+	#
+	# 	self.gui.statusbar.showMessage('Finding spots...')
+	# 	self.gui.app.processEvents()
+	#
+	# 	self.gui.prefs['spotfind_nsearch']
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]]
+	# 		dd = (d-bg)[r[0][0]:r[0][1],r[1][0]:r[1][1]]
+	#
+	# 		# gmm,loc = self.setup_gmm(dd,self.priors[i])
+	# 		gmm,loc = self.setup_gmm(dd,prior=None)
+	# 		# gmm.frame = frame
+	# 		gmm.color = i
+	#
+	# 		locs[i] = loc
+	# 		gmms[i] = gmm
+	# 	return gmms,locs
 
-		start = self.spin_start.value() - 1
-		end = self.spin_end.value() - 1
-		total = end + 1 - start
-		# d = np.max(self.gui.data.movie[start:end+1],axis=0).astype('f')
-		d = np.sum(self.gui.data.movie[start:end+1],axis=0).astype('f') / float(total)
-		# dmin = np.min(self.gui.data.movie[start:end+1],axis=0).astype('f')
-
-		bg = self.gui.docks['background'][1].calc_background(d)
-		self.disp_image = d-bg
-		self.gui.plot.image.set_array(self.disp_image)
-		self.gui.docks['contrast'][1].update_image_contrast()
-
-		regions,shifts = self.gui.data.regions_shifts()
-		locs = [None for _ in range(nc)]
-		gmms = [None for _ in range(nc)]
-
-		self.gui.statusbar.showMessage('Finding spots...')
-		self.gui.app.processEvents()
-
-		self.gui.prefs['spotfind_nsearch']
-		for i in range(nc):
-			r = regions[i]
-			# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]]
-			dd = (d-bg)[r[0][0]:r[0][1],r[1][0]:r[1][1]]
-
-			# gmm,loc = self.setup_gmm(dd,self.priors[i])
-			gmm,loc = self.setup_gmm(dd,prior=None)
-			# gmm.frame = frame
-			gmm.color = i
-
-			locs[i] = loc
-			gmms[i] = gmm
-		return gmms,locs
-
-
-	# def setup_spot_find(self,frame):
-	def setup_spot_search(self,frame):
-		nc = self.gui.data.ncolors
-		d = self.gui.data.movie[frame].astype('f')
-
-		# start = self.spin_start.value() - 1
-		# end = self.spin_end.value() - 1
-		# total = end + 1 - start
-		# d = np.max(self.gui.data.movie[start:end+1],axis=0).astype('f')
-		# d = np.sum(self.gui.data.movie[start:end+1],axis=0).astype('f') / float(total)
-		# dmin = np.min(self.gui.data.movie[start:end+1],axis=0).astype('f')
-
-		bg = self.gui.docks['background'][1].calc_background(d)
-		# self.disp_image = d#-bg
-		# self.gui.plot.image.set_array(self.disp_image)
-		# self.gui.docks['contrast'][1].update_image_contrast()
-
-		regions,shifts = self.gui.data.regions_shifts()
-		locs = [None for _ in range(nc)]
-		gmms = [None for _ in range(nc)]
-
-		self.gui.statusbar.showMessage('Finding spots...')
-		self.gui.app.processEvents()
-
-		self.gui.prefs['spotfind_nsearch']
-		for i in range(nc):
-			r = regions[i]
-			# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]]
-			dd = (d-bg)[r[0][0]:r[0][1],r[1][0]:r[1][1]]
-
-			gmm,loc = self.setup_gmm(dd,self.priors[i])
-			# gmm,loc = self.setup_gmm(dd,prior=None)
-			gmm.frame = frame
-			gmm.color = i
-
-			locs[i] = loc
-			gmms[i] = gmm
-		return gmms,locs
-
-	def compile_spots(self):
-		nc = self.gui.data.ncolors
-		regions,shifts = self.gui.data.regions_shifts()
-		p = self.gui.prefs
-		for i in range(nc):
-			mm = make_map(self.xys[i],self.gui.data.movie.shape[1],self.gui.data.movie.shape[2])
-
-
-			from ..supporting import minmax
-			r = regions[i]
-			mmm = mm[r[0][0]:r[0][1],r[1][0]:r[1][1]]
-			mmin,mmax = minmax.minmax_map(mmm,p['spotfind_nsearch'],p['spotfind_clip_border'])
-
-			from ..supporting import normal_minmax_dist as nmd
-			bg = nmd.estimate_from_min(mmm[mmin],p['spotfind_nsearch']**2)
-
-			cut = np.max((1.,bg[0] + np.sqrt(bg[1])*3.)) # + np.sqrt(bg[0])*3.
-			print i,cut
-
-			mmin,mmax = minmax.minmax_map(mm*(mm > cut),p['spotfind_nsearch'],p['spotfind_clip_border'])
-			self.xys[i] = np.array(np.nonzero(mmax))
-
-			if i == 0:
-				mmtotal = np.zeros_like(mm)
-			# mmtotal[mm>cut] += mm[mm>cut]
-			mmtotal += mm
-
-		self.disp_image = mmtotal
-		self.gui.plot.image.set_array(self.disp_image)
-		self.gui.docks['contrast'][1].update_image_contrast()
+	#
+	# # def setup_spot_find(self,frame):
+	# def setup_spot_search(self,frame):
+	# 	nc = self.gui.data.ncolors
+	# 	d = self.gui.data.movie[frame].astype('f')
+	#
+	# 	# start = self.spin_start.value() - 1
+	# 	# end = self.spin_end.value() - 1
+	# 	# total = end + 1 - start
+	# 	# d = np.max(self.gui.data.movie[start:end+1],axis=0).astype('f')
+	# 	# d = np.sum(self.gui.data.movie[start:end+1],axis=0).astype('f') / float(total)
+	# 	# dmin = np.min(self.gui.data.movie[start:end+1],axis=0).astype('f')
+	#
+	# 	bg = self.gui.docks['background'][1].calc_background(d)
+	# 	# self.disp_image = d#-bg
+	# 	# self.gui.plot.image.set_array(self.disp_image)
+	# 	# self.gui.docks['contrast'][1].update_image_contrast()
+	#
+	# 	regions,shifts = self.gui.data.regions_shifts()
+	# 	locs = [None for _ in range(nc)]
+	# 	gmms = [None for _ in range(nc)]
+	#
+	# 	self.gui.statusbar.showMessage('Finding spots...')
+	# 	self.gui.app.processEvents()
+	#
+	# 	self.gui.prefs['spotfind_nsearch']
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]]
+	# 		dd = (d-bg)[r[0][0]:r[0][1],r[1][0]:r[1][1]]
+	#
+	# 		gmm,loc = self.setup_gmm(dd,self.priors[i])
+	# 		# gmm,loc = self.setup_gmm(dd,prior=None)
+	# 		gmm.frame = frame
+	# 		gmm.color = i
+	#
+	# 		locs[i] = loc
+	# 		gmms[i] = gmm
+	# 	return gmms,locs
+	#
+	# def compile_spots(self):
+	# 	nc = self.gui.data.ncolors
+	# 	regions,shifts = self.gui.data.regions_shifts()
+	# 	p = self.gui.prefs
+	# 	for i in range(nc):
+	# 		mm = make_map(self.xys[i],self.gui.data.movie.shape[1],self.gui.data.movie.shape[2])
+	#
+	#
+	# 		from ..supporting import minmax
+	# 		r = regions[i]
+	# 		mmm = mm[r[0][0]:r[0][1],r[1][0]:r[1][1]]
+	# 		mmin,mmax = minmax.minmax_map(mmm,p['spotfind_nsearch'],p['spotfind_clip_border'])
+	#
+	# 		from ..supporting import normal_minmax_dist as nmd
+	# 		bg = nmd.estimate_from_min(mmm[mmin],p['spotfind_nsearch']**2)
+	#
+	# 		cut = np.max((1.,bg[0] + np.sqrt(bg[1])*3.)) # + np.sqrt(bg[0])*3.
+	# 		print i,cut
+	#
+	# 		mmin,mmax = minmax.minmax_map(mm*(mm > cut),p['spotfind_nsearch'],p['spotfind_clip_border'])
+	# 		self.xys[i] = np.array(np.nonzero(mmax))
+	#
+	# 		if i == 0:
+	# 			mmtotal = np.zeros_like(mm)
+	# 		# mmtotal[mm>cut] += mm[mm>cut]
+	# 		mmtotal += mm
+	#
+	# 	self.disp_image = mmtotal
+	# 	self.gui.plot.image.set_array(self.disp_image)
+	# 	self.gui.docks['contrast'][1].update_image_contrast()
 
 
 	def remove_duplicates(self):
@@ -608,9 +627,42 @@ class dock_spotfind(QWidget):
 			# self.xys[i] = cull_rep_px(self.xys[i].astype('double'),self.gui.data.movie.shape[1],self.gui.data.movie.shape[2])
 			self.xys[i] = avg_close(self.xys[i].astype('double'),self.gui.prefs['extract_same_cutoff'])
 
-	def quick_find(self):
+
+
+	def update_spots(self):
+		if not self.spotprobs is None:
+			self.gui.plot.clear_collections()
+			nc = self.gui.data.ncolors
+			for i in range(nc):
+				if not self.spotprobs[i] is None:
+					from scipy.ndimage import label, center_of_mass
+					labels,num = label(self.spotprobs[i] > self.pp)
+					if num > 0:
+						coms = np.array(center_of_mass(self.spotprobs[i],labels,range(1,num+1))).T
+						self.xys[i] = coms
+						###
+						# self.xys[i] = np.array(np.nonzero(prob*mmax > self.pp))
+						self.xys[i][0] += self.shifts[i][0]
+						self.xys[i][1] += self.shifts[i][1]
+					else:
+						self.xys[i] = None
+
+			self.plot_spots()
+			self.flag_spots = True
+			self.print_spotnum()
+			# self.gui.docks['contrast'][1].update_image_contrast()
+
+
+
+	def vbmaxtestfind(self):
+		self.gui.set_status('Compiling...')
+		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
+		from src.supporting import normal_minmax_dist as nmd
+		self.gui.set_status('Running...')
+
 		if self.gui.data.flag_movie:
 			self.xys = [None for _ in range(self.gui.data.ncolors)]
+			self.spotprobs = [None for _ in range(self.gui.data.ncolors)]
 			self.gui.plot.clear_collections()
 			nc = self.gui.data.ncolors
 			start = self.spin_start.value() - 1
@@ -618,65 +670,200 @@ class dock_spotfind(QWidget):
 			total = end + 1 - start
 			d = self.gui.data.movie[start:end+1]
 
-			regions,shifts = self.gui.data.regions_shifts()
+			regions,self.shifts = self.gui.data.regions_shifts()
+
+			p = self.gui.prefs
+			from ..supporting import minmax
+			# from ..supporting import normal_minmax_dist as nd
+			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
+
+			nregion = self.gui.prefs['spotfind_nsearch']**2
+			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
+			for i in range(nc):
+				r = regions[i]
+				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').mean(0)
+				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
+				d = d.copy() - bg
+
+				mmin,mmax = minmax.minmax_map(d,p['spotfind_nsearch'],p['spotfind_clip_border'])
+				h0 = d[mmax].astype('double')
+				l0 = d[mmin]
+				bg = nmd.estimate_from_min(l0,nregion)
+
+				if not self.priors is None:
+					bg = np.array((self.priors[0,0],self.priors[3,0]/self.priors[2,0]))
+					prior_strengths = np.median(self.priors[:,1:],axis=1)
+					print prior_strengths
+				else:
+					prior_strengths = None
+
+				out = gmm(h0,self.gui.prefs['spotfind_nstates'],bg,nregion,maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths = prior_strengths)
+
+				xsort = out.mu.argsort()
+				prob = np.zeros_like(d)
+				prob[mmax] = (1.-out.r[:,xsort][:,0])
+				self.posterior = out
+				self.posterior.bg = bg
+
+				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
+				self.spotprobs[i] = prob
+
+			self.gui.plot.image.set_array(self.disp_image)
+			self.gui.docks['contrast'][1].update_image_contrast()
+
+			self.update_spots()
+
+	def vbtestfind(self):
+		self.gui.set_status('Compiling...')
+		from src.supporting.hmms.vb_em_gmm import vb_em_gmm as gmm
+		self.gui.set_status('Running...')
+
+
+		if self.gui.data.flag_movie:
+			self.xys = [None for _ in range(self.gui.data.ncolors)]
+			self.spotprobs = [None for _ in range(self.gui.data.ncolors)]
+			self.gui.plot.clear_collections()
+			nc = self.gui.data.ncolors
+			start = self.spin_start.value() - 1
+			end = self.spin_end.value() - 1
+			total = end + 1 - start
+			d = self.gui.data.movie[start:end+1]
+
+			regions,self.shifts = self.gui.data.regions_shifts()
+
+			p = self.gui.prefs
+			from ..supporting import minmax
+			# from ..supporting import normal_minmax_dist as nd
+			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
+
+			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
+			for i in range(nc):
+				r = regions[i]
+				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').mean(0)
+				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
+				d = d.copy() - bg
+
+				mmin,mmax = minmax.minmax_map(d,p['spotfind_nsearch'],p['spotfind_clip_border'])
+
+				out = gmm(d[mmax].astype('float64'),self.gui.prefs['spotfind_nstates'],maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'])
+				xsort = out.mu.argsort()
+				prob = np.zeros_like(d)
+				prob[mmax] = (1.-out.r[:,xsort][:,0])
+
+				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
+				self.spotprobs[i] = prob
+
+			self.gui.plot.image.set_array(self.disp_image)
+			self.gui.docks['contrast'][1].update_image_contrast()
+			self.update_spots()
+
+	def thresholdfind(self):
+
+		if self.gui.data.flag_movie:
+			self.xys = [None for _ in range(self.gui.data.ncolors)]
+			self.spotprobs = [None for _ in range(self.gui.data.ncolors)]
+			self.gui.plot.clear_collections()
+			nc = self.gui.data.ncolors
+			start = self.spin_start.value() - 1
+			end = self.spin_end.value() - 1
+			total = end + 1 - start
+			d = self.gui.data.movie[start:end+1]
+
+			regions,self.shifts = self.gui.data.regions_shifts()
 
 			p = self.gui.prefs
 			from ..supporting import minmax
 			from ..supporting import normal_minmax_dist as nd
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
+
+			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 			for i in range(nc):
 				r = regions[i]
-				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f')
-				bg = self.gui.docks['background'][1].calc_background(d)
-				bg = bg.astype('f')
-				if bg.ndim == 3:
-					bg = np.median(bg,axis=2)
-				d = d.copy()/bg[:,:,None]
+				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').mean(0)
+				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
+				d = d.copy() - bg
 
-				####
-				bg = np.min(d,axis=0)
-				mmin,mmax = minmax.minmax_map(bg,p['spotfind_nsearch'],p['spotfind_clip_border'])
-				bgfit = nd.estimate_from_min(bg[mmin],p['spotfind_nsearch']**2 * d.shape[0])
-				print i,bgfit
-				# prob = np.sum(self.quick_mix_ll(d,bgfit[0],bgfit[1]) > self.pp,axis=0)
-				prob = np.mean(self.quick_mix_ll(d,bgfit[0],bgfit[1]) ,axis=0)#> self.pp
-				prob = minmax.clip(prob,p['spotfind_clip_border'])
-				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += prob
+				mmin,mmax = minmax.minmax_map(d,p['spotfind_nsearch'],p['spotfind_clip_border'])
 
-				mmin,mmax = minmax.minmax_map(prob,p['spotfind_nsearch'],p['spotfind_clip_border'])
-				bgfit = nd.estimate_from_min(prob[mmin],(p['spotfind_nsearch'])**2)
-				print i,bgfit
-				prob = self.quick_mix_ll(prob,bgfit[0],bgfit[1])
-				prob = minmax.clip(prob,p['spotfind_clip_border'])
-				# self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += prob
-				# mmin,mmax = minmax.minmax_map(prob,p['spotfind_nsearch'],p['spotfind_clip_border'])
-
-				from scipy.ndimage import label, center_of_mass
-				labels,num = label(prob > self.pp)
-				coms = np.array(center_of_mass(prob,labels,range(1,num+1))).T
-				self.xys[i] = coms
-				###
-				# self.xys[i] = np.array(np.nonzero(prob*mmax > self.pp))
-				self.xys[i][0] += shifts[i][0]
-				self.xys[i][1] += shifts[i][1]
+				prob = np.zeros_like(d) + d.min()
+				prob[mmax] = d[mmax]
+				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
+				self.spotprobs[i] = prob/d.max()
 
 			self.gui.plot.image.set_array(self.disp_image)
 			self.gui.docks['contrast'][1].update_image_contrast()
-
 			self.gui.plot.clear_collections()
-			self.plot_spots()
-			self.flag_spots = True
-			self.print_spotnum()
-			self.gui.docks['contrast'][1].update_image_contrast()
-			# self.gui.statusbar.showMessage('Spot finding complete')
 
-	def quick_mix_ll(self,d,m,v):
-		pnormal = 1./np.sqrt(2.*np.pi*v)*np.exp(-.5*(d-m)**2. / v)
-		puniform_high = 1./(d.max() - m)*(d > m) ## assume 16 bit camera
-		puniform_low = 1./(m - d.min())*(d<=m) ## assume 16 bit camera
-		p = puniform_high/(pnormal+puniform_high+puniform_low)
-		p[np.bitwise_not(np.isfinite(p))] = 0.
-		return p
+			self.update_spots
+
+	# def quick_find(self):
+	# 	if self.gui.data.flag_movie:
+	# 		self.xys = [None for _ in range(self.gui.data.ncolors)]
+	# 		self.gui.plot.clear_collections()
+	# 		nc = self.gui.data.ncolors
+	# 		start = self.spin_start.value() - 1
+	# 		end = self.spin_end.value() - 1
+	# 		total = end + 1 - start
+	# 		d = self.gui.data.movie[start:end+1]
+	#
+	# 		regions,shifts = self.gui.data.regions_shifts()
+	#
+	# 		p = self.gui.prefs
+	# 		from ..supporting import minmax
+	# 		from ..supporting import normal_minmax_dist as nd
+	# 		self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
+	# 		for i in range(nc):
+	# 			r = regions[i]
+	# 			d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f')
+	# 			bg = self.gui.docks['background'][1].calc_background(d)
+	# 			bg = bg.astype('f')
+	# 			if bg.ndim == 3:
+	# 				bg = np.median(bg,axis=2)
+	# 			d = d.copy()/bg[:,:,None]
+	#
+	# 			####
+	# 			bg = np.min(d,axis=0)
+	# 			mmin,mmax = minmax.minmax_map(bg,p['spotfind_nsearch'],p['spotfind_clip_border'])
+	# 			bgfit = nd.estimate_from_min(bg[mmin],p['spotfind_nsearch']**2 * d.shape[0])
+	# 			# prob = np.sum(self.quick_mix_ll(d,bgfit[0],bgfit[1]) > self.pp,axis=0)
+	# 			prob = np.mean(self.quick_mix_ll(d,bgfit[0],bgfit[1]) ,axis=0)#> self.pp
+	# 			prob = minmax.clip(prob,p['spotfind_clip_border'])
+	# 			self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += prob
+	#
+	# 			mmin,mmax = minmax.minmax_map(prob,p['spotfind_nsearch'],p['spotfind_clip_border'])
+	# 			bgfit = nd.estimate_from_min(prob[mmin],(p['spotfind_nsearch'])**2)
+	# 			print i,bgfit
+	# 			prob = self.quick_mix_ll(prob,bgfit[0],bgfit[1])
+	# 			prob = minmax.clip(prob,p['spotfind_clip_border'])
+	# 			# self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += prob
+	# 			# mmin,mmax = minmax.minmax_map(prob,p['spotfind_nsearch'],p['spotfind_clip_border'])
+	#
+	# 			from scipy.ndimage import label, center_of_mass
+	# 			labels,num = label(prob > self.pp)
+	# 			coms = np.array(center_of_mass(prob,labels,range(1,num+1))).T
+	# 			self.xys[i] = coms
+	# 			###
+	# 			# self.xys[i] = np.array(np.nonzero(prob*mmax > self.pp))
+	# 			self.xys[i][0] += shifts[i][0]
+	# 			self.xys[i][1] += shifts[i][1]
+	#
+	# 		self.gui.plot.image.set_array(self.disp_image)
+	# 		self.gui.docks['contrast'][1].update_image_contrast()
+	#
+	# 		self.gui.plot.clear_collections()
+	# 		self.plot_spots()
+	# 		self.flag_spots = True
+	# 		self.print_spotnum()
+	# 		self.gui.docks['contrast'][1].update_image_contrast()
+	# 		# self.gui.statusbar.showMessage('Spot finding complete')
+	#
+	# def quick_mix_ll(self,d,m,v):
+	# 	pnormal = 1./np.sqrt(2.*np.pi*v)*np.exp(-.5*(d-m)**2. / v)
+	# 	puniform_high = 1./(d.max() - m)*(d > m) ## assume 16 bit camera
+	# 	puniform_low = 1./(m - d.min())*(d<=m) ## assume 16 bit camera
+	# 	p = puniform_high/(pnormal+puniform_high+puniform_low)
+	# 	p[np.bitwise_not(np.isfinite(p))] = 0.
+	# 	return p
 
 
 import numba as nb
