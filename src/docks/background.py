@@ -176,7 +176,7 @@ class dock_background(QWidget):
 			return uniform_filter(gaussian_filter(image,self.radius2),int(self.radius1))
 		elif self.method == 4:
 			x =  self.test()
-			return image*(x-1.)/x
+			return x#image*(x-1.)/x
 		else:
 			return np.zeros(image.shape,dtype='f')
 
@@ -199,12 +199,18 @@ class dock_background(QWidget):
 		self.draw_background()
 
 	def test(self):
-		from PyQt5.QtWidgets import QMessageBox
-		power = np.median(self.gui.data.movie,axis=(1,2))
-		power /= np.median(power)
+		# from PyQt5.QtWidgets import QMessageBox
+		# power = np.median(self.gui.data.movie,axis=(1,2))
+		# power /= np.median(power)
+		#
+		# from ..supporting import solve_bg
+		# background = solve_bg(self.gui.data.movie / power[:,None,None], m=self.gui.prefs['background_pixel_dist'], n=self.gui.prefs['background_time_dist'], sigma=self.gui.prefs['background_smooth_dist']).astype('f')
+		# # background /= np.median(background)
+		# return background
 
-		from ..supporting import solve_bg
-		background = solve_bg(self.gui.data.movie / power[:,None,None], m=self.gui.prefs['background_pixel_dist'], n=self.gui.prefs['background_time_dist'], sigma=self.gui.prefs['background_smooth_dist']).astype('f')
-		# background /= np.median(background)
 
-		return background
+		m = self.gui.data.movie.mean(0)
+		a = median_filter(m,24)
+		b = median_filter(a,24)
+		c = median_filter(b,24)
+		return c

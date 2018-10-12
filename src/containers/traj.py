@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QInputDialog,QFileDialog,QMessageBox
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import wiener
+
 
 
 class traj_container():
@@ -17,6 +17,28 @@ class traj_container():
 		self.fret = np.array(())
 
 		self.deadprob = None
+
+	def filter(self,y):
+		from scipy import signal
+		from scipy.ndimage import gaussian_filter1d,median_filter
+
+		method = self.gui.prefs['filter_method']
+		w = float(self.gui.prefs['filter_width'])
+
+		if w <= 0: w = .01
+		if method == 0:
+			return gaussian_filter1d(y,w)
+		elif method == 1:
+			w = int(np.floor(w/2)*2+1)
+			w = np.max((w,3))
+			return signal.wiener(y,mysize=w)
+		elif method == 2:
+			w = int(np.max((1,w)))
+			return median_filter(y,w)
+		else:
+			if w < 2: w = 2.
+			b, a = signal.bessel(8, 1./w)
+			return signal.filtfilt(b, a, y)
 
 	def calc_cross_corr(self,d=None): ## of gradient
 		try:
@@ -64,13 +86,13 @@ class traj_container():
 		self.gui.update_display_traces()
 		self.gui.log('Trajectories sorted by cross correlation',True)
 
-	def update_fret(self):
+	def update_fret(self,filter_flag=False):
 		q = np.copy(self.d)
-		if self.gui.prefs['wiener_smooth']:
+		if filter_flag:
 			for i in range(q.shape[1]):
 				for j in range(q.shape[0]):
 					try:
-						q[j,i] = wiener(q[j,i])
+						q[j,i] = self.filter(q[j,i])
 					except:
 						pass
 		bts = self.gui.prefs['bleedthrough'].reshape((4,4))
@@ -184,9 +206,9 @@ class traj_container():
 						self.gui.update_display_traces()
 
 
-	def get_plot_data(self):
+	def get_plot_data(self,filter_flag=False):
 		# f = self.fret
-		self.update_fret()
+		self.update_fret(filter_flag)
 		fpb = self.fret.copy()
 		for j in range(self.gui.ncolors-1):
 			for i in range(fpb.shape[1]):
@@ -204,15 +226,11 @@ class traj_container():
 	def remove_acceptor_bleach_from_fret(self):
 		from ..supporting.photobleaching import get_point_pbtime
 
-		self.update_fret()
-		# fpb = self.fret.copy()
 		d = self.get_fluor()
 		checked = self.gui.classes_get_checked()
 		if self.gui.ncolors == 2:
-			# for i in range(fpb.shape[1]):
 			for i in range(d.shape[0]):
 				if checked[i]:
-					# ff = fpb[0][i,self.pre_list[i]:self.pb_list[i]].copy()
 					ff = d[i,1,self.pre_list[i]:self.pb_list[i]]
 					pbt = get_point_pbtime(ff,1.,1.,1.,1000.)
 					self.pb_list[i] = self.pre_list[i]+pbt
@@ -280,7 +298,7 @@ class traj_container():
 		elif color == 'Sum Intensity':
 			z = self.get_fluor().sum(1)
 		elif color == 'E_FRET':
-			self.update_fret()
+			self.update_fret(filter_flag=self.gui.prefs['hmm_filter'])
 			z = self.fret[0]
 		else:
 			raise Exception('wtf color do you want?')

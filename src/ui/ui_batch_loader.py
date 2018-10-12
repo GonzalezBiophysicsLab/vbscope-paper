@@ -97,7 +97,13 @@ class batch_loader(QWidget):
 
 		self.setLayout(tothbox)
 
-	def batch_load(self):
+	def keyPressEvent(self,event):
+		if event.key() == Qt.Key_Escape:
+			self.window.open_preferences()
+			return
+		super(batch_loader,self).keyPressEvent(event)
+
+	def get_lists(self):
 		count1 = self.l1.count()
 		count2 = self.l2.count()
 		if count1 == 0:
@@ -111,4 +117,10 @@ class batch_loader(QWidget):
 					lclass.append(self.l2.item(i).text())
 				else:
 					lclass.append(None)
+			return ltraj,lclass
+
+	def batch_load(self):
+		ls = self.get_lists()
+		if not ls is None:
+			ltraj,lclass = ls
 			self.window.load_batch(ltraj,lclass)

@@ -27,7 +27,7 @@ class vbscope_gui(movie_viewer):
 
 		super(vbscope_gui,self).__init__(self.app)
 
-		self._prefs.combine_prefs(default_prefs)
+		self.prefs.add_dictionary(default_prefs)
 
 		self.setup_vbscope_docks()
 		self.setup_vbscope_menus()
@@ -36,8 +36,8 @@ class vbscope_gui(movie_viewer):
 		self.app_name = 'vbscope'
 		self.about_text = "From the Gonzalez Lab (Columbia University).\n\nPrinciple authors: JH,CKT,RLG.\nMany thanks to the entire lab for their input."
 
-		self._prefs.add_pref('ui_width',(QDesktopWidget().availableGeometry(self).size() * 0.7).width())
-		self._prefs.add_pref('ui_height',(QDesktopWidget().availableGeometry(self).size() * 0.7).height())
+		self.prefs['ui_width']  = (QDesktopWidget().availableGeometry(self).size() * 0.7).width()
+		self.prefs['ui_height'] = (QDesktopWidget().availableGeometry(self).size() * 0.7).height()
 
 		self.ui_update()
 		self.show()
@@ -98,7 +98,7 @@ class vbscope_gui(movie_viewer):
 			self.popout_plots[plot_handle] = popout_plot_container(nplots,self)
 			self.popout_plots[plot_handle].setWindowTitle(plot_name_str)
 			if not dprefs is None:
-				self.popout_plots[plot_handle].ui._prefs.combine_prefs(dprefs)
+				self.popout_plots[plot_handle].ui.prefs.add_dictionary(dprefs)
 			if not callback is None:
 				self.popout_plots[plot_handle].ui.setcallback(callback)
 			self.popout_plots[plot_handle].show()
@@ -115,7 +115,6 @@ class vbscope_gui(movie_viewer):
 		if success:
 			self.docks['spotfind'][1].setup_sliders()
 			self.docks['spotfind'][1].flush_old()
-			self._prefs.update_table()
 			self.docks['tag_viewer'][1].init_model()
 
 

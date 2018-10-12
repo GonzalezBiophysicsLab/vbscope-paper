@@ -1,17 +1,14 @@
-from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut
+from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget, QFileDialog
 from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
 
 # def handler(msg_type, msg_log_context, msg_string):
-	# pass
+# 	pass
 # qInstallMessageHandler(handler)
 
-## Force Qt5 for matplotlib
-try:
-	import matplotlib
-	matplotlib.use('Qt5Agg')
-except:
-	pass
+import matplotlib
+matplotlib.use('Qt5Agg')
+
 
 from ui_log import logger
 from ui_prefs import preferences
@@ -22,7 +19,7 @@ class gui(QMainWindow):
 		* app
 		* menubar
 		* _log
-		* _prefs
+		* prefs
 		* docks
 
 	Functions of Importance:
@@ -31,8 +28,8 @@ class gui(QMainWindow):
 		* set_status
 		* log
 		* load - overload this
-		* _prefs.combine_prefs (for a dictionary)
-		* _prefs.add_pref (for one entry)
+		* prefs.add_dictionary (for a dictionary)
+		* prefs['new_pref_name'] = new_pref_value  (for one entry)
 
 	Variables of Importance:
 		* app_name
@@ -63,7 +60,15 @@ class gui(QMainWindow):
 		self.init_shortcuts()
 
 		self._log = logger()
-		self._prefs = preferences(self)
+
+		self.prefs = preferences(self)
+		self.qd_prefs = QDockWidget("Preferences",self)
+		self.qd_prefs.setWidget(self.prefs)
+		self.qd_prefs.setAllowedAreas( Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		self.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
+		self.qd_prefs.setFloating(True)
+		self.qd_prefs.hide()
+		self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
 
 		self.ui_update()
 		self.show()
@@ -99,7 +104,8 @@ class gui(QMainWindow):
 		self.addDockWidget(l, self.docks[name][0])
 
 		try:
-			self._prefs.combine_prefs(widget.default_prefs)
+			self.prefs.add_dictionary(widget.default_prefs)
+
 		except:
 			pass
 
@@ -125,6 +131,11 @@ class gui(QMainWindow):
 		file_prefs.setShortcutContext(Qt.ApplicationShortcut)
 		file_prefs.triggered.connect(self.open_preferences)
 
+		file_saveprefs = QAction('Save Preferences',self)
+		file_saveprefs.triggered.connect(lambda e: self.prefs.save_preferences())
+		file_loadprefs = QAction('Load Preferences',self)
+		file_loadprefs.triggered.connect(lambda e: self.prefs.load_preferences())
+
 		self.about_text = ""
 		file_about = QAction('About',self)
 		file_about.triggered.connect(self.about)
@@ -133,7 +144,7 @@ class gui(QMainWindow):
 		# file_exit.triggered.connect(self.app.quit)
 		file_exit.triggered.connect(self.close)
 
-		for f in [file_load,file_log,file_prefs,file_about,file_exit]:
+		for f in [file_load,file_log,file_prefs,file_loadprefs,file_saveprefs,file_about,file_exit]:
 			self.menu_file.addAction(f)
 
 ################################################################################
@@ -156,12 +167,41 @@ class gui(QMainWindow):
 		self.app.processEvents()
 
 ################################################################################
+	def resizeEvent(self,event):
+		if not self.signalsBlocked():
+			s = self.size()
+			sw = 0
+			if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+				sw = self.qd_prefs.size().width()
+			self.prefs['ui_width'] = s.width()-sw
+			self.prefs['ui_height'] = s.height()
+			super(gui,self).resizeEvent(event)
 
 	def open_log(self):
 		self._open_ui(self._log)
 
+	def resize_prefs(self):
+		w = self.prefs['ui_width']
+		h = self.prefs['ui_height']
+		self.blockSignals(True)
+		if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+			sw = self.qd_prefs.size().width()
+			self.resize(w+sw+4,h) ## ugh... +4 for dock handles
+			if not self.centralWidget() == 0:
+				self.centralWidget().resize(w,h)
+		else:
+			self.resize(w,h)
+		self.blockSignals(False)
+
 	def open_preferences(self):
-		self._open_ui(self._prefs)
+		if self.qd_prefs.isHidden():
+			self.qd_prefs.show()
+			self.qd_prefs.raise_()
+			self.prefs.le_filter.setFocus()
+
+		else:
+			self.qd_prefs.setHidden(True)
+		self.resize_prefs()
 
 	def open_main(self):
 		self._open_ui(self)
@@ -180,14 +220,19 @@ class gui(QMainWindow):
 		# self.resize(QDesktopWidget().availableGeometry(self).size() * 0.5)
 		# self.menubar.setStyleSheet('background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 lightgray, stop:1 darkgray)')
 
-		for s in [self,self._log,self._prefs]:
+		for s in [self,self._log,self.prefs]:
 			s.setStyleSheet('''
 			color:%s;
 			background-color:%s;
 			font-size: %spx;
 		'''%(self.prefs['ui_fontcolor'],self.prefs['ui_bgcolor'],self.prefs['ui_fontsize']))
 
-		self.resize(self.prefs['ui_width'],self.prefs['ui_height'])
+		self.blockSignals(True)
+		sw = 0
+		if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+			sw = self.qd_prefs.size().width()
+		self.resize(self.prefs['ui_width']+sw,self.prefs['ui_height'])
+		self.blockSignals(False)
 		self.setWindowTitle(self.app_name)
 
 	def quicksafe_load(self,fname):
@@ -228,7 +273,7 @@ class gui(QMainWindow):
 		if reply == QMessageBox.Yes:
 			# self.app.quit()
 			self._log.close()
-			self._prefs.close()
+			self.prefs.close()
 			event.accept()
 		else:
 			event.ignore()

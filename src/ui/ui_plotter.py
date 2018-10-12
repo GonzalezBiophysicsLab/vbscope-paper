@@ -1,71 +1,39 @@
 from PyQt5.QtWidgets import QMainWindow, QWidget, QSizePolicy, QVBoxLayout, QShortcut, QSlider, QHBoxLayout, QPushButton, QFileDialog, QCheckBox,QApplication, QAction,QLineEdit,QLabel,QGridLayout, QInputDialog, QDockWidget, QMessageBox, QTabWidget, QListWidget, QAbstractItemView
 from PyQt5.QtCore import Qt
 from PyQt5.Qt import QFont
-from PyQt5.QtGui import QDoubleValidator, QKeySequence
+from PyQt5.QtGui import QDoubleValidator, QKeySequence, QStandardItem
 
 import multiprocessing as mp
-
 import numpy as np
+
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
 matplotlib.rcParams['savefig.format'] = 'pdf'
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['figure.facecolor'] = 'white'
-matplotlib.rcParams['xtick.major.size'] = 4
-matplotlib.rcParams['xtick.minor.size'] = 2
-matplotlib.rcParams['xtick.major.width'] = 1.0
-matplotlib.rcParams['xtick.minor.width'] = 1.0
-matplotlib.rcParams['xtick.direction'] = 'in'
-matplotlib.rcParams['ytick.major.size'] = 4
-matplotlib.rcParams['ytick.minor.size'] = 2
-matplotlib.rcParams['ytick.major.width'] = 1.0
-matplotlib.rcParams['ytick.minor.width'] = 1.0
-matplotlib.rcParams['ytick.direction'] = 'in'
-matplotlib.rcParams['axes.linewidth'] = 1.0
-
 
 from . import ui_general
 from .ui_batch_loader import gui_batch_loader
 from ..containers import traj_plot_container, traj_container, popout_plot_container
 from .. import plots
 
-default_prefs = {
+number_keys = [Qt.Key_0,Qt.Key_1,Qt.Key_2,Qt.Key_3,Qt.Key_4,Qt.Key_5,Qt.Key_6,Qt.Key_7,Qt.Key_8,Qt.Key_9]
 
-	'channel_colors':['green','red','blue','purple'],
+default_prefs = {
+	'filter_method':0,
+	'filter_width':1.0,
+	'hmm_filter':False,
 
 	'tau':1.0,
-	'bleedthrough':np.array(((0.,0.05,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.))).flatten(),
+	'bleedthrough':np.array(((0.,0.05,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.),(0.,0.,0.,0.))).flatten().tolist(),
 
 	'ncpu':mp.cpu_count(),
 
-	'downsample':1,
-	# 'snr_threshold':.5,
 	'min_length':10,
-    #
-	# 'plotter_floor':0.2,
-	# 'plotter_nbins_contour':20,
-	# 'plotter_smoothx':0.5,
-	# 'plotter_smoothy':0.5,
-	# 'plotter_timeshift':0.0,
-	# 'plotter_floorcolor':'lightgoldenrodyellow',
-	# 'plotter_cmap':'rainbow',
-	'plotter_min_fret':-.5,
-	'plotter_max_fret':1.5,
-	'wiener_smooth':False,
-	# 'plotter_nbins_fret':41,
-	# 'plotter_min_time':0,
-	# 'plotter_max_time':100,
-	# 'plotter_nbins_time':100,
-	# 'plotter_2d_syncpreframes':10,
-	# 'plotter_2d_normalizecolumn':False,
-
-	# 'convert_flag':False,
-	# 'convert_c_lambda':[11.64,12.75],
-	# 'convert_em_gain':300,
-	# 'convert_offset':0,
 
 	'photobleaching_flag':True,
 	'synchronize_start_flag':False,
@@ -73,7 +41,6 @@ default_prefs = {
 	'hmm_nrestarts':4,
 	'hmm_threshold':1e-10,
 	'hmm_max_iters':1000,
-	'wiener_smooth':False,
 	'hmm_binding_expt':False,
 	'hmm_bound_dynamics':False,
 	'vb_prior_beta':0.25,
@@ -90,10 +57,14 @@ class plotter_gui(ui_general.gui):
 		self.gui = gui
 		self.data = traj_container(self)
 
-		self.initialize_ui()
-
+		self._main_widget = QWidget()
 		super(plotter_gui,self).__init__(self.gui.app,self._main_widget)
-		self._prefs.combine_prefs(default_prefs)
+		self.prefs.add_dictionary(default_prefs)
+		try:
+			self.prefs.load_preferences(fname='./prefs.txt')
+		except:
+			pass
+		self.initialize_ui()
 
 		self.initialize_connections()
 
@@ -113,7 +84,31 @@ class plotter_gui(ui_general.gui):
 		self.setWindowTitle(self.app_name)
 
 		self.ui_update()
+		self.prefs.edit_callback = self.update_pref_callback
+		self.setFocus()
 		self.show()
+		self.move(1,1)
+		self.qd_prefs.keyPressEvent = self.keyPressEvent
+		self.add_pref_commands()
+
+	def add_pref_commands(self):
+		self.prefs.commands['open'] = self.load_traces
+		self.prefs.commands['run hmm'] = self.data.run_vbhmm_model
+		self.prefs.commands['photobleach'] = self.data.photobleach_step
+		self.prefs.commands['hist1d'] = self.plot_hist1d
+		self.prefs.commands['hist2d'] = self.plot_hist2d
+		self.prefs.commands['acorr'] = self.plot_acorr
+		self.prefs.commands['cycle'] = self.cycle_batch
+		# del self.prefs.commands['hello']
+		self.prefs.update_commands()
+
+	def update_pref_callback(self):
+		try:
+			self.ui_update()
+			self.plot.update_minmax()
+			self.plot.update_plots()
+		except:
+			pass
 
 	def initialize_ui(self):
 		## Initialize Plots
@@ -134,31 +129,14 @@ class plotter_gui(ui_general.gui):
 		hbox.addWidget(self.label_current)
 		qw.setLayout(hbox)
 
-		### Initialize line edit boxes for y-min and y-max intensity values
-		self.plot.yminmax = np.array((0.,0.))
-
-		scalewidget = QWidget()
-		g = QGridLayout()
-		g.addWidget(QLabel('Min'),0,0)
-		g.addWidget(QLabel('Max'),0,1)
-		self.le_min = QLineEdit()
-		self.le_max = QLineEdit()
-		g.addWidget(self.le_min,1,0)
-		g.addWidget(self.le_max,1,1)
-
-		for ll in [self.le_min,self.le_max]:
-			ll.setValidator(QDoubleValidator(-1e300,1e300,100))
-			ll.setText(str(0.))
-		scalewidget.setLayout(g)
-
 		## Put all of the widgets together
-		self._main_widget = QWidget()
+		# self._main_widget = QWidget()
 		self.layout = QVBoxLayout()
 		self.layout.addWidget(self.plot.canvas)
 		self.layout.addWidget(self.plot.toolbar)
 		# self.layout.addWidget(self.slider_select)
 		self.layout.addWidget(qw)
-		self.layout.addWidget(scalewidget)
+		# self.layout.addWidget(scalewidget)
 		self._main_widget.setLayout(self.layout)
 
 		plt.close(self.plot.f)
@@ -169,10 +147,7 @@ class plotter_gui(ui_general.gui):
 		self.initialize_menubar()
 
 		# ## Connect everything for interaction
-		self.initialize_shortcuts()
 		self.initialize_sliders()
-		for le in [self.le_min,self.le_max]:
-			le.editingFinished.connect(self.plot.update_minmax)
 		self.slider_select.valueChanged.connect(self.callback_sliders)
 		self.plot.f.canvas.mpl_connect('button_press_event', self.callback_mouseclick)
 
@@ -192,11 +167,9 @@ class plotter_gui(ui_general.gui):
 		self.data.hmm_result = None
 
 		## Guess at good y-limits for the plot
-		self.plot.yminmax = np.percentile(self.data.d.flatten()[np.isfinite(self.data.d.flatten())],[.1,99.9])
-		self.le_min.setText(str(self.plot.yminmax[0]))
-		self.le_max.setText(str(self.plot.yminmax[1]))
-
-
+		yy =  np.percentile(self.data.d.flatten()[np.isfinite(self.data.d.flatten())],[.1,99.9])
+		self.prefs['plot_intensity_min'] = float(yy[0])
+		self.prefs['plot_intensity_max'] = float(yy[1])
 
 		## Calculate/set photobleaching, initialize class list
 		self.data.update_fret()
@@ -242,7 +215,10 @@ class plotter_gui(ui_general.gui):
 		export_classes = QAction('Save Classes', self, shortcut='Ctrl+D')
 		export_classes.triggered.connect(lambda event: self.export_classes())
 
-		for f in [export_traces,export_classes,export_processed_traces]:
+		export_hmm = QAction('Save HMM',self)
+		export_hmm.triggered.connect(lambda event: self.data.hmm_export(prompt_export=True))
+
+		for f in [export_traces,export_classes,export_processed_traces,export_hmm]:
 			menu_save.addAction(f)
 
 		### tools
@@ -302,6 +278,8 @@ class plotter_gui(ui_general.gui):
 		plots_2d.triggered.connect(self.plot_hist2d)
 		plots_tdp = QAction('Transition Density Plot', self)
 		plots_tdp.triggered.connect(self.plot_tdp)
+		plots_acorr = QAction('Autocorrelation Function Plot', self)
+		plots_acorr.triggered.connect(self.plot_acorr)
 		plots_tranM = QAction('Transition Matrix Plot', self)
 		plots_tranM.triggered.connect(self.plot_tranM)
 		plots_intensities = QAction('Intensities Plot', self)
@@ -311,7 +289,7 @@ class plotter_gui(ui_general.gui):
 		plots_vb_states = QAction('VB States', self)
 		plots_vb_states.triggered.connect(self.plot_vb_states)
 
-		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_intensities,plots_crosscorr,plots_vb_states]:
+		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_acorr, plots_intensities,plots_crosscorr,plots_vb_states]:
 			menu_plots.addAction(f)
 
 		### classes
@@ -342,36 +320,12 @@ class plotter_gui(ui_general.gui):
 
 ################################################################################
 
-	## Helper function to setup keyboard shortcuts
-	def initialize_shortcuts(self):
-		## Helper function to setup keyboard shortcuts
-		def _make_shortcut(key,fxn):
-			qs = QShortcut(self)
-			qs.setKey(key)
-			qs.activated.connect(fxn)
-
-		_make_shortcut(Qt.Key_Left,lambda : self.callback_keypress('left'))
-		_make_shortcut(Qt.Key_Right,lambda : self.callback_keypress('right'))
-		_make_shortcut(Qt.Key_H,lambda : self.callback_keypress('h'))
-		_make_shortcut(Qt.Key_1,lambda : self.callback_keypress(1))
-		_make_shortcut(Qt.Key_2,lambda : self.callback_keypress(2))
-		_make_shortcut(Qt.Key_3,lambda : self.callback_keypress(3))
-		_make_shortcut(Qt.Key_4,lambda : self.callback_keypress(4))
-		_make_shortcut(Qt.Key_5,lambda : self.callback_keypress(5))
-		_make_shortcut(Qt.Key_6,lambda : self.callback_keypress(6))
-		_make_shortcut(Qt.Key_7,lambda : self.callback_keypress(7))
-		_make_shortcut(Qt.Key_8,lambda : self.callback_keypress(8))
-		_make_shortcut(Qt.Key_9,lambda : self.callback_keypress(9))
-		_make_shortcut(Qt.Key_0,lambda : self.callback_keypress(0))
-		_make_shortcut(Qt.Key_R,lambda : self.callback_keypress('r'))
-		_make_shortcut(Qt.Key_G,lambda : self.callback_keypress('g'))
-		_make_shortcut(Qt.Key_P,lambda : self.callback_keypress('p'))
-
 	def initialize_plot_docks(self):
 		self.popout_plots = {
 			'plot_hist1d':None,
 			'plot_hist2d':None,
 			'plot_tdp':None,
+			'plot_acorr':None,
 			'plot_tranM':None,
 			'plot_intensities':None,
 			'crosscorr':None
@@ -387,10 +341,10 @@ class plotter_gui(ui_general.gui):
 			self.popout_plots[plot_handle] = popout_plot_container(nplots_x, nplots_y,self)
 			self.popout_plots[plot_handle].setWindowTitle(plot_name_str)
 			if not dprefs is None:
-				self.popout_plots[plot_handle].ui._prefs.combine_prefs(dprefs)
+				self.popout_plots[plot_handle].ui.prefs.add_dictionary(dprefs)
 			if not callback is None:
 				self.popout_plots[plot_handle].ui.setcallback(callback)
-			self.popout_plots[plot_handle].resize(int(self.popout_plots[plot_handle].ui.prefs['fig_width']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+200,int(self.popout_plots[plot_handle].ui.prefs['fig_height']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+125)
+			self.popout_plots[plot_handle].resize(int(self.popout_plots[plot_handle].ui.prefs['fig_width']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+500,int(self.popout_plots[plot_handle].ui.prefs['fig_height']*self.plot.f.get_dpi()/self.plot.canvas.devicePixelRatio())+125)
 			self.popout_plots[plot_handle].show()
 			self.popout_plots[plot_handle].ui.clf()
 			if not setup is None:
@@ -408,6 +362,10 @@ class plotter_gui(ui_general.gui):
 		self.raise_plot('plot_tdp', 'Transition Density Plot', 1,1, lambda: plots.tdp.plot(self), plots.tdp.default_prefs)
 		plots.tdp.plot(self)
 
+	def plot_acorr(self):
+		self.raise_plot('plot_acorr', 'Autocorrelation Function Plot', 1,1, lambda: plots.autocorr.plot(self), plots.autocorr.default_prefs, setup=lambda:plots.autocorr.setup(self))
+		plots.autocorr.plot(self)
+
 	def plot_tranM(self):
 		self.raise_plot('plot_tranM', 'Transition Matrix Plot', 1,1, lambda: plots.tranM.plot(self), plots.tranM.default_prefs)
 		plots.tranM.plot(self)
@@ -424,28 +382,42 @@ class plotter_gui(ui_general.gui):
 		self.raise_plot('vb_states', 'VB States', 1,1, lambda: plots.vb_states.plot(self), plots.vb_states.default_prefs)
 		plots.vb_states.plot(self)
 
-	## Callback function for keyboard presses
-	def callback_keypress(self,kk):
-		if kk == 'right':
-			self.plot.index += 1
-		elif kk == 'left':
-			self.plot.index -= 1
-		if self.plot.index < 0:
-			self.plot.index = 0
-		elif self.plot.index >= self.data.d.shape[0]:
-			self.plot.index = self.data.d.shape[0]-1
-		self.slider_select.setValue(self.plot.index)
+	def keyPressEvent(self,event):
+		kk = event.key()
 
-		if kk == 'r':
+		if kk == Qt.Key_Escape and str(self.prefs.le_filter.text()) == "":
+			self.open_preferences()
+			return
+
+		if kk in [Qt.Key_Right,Qt.Key_Left]:
+			try:
+				if kk == Qt.Key_Right:
+					self.plot.index += 1
+				elif kk == Qt.Key_Left:
+						self.plot.index -= 1
+				if self.plot.index < 0:
+					self.plot.index = 0
+				elif self.plot.index >= self.data.d.shape[0]:
+					self.plot.index = self.data.d.shape[0]-1
+				self.slider_select.setValue(self.plot.index)
+				self.plot.update_plots()
+			except:
+				pass
+			return
+
+		if kk == Qt.Key_R:
 			self.data.pre_list[self.plot.index] = 0
 			self.data.pb_list[self.plot.index] = self.data.d.shape[2]-1
 			self.data.safe_hmm()
-		elif kk == 'g':
+			self.plot.update_plots()
+			return
+		elif kk == Qt.Key_G:
 			self.plot.a[0,0].grid()
 			self.plot.a[1,0].grid()
 			self.plot.update_blits()
 			self.plot.update_plots()
-		elif kk == 'p':
+			return
+		elif kk == Qt.Key_P:
 			try:
 				from ..supporting.photobleaching import get_point_pbtime
 				self.data.pre_list[self.plot.index] = 0
@@ -456,23 +428,20 @@ class plotter_gui(ui_general.gui):
 				self.data.pb_list[self.plot.index] = get_point_pbtime(qq,1.,1.,1.,1000.)
 				self.data.safe_hmm()
 				self.plot.update_plots()
+				return
+			except:
+				return
+
+		if kk in number_keys:
+			try:
+				self.data.class_list[self.plot.index] = number_keys.index(kk)
+				self.plot.update_plots()
+				self.update_display_traces()
+				self.gui.app.processEvents()
 			except:
 				pass
 
-		for i in range(10):
-			if i == kk:
-				self.data.class_list[self.plot.index] = kk
-				self.plot.update_plots()
-				break
-
-		try:
-			self.update_display_traces()
-			self.gui.app.processEvents()
-		except:
-			pass
-
-		self.plot.update_plots()
-
+		super(plotter_gui,self).keyPressEvent(event)
 
 	## callback function for changing the trajectory using the slider
 	def callback_sliders(self,v):
@@ -562,6 +531,36 @@ class plotter_gui(ui_general.gui):
 			self.ui_batch.setWindowTitle('Batch Load')
 			self.ui_batch.show()
 
+	def cycle_batch(self):
+		try:
+			ls = self.ui_batch.ui.get_lists()
+		except:
+			return
+		try:
+			i = self.cycle_number
+		except:
+			self.cycle_number = 0
+		try:
+			if not ls is None:
+				if len(ls[0]) > 0:
+					if self.cycle_number >= len(ls[0]):
+						self.cycle_number = 0
+					fn = ls[0][self.cycle_number]
+					self.load_traces(filename=fn,ncolors=self.ncolors)
+					self.ui_batch.ui.l1.setCurrentRow(self.cycle_number)
+					fn = ls[1][self.cycle_number]
+					if not fn is None:
+						self.load_classes(filename=fn)
+						self.ui_batch.ui.l2.clearSelection()
+						self.ui_batch.ui.l2.setCurrentRow(self.cycle_number)
+					self.cycle_number += 1
+
+					self.plot.initialize_plots()
+					self.initialize_sliders()
+					self.update_display_traces()
+		except:
+			return
+
 ################################################################################
 
 	def load_batch(self,ltraj,lclass,ncolors = None):
@@ -640,6 +639,8 @@ class plotter_gui(ui_general.gui):
 						f = open(fname,'r')
 						self.data.hmm_result = pickle.load(f)
 						f.close()
+						if not 'models' in self.data.hmm_result.__dict__:
+							self.data.hmm_result.models = [self.data.hmm_result.result]
 						self.plot.initialize_hmm_plot()
 						self.plot.update_plots()
 						self.log("Loaded HMM result from %s"%(fname),True)

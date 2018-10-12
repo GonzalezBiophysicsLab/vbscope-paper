@@ -155,7 +155,7 @@ def outer_loop(x,mu,var,tm,maxiters,threshold,prior_strengths):
 		a,b,m,beta,nk,xbark,sk = m_updates(flatx,np.concatenate(r,axis=0),a0,b0,m0,beta0)
 
 		### indivudal - copy this from simulataneous
-		pik = pi0 + np.sum([ri[0] for ri in r])
+		pik = pi0 + np.sum([ri[0] for ri in r],axis=0)
 
 		tm = tm0.copy()
 		for i in range(len(xi)):

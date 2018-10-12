@@ -1,28 +1,39 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 
 default_prefs = {
-'fret_min':-.2,
-'fret_max':1.2,
-'fret_nbins':41,
-'hist_smoothx':4.,
-'hist_smoothy':4.,
+'subplots_top':0.97,
+'subplots_right':0.91,
+'subplots_left':0.05,
+'axes_topright':True,
+'xlabel_offset':-0.1,
+'ylabel_offset':-0.18,
 
+'fret_min':-.25,
+'fret_max':1.25,
+'fret_nbins':51,
+'fret_nticks':7,
+
+'hist_smoothx':1.,
+'hist_smoothy':1.,
 'hist_inerp_res':800,
-
-'color_cmap':'rainbow',
-'color_floorcolor':'lightgoldenrodyellow',
-'color_ceiling':0.0,
-'color_floor':0.0,
-'color_nticks':5,
 'hist_rawsignal':True,
 'hist_normalize':True,
 
-'label_y_nticks':8,
-'label_x_nticks':8,
-'label_ticksize':8,
-'label_x_rotate':0.,
-'label_y_rotate':0.,
+'color_cmap':'rainbow',
+'color_floorcolor':'white',
+'color_ceiling':.95,
+'color_floor':0.02,
+'color_nticks':5,
+'color_xloc':.75,
+
+'xlabel_rotate':0.,
+'ylabel_rotate':0.,
+'xlabel_text':r'Initial E$_{\rm{FRET}}$',
+'ylabel_text':r'Final E$_{\rm{FRET}}$',
+'xlabel_decimals':2,
+'ylabel_decimals':2,
 
 'textbox_x':0.95,
 'textbox_y':0.93,
@@ -94,9 +105,12 @@ def colormap(gui):
 
 def plot(gui):
 	popplot = gui.popout_plots['plot_tdp'].ui
+	pp = popplot.prefs
 	popplot.ax[0].cla()
 	popplot.resize_fig()
 	gui.app.processEvents()
+
+	dpr = popplot.f.canvas.devicePixelRatio()
 
 	if gui.ncolors != 2:
 		return
@@ -107,13 +121,12 @@ def plot(gui):
 	### Plotting
 	cm = colormap(gui)
 
-	if popplot.prefs['color_ceiling'] == popplot.prefs['color_floor']:
-		popplot.prefs['color_floor'] = 0.0
-		popplot.prefs['color_ceiling'] = np.ceil(z.max())
-		popplot._prefs.update_table()
+	if pp['color_ceiling'] == pp['color_floor']:
+		pp['color_floor'] = 0.0
+		pp['color_ceiling'] = np.ceil(z.max())
 
-	vmin = popplot.prefs['color_floor']
-	vmax = popplot.prefs['color_ceiling']
+	vmin = pp['color_floor']
+	vmax = pp['color_ceiling']
 
 	pc = popplot.ax[0].imshow(z, cmap=cm, origin='lower',interpolation='none',extent=[x.min(),x.max(),x.min(),x.max()],vmin=vmin,vmax=vmax)
 
@@ -130,45 +143,57 @@ def plot(gui):
 		popplot.f.axes[1].cla()
 		cb = popplot.f.colorbar(pc,cax=popplot.f.axes[1],extend=ext)
 
-	cbticks = np.linspace(0,vmax,popplot.prefs['color_nticks'])
-	cbticks = cbticks[cbticks > popplot.prefs['color_floor']]
-	# cbticks = cbticks[cbticks < popplot.prefs['color_ceiling']]
-	cbticks = np.append(popplot.prefs['color_floor'], cbticks)
-	cbticks = np.append(cbticks, popplot.prefs['color_ceiling'])
+	cbticks = np.linspace(vmin,vmax,pp['color_nticks'])
+	cbticks = np.array(popplot.figure_out_ticks(0,pp['color_ceiling'],pp['color_nticks']))
+	cbticks = cbticks[cbticks > pp['color_floor']]
+	cbticks = cbticks[cbticks < popplot.prefs['color_ceiling']]
+	cbticks = np.append(pp['color_floor'], cbticks)
+	cbticks = np.append(cbticks, pp['color_ceiling'])
 	cb.set_ticks(cbticks)
 	cb.set_ticklabels(["%.2f"%(cbt) for cbt in cbticks])
+	for label in cb.ax.get_yticklabels():
+		label.set_family(pp['font'])
 
-
-	cb.ax.yaxis.set_tick_params(labelsize=popplot.prefs['label_ticksize']/gui.plot.canvas.devicePixelRatio(),direction='in',width=1.0/gui.plot.canvas.devicePixelRatio(),length=4./gui.plot.canvas.devicePixelRatio())
+	cb.ax.yaxis.set_tick_params(labelsize=pp['tick_fontsize']/dpr,direction=pp['tick_direction'],width=pp['tick_linewidth']/dpr,length=pp['tick_length_major']/dpr)
 	for asp in ['top','bottom','left','right']:
-		cb.ax.spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
+		cb.ax.spines[asp].set_linewidth(pp['axes_linewidth']/dpr)
 	cb.solids.set_edgecolor('face')
 	cb.solids.set_rasterized(True)
 
-	####
-	#
+	pos = popplot.f.axes[1].get_position()
+	popplot.f.axes[1].set_position([popplot.prefs['color_xloc'],pos.y0,pos.width,pos.height])
 
-	popplot.ax[0].set_xlabel(r'Initial E$_{\rm FRET}$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
-	popplot.ax[0].set_ylabel(r'Final E$_{\rm FRET}$',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
-	popplot.ax[0].set_title('Transition Density',fontsize=popplot.prefs['label_fontsize']/gui.plot.canvas.devicePixelRatio())
-	# bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
-	# popplot.ax[0].annotate('n = %d'%(fpb.shape[0]),xy=(.95,.93),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['label_ticksize']/gui.plot.canvas.devicePixelRatio())
-	popplot.ax[0].set_xticks(np.around(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_x_nticks']),4)+0.)
-	popplot.ax[0].set_xticklabels(popplot.ax[0].get_xticks(),rotation=popplot.prefs['label_x_rotate'])
-	popplot.ax[0].set_yticks(np.around(np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],popplot.prefs['label_y_nticks']),4)+0.)
-	popplot.ax[0].set_yticklabels(popplot.ax[0].get_yticks(),rotation=popplot.prefs['label_y_rotate'])
+	####################################################
+	####################################################
 
+	fs = pp['label_fontsize']/dpr
+	font = {
+		'family': pp['font'],
+		'size': fs,
+		'va':'top'
+	}
+	popplot.ax[0].set_xlabel(pp['xlabel_text'],fontdict=font)
+	popplot.ax[0].set_ylabel(pp['ylabel_text'],fontdict=font)
+	popplot.ax[0].yaxis.set_label_coords(pp['ylabel_offset'], 0.5)
+	popplot.ax[0].xaxis.set_label_coords(0.5, pp['xlabel_offset'])
 
-	bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./gui.plot.canvas.devicePixelRatio())
+	popplot.ax[0].set_xticks(popplot.figure_out_ticks(pp['fret_min'],pp['fret_max'],pp['fret_nticks']))
+	popplot.ax[0].set_yticks(popplot.figure_out_ticks(pp['fret_min'],pp['fret_max'],pp['fret_nticks']))
+
+	bbox_props = dict(boxstyle="square", fc="w", alpha=1.0,lw=1./dpr)
 	lstr = 'n = %d'%(d1.size)
-	if popplot.prefs['textbox_nmol']:
+	if pp['textbox_nmol']:
 		lstr = 'N = %d'%(N)
 
-	popplot.ax[0].annotate(lstr,xy=(popplot.prefs['textbox_x'],popplot.prefs['textbox_y']),xycoords='axes fraction',ha='right',color='k',bbox=bbox_props,fontsize=popplot.prefs['textbox_fontsize']/gui.plot.canvas.devicePixelRatio())
+	popplot.ax[0].annotate(lstr,xy=(pp['textbox_x'],pp['textbox_y']),xycoords='axes fraction', ha='right', color='k', bbox=bbox_props, fontsize=pp['textbox_fontsize']/dpr)
 
+	fd = {'rotation':pp['xlabel_rotate'], 'ha':'center'}
+	if fd['rotation'] != 0: fd['ha'] = 'right'
+	popplot.ax[0].set_xticklabels(["{0:.{1}f}".format(x, pp['xlabel_decimals']) for x in popplot.ax[0].get_xticks()], fontdict=fd)
+	popplot.ax[0].xaxis.set_major_formatter(ticker.FuncFormatter(lambda x,pos: "{0:.{1}f}".format(x,pp['xlabel_decimals'])))
 
-	for asp in ['top','bottom','left','right']:
-		popplot.ax[0].spines[asp].set_linewidth(1.0/gui.plot.canvas.devicePixelRatio())
-	popplot.f.subplots_adjust(left=.05+popplot.prefs['label_padding'],bottom=.05+popplot.prefs['label_padding'],top=.95-popplot.prefs['label_padding'],right=.95)
+	fd = {'rotation':pp['ylabel_rotate']}
+	popplot.ax[0].set_yticklabels(["{0:.{1}f}".format(y, pp['ylabel_decimals']) for y in popplot.ax[0].get_yticks()], fontdict=fd)
+	popplot.ax[0].yaxis.set_major_formatter(ticker.FuncFormatter(lambda y,pos: "{0:.{1}f}".format(y,pp['ylabel_decimals'])))
 
 	popplot.f.canvas.draw()
