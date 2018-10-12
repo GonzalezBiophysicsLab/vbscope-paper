@@ -47,7 +47,19 @@ default_prefs = {
 	'vb_prior_a':2.5,
 	'vb_prior_b':0.01,
 	'vb_prior_alpha':1.,
-	'vb_prior_pi':1.
+	'vb_prior_pi':1.,
+
+	'biasd_path':'./',
+	'biasd_prior_e1_m':0.0,
+	'biasd_prior_e1_s':0.2,
+	'biasd_prior_e2_m':1.0,
+	'biasd_prior_e2_s':0.2,
+	'biasd_prior_sig_l':.01,
+	'biasd_prior_sig_u':.3,
+	'biasd_prior_k1_a':1.,
+	'biasd_prior_k1_b':1./.1,
+	'biasd_prior_k2_a':1.,
+	'biasd_prior_k2_b':1./.1
 
 }
 
@@ -225,7 +237,8 @@ class plotter_gui(ui_general.gui):
 		menu_tools = self.menubar.addMenu('Tools')
 		menu_cull = menu_tools.addMenu('Cull')
 		menu_photobleach = menu_tools.addMenu('Photobleach')
-		menu_hmm = menu_tools.addMenu('HMM')
+		menu_analysis = menu_tools.addMenu('Analysis')
+		menu_hmm = menu_analysis.addMenu('HMM')
 		tools_cullpb = QAction('Cull short', self)
 		tools_cullpb.triggered.connect(self.data.cull_pb)
 		tools_cullmin = QAction('Cull minimums', self)
@@ -256,6 +269,9 @@ class plotter_gui(ui_general.gui):
 		tools_vbhmmmodel = QAction('vbFRET + Model Selection',self)
 		tools_vbhmmmodel.triggered.connect(lambda event: self.data.run_vbhmm_model())
 
+		tools_biasd = QAction('BIASD',self)
+		tools_biasd.triggered.connect(lambda event: self.data.run_biasd())
+
 		# for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_stepfret,tools_remove,tools_dead,tools_hmm]:
 		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons]:
 			menu_cull.addAction(f)
@@ -267,7 +283,10 @@ class plotter_gui(ui_general.gui):
 			menu_tools.addAction(f)
 		for f in [tools_vbhmm,tools_vbhmmmodel,tools_conhmm,tools_conhmmmodel,tools_mlhmm]:
 			menu_hmm.addAction(f)
-		menu_tools.addMenu(menu_hmm)
+		for f in [tools_biasd]:
+			menu_analysis.addAction(tools_biasd)
+		menu_tools.addMenu(menu_analysis)
+		menu_analysis.addMenu(menu_hmm)
 #
 		### plots
 		menu_plots = self.menubar.addMenu('Plots')

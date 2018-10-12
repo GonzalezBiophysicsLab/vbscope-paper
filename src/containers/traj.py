@@ -575,7 +575,6 @@ class traj_container():
 				except:
 					return
 
-
 				priors = np.array([self.gui.prefs[sss] for sss in ['vb_prior_beta','vb_prior_a','vb_prior_b','vb_prior_pi','vb_prior_alpha']])
 				self.hmm_result = consensus_hmm_result()
 				self.hmm_result.type = 'consensus vbfret'
@@ -750,6 +749,39 @@ class traj_container():
 				self.hmm_export(prompt_export)
 				if self.gui.prefs['hmm_binding_expt'] is True:
 					self.hmm_savechopped()
+
+	def run_biasd(self,color=None):
+		import sys
+		pp = self.gui.prefs
+		if not pp['biasd_path'] in sys.path:
+			sys.path.append(pp['biasd_path'])
+		try:
+			import biasd as b
+		except:
+			self.gui.set_status("Failed to load BIASD; Check biasd_path preference")
+			QMessageBox.critical(self.gui,'import BIASD','There was a problem trying to import BIASD. Check the path in preferences >> biasd_path')
+			self.gui.log('Failed to import BIASD; check biasd_path preference',True)
+			return
+
+		success1,color = self.hmm_get_colorchannel(color)
+		if success1:
+			try:
+				y,ran = self.hmm_get_traces(color)
+			except:
+				return
+
+		#
+		# y = np.concatenate(y)
+		# y = y[np.isfinite(y)]
+		#
+		# e1 = b.distributions.normal(pp['biasd_prior_e1_m'],pp['biasd_prior_e1_s'])
+		# e2 = b.distributions.normal(pp['biasd_prior_e2_m'],pp['biasd_prior_e2_s'])
+		# sigma = b.distributions.uniform(pp['biasd_prior_sig_l'],pp['biasd_prior_sig_u'])
+		# k1 = b.distributions.gamma(pp['biasd_prior_k1_a'],pp['biasd_prior_k1_b'])
+		# k2 = b.distributions.gamma(pp['biasd_prior_k2_a'],pp['biasd_prior_k2_b'])
+		# priors = b.distributions.parameter_collection(e1, e2, sigma, k1, k2)
+		# print b.laplace.laplace_approximation(y, priors, self.gui.prefs['tau'], nrestarts=4, verbose=False, threads=pp['ncpu'], device=0)
+		QMessageBox.critical(self.gui,'BIASD','BIASD: We are not really doing this  yet... What do you want?')
 
 	def remove_beginning(self,nd=None):
 		if not self.d is None:

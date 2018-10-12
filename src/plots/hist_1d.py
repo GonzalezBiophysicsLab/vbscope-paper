@@ -60,17 +60,21 @@ default_prefs = {
 	'textbox_nmol':True,
 
 	'xlabel_text':r'E$_{\rm{FRET}}$',
-	'ylabel_text':r'Probability'
+	'ylabel_text':r'Probability',
+
+	'biasd_on':True,
+	'biasd_tau':1.,
 }
 
 def setup(gui):
-	# fitvbbutton = QPushButton("VB gmm Fit")
-	# gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(2,fitvbbutton)
-	# fitvbbutton.clicked.connect(lambda x: fit_vb(gui))
 
 	# fithistbutton = QPushButton("Fit Hist")
 	# gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(2,fithistbutton)
 	# fithistbutton.clicked.connect(lambda x: fit_hist(gui))
+
+	biasdfitbutton = QPushButton("BIASD Fit")
+	gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(2,biasdfitbutton)
+	biasdfitbutton.clicked.connect(lambda x: fit_biasd(gui))
 
 	fitmlbutton = QPushButton("ML gmm Fit")
 	gui.popout_plots['plot_hist1d'].ui.buttonbox.insertWidget(2,fitmlbutton)
@@ -81,6 +85,7 @@ def setup(gui):
 	recalcbutton.clicked.connect(lambda x: recalc(gui))
 
 	gui.popout_plots['plot_hist1d'].ui.gmm_result = None
+	gui.popout_plots['plot_hist1d'].ui.biasd_result = None
 	gui.popout_plots['plot_hist1d'].ui.hist = obj()
 
 	if not gui.data.d is None:
@@ -120,6 +125,26 @@ def setup(gui):
 # 		gui.popout_plots['plot_hist1d'].ui.ax[0].plot(t,y,color='r',lw=1)
 # 		gui.popout_plots['plot_hist1d'].ui.f.draw()
 
+def add_path(path):
+	import sys
+	if not path in sys.path:
+		sys.path.append(path)
+
+def fit_biasd(gui):
+	if not gui.data.d is None:
+		add_path(gui.prefs['biasd_path'])
+		import biasd as b
+
+		prefs = gui.popout_plots['plot_hist1d'].ui.prefs
+
+		fpb = gui.popout_plots['plot_hist1d'].ui.fpb.flatten()
+		fpb = fpb[np.isfinite(fpb)]
+		keep = np.bitwise_and((fpb > prefs['fret_clip_low']),(fpb < prefs['fret_clip_high']))
+		fpb = fpb[keep]
+
+		p,c = b.likelihood.fit_histogram(fpb,prefs['biasd_tau'],minmax=(prefs['fret_min'],prefs['fret_max']))
+		print p
+		gui.popout_plots['plot_hist1d'].ui.biasd_result = p
 
 def fit_vb(gui):
 	if not gui.data.d is None:
@@ -194,6 +219,18 @@ def fit_ml(gui):
 			# plot(gui)
 
 			gui.log(r.report(),True)
+
+def draw_biasd(gui):
+		import biasd as b
+
+		popplot = gui.popout_plots['plot_hist1d'].ui
+		p = popplot.biasd_result
+		x = np.linspace(popplot.prefs['fret_min'],popplot.prefs['fret_max'],1000)
+		y = (1.-p[-1])/(x[1]-x[0]) + p[-1]*np.exp(b.likelihood.nosum_log_likelihood(p[:-1],x,popplot.prefs['biasd_tau'],device=None))
+
+		popplot.ax[0].plot(x,y,color='k',lw=2,alpha=.8)
+		popplot.f.canvas.draw()
+
 
 def draw_gmm(gui):
 	try:
@@ -385,6 +422,8 @@ def plot(gui):
 			draw_hmm(gui)
 		if pp['gmm_on'] and not popplot.gmm_result is None:
 			draw_gmm(gui)
+		if pp['biasd_on'] and not popplot.biasd_result is None:
+			draw_biasd(gui)
 
 		#################################
 

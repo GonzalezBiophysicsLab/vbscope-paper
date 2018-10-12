@@ -387,8 +387,8 @@ if __name__ == '__main__':
 	print(prefs['aliens?'])
 	print(prefs['fun list'].mean())
 	o = prefs.output_str()
-	oo = "fun list:\"yep\""
+	# oo = "fun list:\"yep\""
 
-	prefs.load_str(oo)
+	# prefs.load_str(oo)
 	prefs.show()
 	sys.exit(app.exec_())
