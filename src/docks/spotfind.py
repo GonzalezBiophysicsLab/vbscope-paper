@@ -7,6 +7,7 @@ import multiprocessing as mp
 
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 _windows = False
 import os
@@ -17,9 +18,11 @@ import sys
 default_prefs = {
 	'spotfind_nsearch':3,
 	'spotfind_clip_border':8,
-	'spotfind_threshold':1e-5,
-	'spotfind_maxiterations':200,
-	'spotfind_nstates':3
+	'spotfind_threshold':1e-3,
+	'spotfind_maxiterations':250,
+	'spotfind_nstates':3,
+	'spotfind_frameson':25,
+	'spotfind_nrestarts':4
 }
 
 
@@ -31,6 +34,8 @@ class dock_spotfind(QWidget):
 
 		self.flag_priorsloaded = False
 		self.flag_spots = False
+		self.flag_importedvb = False
+		self.flag_importedvbmax = False
 
 		self.gui = parent
 		# self.gmms = None
@@ -43,7 +48,7 @@ class dock_spotfind(QWidget):
 		self.button_export = QPushButton('Export Location')
 
 		label_prior = QLabel('Priors from:')
-		self.spin_prior = QSpinBox()
+		# self.spin_prior = QSpinBox()
 		self.button_loadpriors = QPushButton('Load Priors')
 		self.button_savepriors = QPushButton('Save Priors')
 		self.button_clearpriors = QPushButton('Clear Priors')
@@ -57,7 +62,8 @@ class dock_spotfind(QWidget):
 		# self.button_quick = QPushButton('Quick Find')
 		self.button_threshold = QPushButton('Threshold')
 		self.button_vb = QPushButton('VBGMM')
-		self.button_vbmax = QPushButton('MaxVal+VBGMM')
+		self.button_vbmax = QPushButton('Mean')
+		self.button_range = QPushButton('Range')
 
 		self.label_bb = QLabel()
 		self.label_pp = QLabel()
@@ -75,7 +81,7 @@ class dock_spotfind(QWidget):
 		layout_priors = QHBoxLayout()
 
 		layout_priors.addWidget(label_prior)
-		layout_priors.addWidget(self.spin_prior)
+		# layout_priors.addWidget(self.spin_prior)
 		layout_priors.addStretch(1)
 		wlp.setLayout(layout_priors)
 
@@ -134,8 +140,10 @@ class dock_spotfind(QWidget):
 		# hbox_ff.addWidget(self.button_find)
 		# hbox_ff.addWidget(self.button_quick)
 		hbox_ff.addWidget(self.button_threshold)
-		hbox_ff.addWidget(self.button_vb)
+		# hbox_ff.addWidget(self.button_vb)
+		hbox_ff.addWidget(self.button_range)
 		hbox_ff.addWidget(self.button_vbmax)
+
 		whff.setLayout(hbox_ff)
 
 
@@ -181,10 +189,12 @@ class dock_spotfind(QWidget):
 		self.sliders[0].setValue(500) # p = .5
 		self.change_slide1()
 
-		[s.setValue(1) for s in [self.spin_prior,self.spin_start]]
-
-		[s.setMinimum(1) for s in [self.spin_prior,self.spin_start,self.spin_end]]
-		[s.setMaximum(self.gui.data.total_frames) for s in [self.spin_prior,self.spin_start,self.spin_end]]
+		[s.setValue(1) for s in [self.spin_start]]
+		[s.setMinimum(1) for s in [self.spin_start,self.spin_end]]
+		[s.setMaximum(self.gui.data.total_frames) for s in [self.spin_start,self.spin_end]]
+		# [s.setValue(1) for s in [self.spin_prior,self.spin_start]]
+		# [s.setMinimum(1) for s in [self.spin_prior,self.spin_start,self.spin_end]]
+		# [s.setMaximum(self.gui.data.total_frames) for s in [self.spin_prior,self.spin_start,self.spin_end]]
 		self.spin_end.setValue(self.gui.data.total_frames)
 
 	def connect_things(self):
@@ -196,6 +206,7 @@ class dock_spotfind(QWidget):
 		self.button_threshold.clicked.connect(self.thresholdfind)
 		self.button_vb.clicked.connect(self.vbtestfind)
 		self.button_vbmax.clicked.connect(self.vbmaxtestfind)
+		self.button_range.clicked.connect(self.vbscope_range)
 		# self.button_find.clicked.connect(self.findspots)
 		# self.button_quick.clicked.connect(self.quick_find)
 		# self.button_search.clicked.connect(self.searchspots)
@@ -386,7 +397,7 @@ class dock_spotfind(QWidget):
 			fname = QFileDialog.getOpenFileName(self,'Choose priors to load -- PRIORS ARE BUSTED RIGHT NOW','./')#,filter='TIF File (*.tif *.TIF)')
 			if fname[0] != "":
 				try:
-					self.priors = np.loadtxt(fname[0])
+					self.priors = np.loadtxt(fname[0]).astype('double')
 					self.flag_priorsloaded = True
 					self.gui.statusbar.showMessage('Priors loaded from  %s'%(fname[0]))
 				except:
@@ -395,21 +406,30 @@ class dock_spotfind(QWidget):
 
 	def savepriors(self):
 		if self.gui.data.flag_movie:
-			oname = QFileDialog.getSaveFileName(self, 'Save Priors -- PRIORS ARE BUSTED RIGHT NOW', self.gui.data.filename[:-4]+'_priors_%i.dat'%(self.spin_prior.value()),'*.dat')
+			oname = QFileDialog.getSaveFileName(self, 'Save Priors -- PRIORS ARE BUSTED RIGHT NOW', self.gui.data.filename[:-4]+'_priors.dat','*.dat')
 			if oname[0] != "":
-				try:
-					p = self.posterior
-					n = p.mu.size
-					z = np.zeros((4,n))
-					z[0] = p.m
-					z[1] = p.beta
-					z[2] = p.a
-					z[3] = p.b
-					print z
+				# try:
+				if 1:
+					pp = self.get_priors()
 					## Save Normal
-					np.savetxt(oname[0],z)
-				except:
-					QMessageBox.critical(self,'Save Status','There was a problem trying to save the priors of frame %d'%(self.spin_prior.value()-1))
+					np.savetxt(oname[0],pp)
+				# except:
+					# QMessageBox.critical(self,'Save Status','There was a problem trying to save the priors of frame %d'%(self.spin_prior.value()-1))
+
+	def get_priors(self):
+		if not self.posterior is None:
+			p = self.posterior
+			n = p.mu.size
+			# z = np.zeros((4,n))
+			# z[0] = p.m
+			# z[1] = p.beta ## poisson-esque
+			# z[2] = p.a
+			# z[3] = p.b
+			# z = z[:,1:].mean(1)
+			z = np.array((p.m.max(),p.beta.max(),p.a.max(),p.b[p.a.argmax()]))
+			print z
+			return z
+		return None
 
 	def plot_spots(self,color=None):
 		if not color is None:
@@ -495,22 +515,22 @@ class dock_spotfind(QWidget):
 	#
 	# 	return gmm,locs
 
-	def get_priors(self):
-		self.gui.statusbar.showMessage('Finding priors from frame %d'%(self.spin_prior.value()))
-		self.gui.app.processEvents()
-
-		nc = self.gui.data.ncolors
-		dp = self.gui.data.movie[self.spin_prior.value()-1].astype('f')
-
-		regions,shifts = self.gui.data.regions_shifts()
-
-		self.priors = [None for _ in range(nc)]
-		for i in range(nc):
-			r = regions[i]
-			ddp = dp[r[0][0]:r[0][1],r[1][0]:r[1][1]]
-			gmm,locs = self.setup_gmm(ddp,prior=None)
-			self.priors[i] = gmm.prior
-
+	# def get_priors(self):
+	# 	self.gui.statusbar.showMessage('Finding priors from frame %d'%(self.spin_prior.value()))
+	# 	self.gui.app.processEvents()
+	#
+	# 	nc = self.gui.data.ncolors
+	# 	dp = self.gui.data.movie[self.spin_prior.value()-1].astype('f')
+	#
+	# 	regions,shifts = self.gui.data.regions_shifts()
+	#
+	# 	self.priors = [None for _ in range(nc)]
+	# 	for i in range(nc):
+	# 		r = regions[i]
+	# 		ddp = dp[r[0][0]:r[0][1],r[1][0]:r[1][1]]
+	# 		gmm,locs = self.setup_gmm(ddp,prior=None)
+	# 		self.priors[i] = gmm.prior
+	#
 	# # def setup_spot_find(self,frame):
 	# def setup_spot_find(self):
 	# 	nc = self.gui.data.ncolors
@@ -653,11 +673,106 @@ class dock_spotfind(QWidget):
 			# self.gui.docks['contrast'][1].update_image_contrast()
 
 
+	def vbscope_range(self,flag_calcbg=True):
+		self.gui.set_status('Compiling...')
+		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
+		from src.supporting.hmms.fxns.gmm_related import initialize_params
+		from src.supporting import normal_minmax_dist as nmd
+		from ..supporting import minmax
+		self.gui.set_status('Running...')
+
+		if not self.gui.data.flag_movie:
+			return
+
+		nc = self.gui.data.ncolors
+		self.xys = [None for _ in range(nc)]
+		self.spotprobs = [None for _ in range(nc)]
+		self.gui.plot.clear_collections()
+
+		start = self.spin_start.value() - 1
+		end = self.spin_end.value() - 1
+		total = end + 1 - start
+		_,nx,ny = self.gui.data.movie.shape
+
+		regions,self.shifts = self.gui.data.regions_shifts()
+
+		p = self.gui.prefs
+		nlocal = p['spotfind_nsearch']**2
+		probs = [None for _ in range(nc)]
+
+		self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
+		for i in range(nc):
+			r = regions[i]
+			probs[i] = np.zeros((total,nx,ny))[:,r[0][0]:r[0][1],r[1][0]:r[1][1]]
+			d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]]
+
+			for t in range(total):
+				t0 = time.clock()
+				bg = 0.0
+				if flag_calcbg:
+					bg = self.gui.docks['background'][1].calc_background(d[t])
+				image = d[t] - bg
+
+				mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
+				h0 = image[mmax].astype('double')
+				l0 = image[mmin]
+				bg_values = nmd.estimate_from_min(l0,nlocal)
+
+				if t == 0:
+					initials = initialize_params(h0,self.gui.prefs['spotfind_nstates']+1)
+
+				# out = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
+				rr = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
+
+				pp = np.zeros_like(image)
+				pp[mmax] = (1.-rr[:,0])
+				# xsort = out.mu.argsort()
+				# pp = np.zeros_like(image)
+				# pp[mmax] = (1.-out.r[:,xsort][:,0])
+				# # # print r[1][0],r[1][1]
+				# # # print probs[i].shape,probs[i][t,r[0][0]:r[0][1],r[1][0]:r[1][1]].shape,pp.shape,d.shape
+				# self.gui.plot.image.set_array(pp)
+				# self.gui.plot.canvas.draw()
+				# self.gui.app.processEvents()
+				probs[i][t] += pp
+				t1 = time.clock()
+				print i,t,t1-t0
+
+			## Options
+			# compile with as a binomial process using mean of posterior w/ conj prior/likelihood
+
+			# search again ugh.....
+			pmap = probs[i].astype('double').sum(0) / float(p['spotfind_frameson'])
+			mmin,mmax = minmax.minmax_map(pmap,p['spotfind_nsearch'],p['spotfind_clip_border'])
+			pp = np.zeros_like(pmap)
+			pp[mmax] = pmap[mmax]
+
+			#
+			# h0 = pmap[mmax].astype('double')
+			# l0 = pmap[mmin]
+			# bg_values = nmd.estimate_from_min(l0,nlocal)
+			# initials = initialize_params(h0,p['spotfind_nstates']+1)
+			# # prior_strengths = np.array((1.,1000.,100.,.01))
+			# out = gmm(pmap[mmax],p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths = None)
+			# xsort = out.mu.argsort()
+			# pp = np.zeros_like(pmap)
+			# pp[mmax] = (1.-out.r[:,xsort][:,0])
+			self.spotprobs[i] = pp
+
+			self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += pp
+			# print pmap[np.nonzero(pmap!=0)]
+
+			# print i,(probs[i] > self.pp).sum((1,2))
+		self.gui.plot.image.set_array(self.disp_image)
+		self.gui.docks['contrast'][1].update_image_contrast()
+		self.update_spots()
+		# return probs
 
 	def vbmaxtestfind(self):
 		self.gui.set_status('Compiling...')
-		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
+		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm_parallel as gmm
 		from src.supporting import normal_minmax_dist as nmd
+		from ..supporting import minmax as minmax
 		self.gui.set_status('Running...')
 
 		if self.gui.data.flag_movie:
@@ -673,9 +788,6 @@ class dock_spotfind(QWidget):
 			regions,self.shifts = self.gui.data.regions_shifts()
 
 			p = self.gui.prefs
-			from ..supporting import minmax
-			# from ..supporting import normal_minmax_dist as nd
-			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 
 			nregion = self.gui.prefs['spotfind_nsearch']**2
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
@@ -688,22 +800,15 @@ class dock_spotfind(QWidget):
 				mmin,mmax = minmax.minmax_map(d,p['spotfind_nsearch'],p['spotfind_clip_border'])
 				h0 = d[mmax].astype('double')
 				l0 = d[mmin]
-				bg = nmd.estimate_from_min(l0,nregion)
+				bg_val = nmd.estimate_from_min(l0,nregion)
 
-				if not self.priors is None:
-					bg = np.array((self.priors[0,0],self.priors[3,0]/self.priors[2,0]))
-					prior_strengths = np.median(self.priors[:,1:],axis=1)
-					print prior_strengths
-				else:
-					prior_strengths = None
-
-				out = gmm(h0,self.gui.prefs['spotfind_nstates'],bg,nregion,maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths = prior_strengths)
+				out = gmm(h0,self.gui.prefs['spotfind_nstates'],bg_val,nregion,initials=None,maxiters=self.gui.prefs['spotfind_maxiterations'],nrestarts=self.gui.prefs['spotfind_nrestarts'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths =self.priors,ncpu=p['computer_ncpu'])
 
 				xsort = out.mu.argsort()
 				prob = np.zeros_like(d)
 				prob[mmax] = (1.-out.r[:,xsort][:,0])
 				self.posterior = out
-				self.posterior.bg = bg
+				self.posterior.bg = bg_val
 
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
 				self.spotprobs[i] = prob
@@ -715,9 +820,9 @@ class dock_spotfind(QWidget):
 
 	def vbtestfind(self):
 		self.gui.set_status('Compiling...')
-		from src.supporting.hmms.vb_em_gmm import vb_em_gmm as gmm
+		from src.supporting.hmms.vb_em_gmm import vb_em_gmm_parallel as gmm
+		from ..supporting import minmax as minmax
 		self.gui.set_status('Running...')
-
 
 		if self.gui.data.flag_movie:
 			self.xys = [None for _ in range(self.gui.data.ncolors)]
@@ -732,7 +837,7 @@ class dock_spotfind(QWidget):
 			regions,self.shifts = self.gui.data.regions_shifts()
 
 			p = self.gui.prefs
-			from ..supporting import minmax
+
 			# from ..supporting import normal_minmax_dist as nd
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 
@@ -745,10 +850,11 @@ class dock_spotfind(QWidget):
 
 				mmin,mmax = minmax.minmax_map(d,p['spotfind_nsearch'],p['spotfind_clip_border'])
 
-				out = gmm(d[mmax].astype('float64'),self.gui.prefs['spotfind_nstates'],maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'])
+				out = gmm(d[mmax].astype('float64'),self.gui.prefs['spotfind_nstates'],maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'],nrestarts=self.gui.prefs['spotfind_nrestarts'],prior_strengths=self.priors)
 				xsort = out.mu.argsort()
 				prob = np.zeros_like(d)
 				prob[mmax] = (1.-out.r[:,xsort][:,0])
+				self.posterior = out
 
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
 				self.spotprobs[i] = prob
