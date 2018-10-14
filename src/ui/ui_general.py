@@ -2,13 +2,8 @@ from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProg
 from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
 
-def handler(msg_type, msg_log_context, msg_string):
-	pass
-qInstallMessageHandler(handler)
-
 import matplotlib
 matplotlib.use('Qt5Agg')
-
 
 from ui_log import logger
 from ui_prefs import preferences
@@ -70,10 +65,15 @@ class gui(QMainWindow):
 		self.qd_prefs.hide()
 		self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
 
+		qInstallMessageHandler(self.error_handler)
+
 		self.ui_update()
 		self.show()
 
 ################################################################################
+
+	def error_handler(self,msg_type, msg_log_context, msg_string):
+		self.log(msg_string)
 
 	def init_shortcuts(self):
 		f12 = QShortcut(QKeySequence("F12"), self, self.full_screen)
