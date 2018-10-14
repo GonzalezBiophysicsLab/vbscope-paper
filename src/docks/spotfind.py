@@ -394,19 +394,19 @@ class dock_spotfind(QWidget):
 
 	def loadpriors(self):
 		if self.gui.data.flag_movie:
-			fname = QFileDialog.getOpenFileName(self,'Choose priors to load -- PRIORS ARE BUSTED RIGHT NOW','./')#,filter='TIF File (*.tif *.TIF)')
+			fname = QFileDialog.getOpenFileName(self,'Choose priors to load','./')#,filter='TIF File (*.tif *.TIF)')
 			if fname[0] != "":
 				try:
 					self.priors = np.loadtxt(fname[0]).astype('double')
 					self.flag_priorsloaded = True
 					self.gui.statusbar.showMessage('Priors loaded from  %s'%(fname[0]))
 				except:
-					QMessageBox.critical(self,'Load Status','There was a problem trying to load the priors from file %s'%(fname[0]))
+					QMessageBox.critical(self,'Load Status','There was a problem trying to load the priors')
 					self.flag_priorsloaded = False
 
 	def savepriors(self):
 		if self.gui.data.flag_movie:
-			oname = QFileDialog.getSaveFileName(self, 'Save Priors -- PRIORS ARE BUSTED RIGHT NOW', self.gui.data.filename[:-4]+'_priors.dat','*.dat')
+			oname = QFileDialog.getSaveFileName(self, 'Save Priors', self.gui.data.filename[:-4]+'_priors.dat','*.dat')
 			if oname[0] != "":
 				try:
 					pp = self.get_priors()
@@ -414,7 +414,7 @@ class dock_spotfind(QWidget):
 					## Save Normal
 					np.savetxt(oname[0],pp)
 				except:
-					QMessageBox.critical(self,'Save Status','There was a problem trying to save the priors of frame %d'%(self.spin_prior.value()-1))
+					QMessageBox.critical(self,'Save Status','There was a problem trying to save the priors')
 
 	def get_priors(self):
 		if not self.posterior is None:

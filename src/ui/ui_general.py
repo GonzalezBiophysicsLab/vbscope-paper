@@ -2,9 +2,9 @@ from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProg
 from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
 
-# def handler(msg_type, msg_log_context, msg_string):
-# 	pass
-# qInstallMessageHandler(handler)
+def handler(msg_type, msg_log_context, msg_string):
+	pass
+qInstallMessageHandler(handler)
 
 import matplotlib
 matplotlib.use('Qt5Agg')
