@@ -672,6 +672,8 @@ class dock_spotfind(QWidget):
 			self.print_spotnum()
 			# self.gui.docks['contrast'][1].update_image_contrast()
 
+	def cancel_expt(self):
+		self.flag_abort = True
 
 	def vbscope_range(self,flag_calcbg=True):
 		self.gui.set_status('Compiling...')
@@ -707,37 +709,50 @@ class dock_spotfind(QWidget):
 		# from ..containers.popout_plot import popout_plot_container
 		# self.ppc = popout_plot_container(1,1)
 
+		from ..ui.ui_progressbar import progressbar
 		self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 		for i in range(nc):
 			r = regions[i]
 			probs[i] = np.zeros((total,nx,ny))[:,r[0][0]:r[0][1],r[1][0]:r[1][1]]
 			d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]]
 
-			for t in range(total):
-				t0 = time.clock()
-				bg = 0.0
-				if flag_calcbg:
-					bg = self.gui.docks['background'][1].calc_background(d[t])
-				image = d[t] - bg
+			prog = progressbar()
+			prog.setRange(start,end)
+			prog.setWindowTitle("Finding Spots")
+			prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(i,start+1,end+1,start+1, 0.))
+			prog.canceled.connect(self.cancel_expt)
+			prog.show()
+			self.gui.app.processEvents()
 
-				mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
-				h0 = image[mmax].astype('double')
-				l0 = image[mmin]
-				bg_values = nmd.estimate_from_min(l0,nlocal)
+			self.flag_abort = False
+			for t in range(start,end+1):
+				if not self.flag_abort:
+					prog.setValue(t)
+					self.gui.app.processEvents()
+					t0 = time.clock()
+					bg = 0.0
+					if flag_calcbg:
+						bg = self.gui.docks['background'][1].calc_background(d[t])
+					image = d[t] - bg
 
-				if t == 0:
-					initials = initialize_params(h0,self.gui.prefs['spotfind_nstates']+1,flag_kmeans=True)
+					mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
+					h0 = image[mmax].astype('double')
+					l0 = image[mmin]
+					bg_values = nmd.estimate_from_min(l0,nlocal)
 
-				# out = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
-				rr = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
+					if t == start:
+						initials = initialize_params(h0,self.gui.prefs['spotfind_nstates']+1,flag_kmeans=True)
 
-				pp = np.zeros_like(image)
-				pp[mmax] = (1.-rr[:,0])
-				probs[i][t] += pp
-				t1 = time.clock()
-				self.gui.set_status('%d,%d,%f'%(i,t,t1-t0))
-				self.gui.app.processEvents()
+					# out = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
+					rr = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
 
+					pp = np.zeros_like(image)
+					pp[mmax] = (1.-rr[:,0])
+					probs[i][t-start] += pp
+					t1 = time.clock()
+					prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(i,start+1,end+1,t+2, t1-t0))
+					self.gui.app.processEvents()
+			prog.close()
 			## Options
 			# compile with as a binomial process using mean of posterior w/ conj prior/likelihood
 			# search again ugh.....
