@@ -1,6 +1,12 @@
 import numpy as np
 import numba as nb
 from math import lgamma
+from math import erf as erff
+
+
+@nb.vectorize
+def erf(x):
+	return erff(x)
 
 @nb.vectorize
 def gammaln(x):

@@ -185,6 +185,9 @@ class dock_extract(QWidget):
 	def extract(self):
 		self.gui.statusbar.showMessage('Starting Extraction')
 
+		if not self.gui.docks['transform'][1].flag_transforms:
+			self.gui.statusbar.showMessage('Set alignment file')
+			return
 		spots = self.get_spots()
 
 		regions,shifts = self.gui.data.regions_shifts()

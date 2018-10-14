@@ -1,16 +1,27 @@
-## Install the Required Python Libraries
-* pyqt 5.6
-* numpy 1.13
-* matplotlib 2.2
-* scipy 0.19
-* scikit-image 0.13
-* scikit-learn 0.19.0
-* numba 0.34
-* gitpython 2.1
+# Installation
+Should work on best on Unix-based systems (Mac and Linux); Mostly works on Windows
 
-### Using conda
+## Quick Start
+1. Install miniconda (64 bits)
+2. Install python libraries
+2. Install git
+3. git clone this repository
+4. Make shortcuts
+5. Launch vbscope
+
+## Required python libraries
+* pyqt 5.9.4
+* numpy 1.11.3
+* matplotlib 2.2.2
+* scipy 0.19.0
+* scikit-image 0.13.1
+* numba 0.35
+* tqdm 4.23.3
+* h5py 2.7.1
+
+### Install using conda
 ``` bash
-conda install scikit-image scipy numpy matplotlib pyqt scikit-learn numba gitpython
+conda install scikit-image scipy numpy matplotlib pyqt numba h5py tqdm
 ```
 
 ## Make a Terminal Shortcut
@@ -20,50 +31,70 @@ alias vbscope="python /home/username/directory/to/vbscope/vbscope.py"
 alias vbscope_plot="python /home/username/directory/to/vbscope/plotter.py"
 ```
 
-## Parameters
-Explanations of the parameters in the preferences dock:
+## Mac hints
+1. Install miniconda (download link: https://conda.io/miniconda.html, terminal >> sh ~/Downloads/name_of_the_miniconda_file.sh, close terminal, open terminal)
+2. Install git (terminal >> xcode-select --install)
+3. python libraries (terminal >> see above)
+4. shortcuts (text edit >> ~/.bash_profile)
+5. Launch (terminal >> vbscope)
 
-### Experiment Parameters
-* tau - the frame period in seconds
-* pixel_size - length of the (square) pixels on the camera in nanometers. Andor 888 is 13300, Andor 897 is 16000.
-* numerical_aperture - the NA of the objective used to the collect the movie
-* channel_wavelengths - wavelengths of each color channel. This is used the calculate the PSF width
-* binning - factor of binning in the microscope image. Used to calculate the PSF width
-* magnification - Magnification of objective used in microscope
-* bleedthrough - fraction of donor intensity removed from acceptor intensity in the plots and exported traces. Multiple colors is complicated. The first `n` (number of colors) entries correspond to the fraction of color 1 to remove from colors 1 through n, respectively. The next `n` entries correspond to the fraction of color 2 to remove from colors 1 through n, respectively... and so on.
+## Hints
+1. You must upload an ssh key to gitlab in order to download/upload using git. Gitlab >> Settings >> SSH keys. Follow link out for system specific help doing this.
 
-### Display Parameters
-* channel_colors - the color used to plot each channel (string colors accepted)
-* color map - Matplotlib colormap for the movie image
-* contast_scale - multiplier for determining non-linearity of contrast sliders. Higher is  a wider range
-* playback_fps - upper-limit of frames per second for playing movie
+# Parameters
+Explanations of the parameters in the preferences:
 
-### Spotfinding Parameters
-* nsearch - number of pixels (in one dimension) that are used for finding a local min or local max. Can only be odd numbers
-* ncpu - number of cpus to use in parallel when spotfinding in multiple frames
-* threshold - relative threshold the lowerbound must decrease by during VBEM in spotfinding for the algorithm to converge
-* nstates - number of spot classes to use during spotfinding
-* maxiterations - maximum number of VBEM iterations to run when spotfinding
-* clip border - number of pixels to exclude from each border edge when spot finding
+## Background
+* background_pixel_dist - for testing
+* background_smooth_dist - for testing
+* background_time_dist - for testing
 
-### Trace Extraction Parameters
-* same_cutoff - distance cutoff in pixels of which spots are the same spot in different color channels
-* nintegrate - number of pixels (in one dimension) that are used for integrating the PSF to get the intensity values
+## Channels
+* channels_colors - the color used to plot each channel (string colors accepted)
+* channels_wavelength - wavelengths of each color channel. This is used the calculate the PSF width
 
-### Alignment Parameters
-* alignment_order - order of the polynomial used for alignment when loaded in alignment file
+## Computer
+* computer_ncpu - number of cpus to use in multiprocessing algorithms
 
-### Plotting Parameters
-* downsample - number of frames to sum together into one datapoint. Time of this new datapoint is the time of the first datapoint in the sum.
-* plotter_xmin - first frame to use (in frames) for ensemble plots
-* plotter_xmax - last frame to use (in frames) for ensemble plots. -1 is last
-* plotter_n_xbins - number of histogram bins for x axis for all ensemble plots
-* plotter_n_ybins - number of histogram bins for y axis for all ensemble plots
-* plotter_floor - don't display less than this value in 2D heat maps. For 2D FRET, this should be between 0 and 1. For the TDP, this should be greater than 1
-* plotter_n_levels - number of filled contour levels for 2D heat maps
-* plotter_smoothx - standard deviation of gaussian (in datapoints) used to smooth 2D heat maps in the x direction
-* plotter_smoothy - standard deviation of gaussian (in datapoints) used to smooth 2D heat maps in the y direction
+## Intensity Extraction
+* extraction_binning - factor of binning in the microscope image. Used to calculate the PSF width
+* extract_magnification - magnification of objective used in microscope
+* extract_ml_psf_maxiters - number of ML iterations
+* extract_numerical_aperture - the NA of the objective used to the collect the movie
+* extract_nintegrate - number of pixels (in one dimension) that are used for integrating the PSF to get the intensity values
+* extract_pixel_size - length of the (square) pixels on the camera in nanometers. Andor 888 is 13300, Andor 897 is 16000
+* extract_same_cutoff - distance cutoff in pixels of which spots are the same spot in different color channels
 
-### Plot Processing Parameters
-* snr_threshold - traces with estimated SNR less than this number can be removed
-* pb_length - number of datapoints for sliding window when calculating variance for photobleaching variance method. Also the minimum number of frames between pre-bleach and post-bleach points for a trace that can be kept
+## Movie
+* movie_playback_fps - upper-limit of frames per second for playing movie
+* movie_tau - the frame period in seconds
+
+## Plot
+* plot_colormap - colormap of image
+* plot_contrast_scale - non-linear contrast scaling for contrast dock
+* plot_fontsize - fontsize in plots
+
+## Render
+* render_artist - metadata name
+* render_codec - codec for movie rendering
+* render_fps - frames per second of rendered movie
+* render_renderer - program to use to render movie frames together
+* render_title - metadata movie title
+
+## Spot Finding
+* spotfind_clip_border - number of pixels to exclude from each border edge when spot finding
+* spotfind_maxiterations - maximum number of VBEM iterations to run when spotfinding
+* spotfind_nsearch - number of pixels (in one dimension) that are used for finding a local min or local max. Can only be odd numbers
+* spotfind_nstates - number of spot classes to use during spotfinding
+* spot_threshold - relative threshold the lowerbound must decrease by during VBEM in spotfinding for the algorithm to converge
+
+## Alignment
+* Transform_alignment_order - order of the polynomial used for alignment when loaded in alignment file
+
+## User Interface
+* ui_bgcolor - background color
+* ui_fontcolor - color of font
+* ui_fontsize - font size
+* ui_height - size of window
+* ui_version - version number
+* ui_width - size of window

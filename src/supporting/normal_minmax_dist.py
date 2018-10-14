@@ -1,5 +1,6 @@
 import numpy as np
-from numba_math import erf, ndtri
+# from numba_math import erf, ndtri
+from scipy.special import erf,ndtri
 import numba as nb
 
 
