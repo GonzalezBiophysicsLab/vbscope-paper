@@ -10,7 +10,6 @@ from fxns.kernel_sample import kernel_sample
 from fxns.numba_math import psi,gammaln,erf
 from fxns.gmm_related import initialize_params, result_bayesian_gmm
 
-
 @nb.njit(nb.double[:](nb.double[:],nb.double,nb.double))
 def lnp_normal(x,mu,var):
 	y = np.log(2.*np.pi) + np.log(var) + (x-mu)**2./var

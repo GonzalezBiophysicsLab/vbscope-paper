@@ -42,7 +42,6 @@ class vbscope_gui(movie_viewer):
 		self.ui_update()
 		self.show()
 
-
 	def setup_vbscope_docks(self):
 		## Add Docks
 		self.add_dock('tag_viewer', 'Tag Viewer', docks.tag_viewer.dock_tagviewer(self), 'tb', 't')

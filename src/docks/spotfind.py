@@ -20,8 +20,8 @@ default_prefs = {
 	'spotfind_clip_border':8,
 	'spotfind_threshold':1e-3,
 	'spotfind_maxiterations':250,
-	'spotfind_nstates':3,
-	'spotfind_frameson':25,
+	'spotfind_nstates':1,
+	'spotfind_frameson':5,
 	'spotfind_nrestarts':4
 }
 
@@ -408,13 +408,13 @@ class dock_spotfind(QWidget):
 		if self.gui.data.flag_movie:
 			oname = QFileDialog.getSaveFileName(self, 'Save Priors -- PRIORS ARE BUSTED RIGHT NOW', self.gui.data.filename[:-4]+'_priors.dat','*.dat')
 			if oname[0] != "":
-				# try:
-				if 1:
+				try:
 					pp = self.get_priors()
+					sellf.priors = pp.astype('double')
 					## Save Normal
 					np.savetxt(oname[0],pp)
-				# except:
-					# QMessageBox.critical(self,'Save Status','There was a problem trying to save the priors of frame %d'%(self.spin_prior.value()-1))
+				except:
+					QMessageBox.critical(self,'Save Status','There was a problem trying to save the priors of frame %d'%(self.spin_prior.value()-1))
 
 	def get_priors(self):
 		if not self.posterior is None:
@@ -680,9 +680,14 @@ class dock_spotfind(QWidget):
 		from src.supporting import normal_minmax_dist as nmd
 		from ..supporting import minmax
 		self.gui.set_status('Running...')
+		self.gui.app.processEvents()
 
 		if not self.gui.data.flag_movie:
 			return
+
+		if self.priors is None:
+			self.vbmaxtestfind()
+			self.priors = self.get_priors().astype('double')
 
 		nc = self.gui.data.ncolors
 		self.xys = [None for _ in range(nc)]
@@ -699,6 +704,8 @@ class dock_spotfind(QWidget):
 		p = self.gui.prefs
 		nlocal = p['spotfind_nsearch']**2
 		probs = [None for _ in range(nc)]
+		# from ..containers.popout_plot import popout_plot_container
+		# self.ppc = popout_plot_container(1,1)
 
 		self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 		for i in range(nc):
@@ -719,50 +726,30 @@ class dock_spotfind(QWidget):
 				bg_values = nmd.estimate_from_min(l0,nlocal)
 
 				if t == 0:
-					initials = initialize_params(h0,self.gui.prefs['spotfind_nstates']+1)
+					initials = initialize_params(h0,self.gui.prefs['spotfind_nstates']+1,flag_kmeans=True)
 
 				# out = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
 				rr = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
 
 				pp = np.zeros_like(image)
 				pp[mmax] = (1.-rr[:,0])
-				# xsort = out.mu.argsort()
-				# pp = np.zeros_like(image)
-				# pp[mmax] = (1.-out.r[:,xsort][:,0])
-				# # # print r[1][0],r[1][1]
-				# # # print probs[i].shape,probs[i][t,r[0][0]:r[0][1],r[1][0]:r[1][1]].shape,pp.shape,d.shape
-				# self.gui.plot.image.set_array(pp)
-				# self.gui.plot.canvas.draw()
-				# self.gui.app.processEvents()
 				probs[i][t] += pp
 				t1 = time.clock()
-				print i,t,t1-t0
+				self.gui.set_status('%d,%d,%f'%(i,t,t1-t0))
+				self.gui.app.processEvents()
 
 			## Options
 			# compile with as a binomial process using mean of posterior w/ conj prior/likelihood
-
 			# search again ugh.....
+			# self.ppc.ui.ax[0].plot(np.arange(probs[i].shape[0]),(probs[i] > self.pp).sum((1,2)))
+			# self.ppc.ui.canvas.draw()
+
 			pmap = probs[i].astype('double').sum(0) / float(p['spotfind_frameson'])
 			mmin,mmax = minmax.minmax_map(pmap,p['spotfind_nsearch'],p['spotfind_clip_border'])
 			pp = np.zeros_like(pmap)
 			pp[mmax] = pmap[mmax]
-
-			#
-			# h0 = pmap[mmax].astype('double')
-			# l0 = pmap[mmin]
-			# bg_values = nmd.estimate_from_min(l0,nlocal)
-			# initials = initialize_params(h0,p['spotfind_nstates']+1)
-			# # prior_strengths = np.array((1.,1000.,100.,.01))
-			# out = gmm(pmap[mmax],p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths = None)
-			# xsort = out.mu.argsort()
-			# pp = np.zeros_like(pmap)
-			# pp[mmax] = (1.-out.r[:,xsort][:,0])
 			self.spotprobs[i] = pp
-
 			self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += pp
-			# print pmap[np.nonzero(pmap!=0)]
-
-			# print i,(probs[i] > self.pp).sum((1,2))
 		self.gui.plot.image.set_array(self.disp_image)
 		self.gui.docks['contrast'][1].update_image_contrast()
 		self.update_spots()
@@ -774,6 +761,7 @@ class dock_spotfind(QWidget):
 		from src.supporting import normal_minmax_dist as nmd
 		from ..supporting import minmax as minmax
 		self.gui.set_status('Running...')
+		self.gui.app.processEvents()
 
 		if self.gui.data.flag_movie:
 			self.xys = [None for _ in range(self.gui.data.ncolors)]
@@ -823,6 +811,7 @@ class dock_spotfind(QWidget):
 		from src.supporting.hmms.vb_em_gmm import vb_em_gmm_parallel as gmm
 		from ..supporting import minmax as minmax
 		self.gui.set_status('Running...')
+		self.gui.app.processEvents()
 
 		if self.gui.data.flag_movie:
 			self.xys = [None for _ in range(self.gui.data.ncolors)]
@@ -972,85 +961,89 @@ class dock_spotfind(QWidget):
 	# 	return p
 
 
-import numba as nb
-@nb.jit(["int64[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
-def make_map(ss,nx,ny):
-	x = ss[0]
-	y = ss[1]
-
-	m = np.zeros((nx,ny),dtype=nb.int64)
-	for i in range(x.size):
-		m[int(x[i]),int(y[i])] += 1
-	return m
-
 # import numba as nb
-# @nb.jit(["double[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
-# def cull_rep_px(ss,nx,ny):
+# @nb.jit(["int64[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
+# def make_map(ss,nx,ny):
 # 	x = ss[0]
 # 	y = ss[1]
 #
-# 	m = np.zeros((nx,ny))
+# 	m = np.zeros((nx,ny),dtype=nb.int64)
 # 	for i in range(x.size):
 # 		m[int(x[i]),int(y[i])] += 1
+# 	return m
 #
-# 	x = []
-# 	y = []
-# 	for i in range(nx):
-# 		for j in range(ny):
-# 			if m[i,j] > 0:
-# 				x.append(i)
-# 				y.append(j)
-# 	return np.array((x,y),dtype=ss.dtype)
+# # import numba as nb
+# # @nb.jit(["double[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
+# # def cull_rep_px(ss,nx,ny):
+# # 	x = ss[0]
+# # 	y = ss[1]
+# #
+# # 	m = np.zeros((nx,ny))
+# # 	for i in range(x.size):
+# # 		m[int(x[i]),int(y[i])] += 1
+# #
+# # 	x = []
+# # 	y = []
+# # 	for i in range(nx):
+# # 		for j in range(ny):
+# # 			if m[i,j] > 0:
+# # 				x.append(i)
+# # 				y.append(j)
+# # 	return np.array((x,y),dtype=ss.dtype)
+# #
+# @nb.jit('double[:,:](double[:,:],double)',nopython=True)
+# def avg_close(ss,cutoff):
 #
-@nb.jit('double[:,:](double[:,:],double)',nopython=True)
-def avg_close(ss,cutoff):
-
-	totalx = []
-	totaly = []
-
-	# ## AVERAGE
-	# already = []
-	# for j in range(ss[0].size):
-	# 	currentn = 1.
-	# 	currentx = ss[0][j]
-	# 	currenty = ss[1][j]
-	# 	if already.count(j) == 0:
-	# 		for i in range(j+1,ss[0].size):
-	# 			if already.count(i) == 0:
-	# 				r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
-	# 				if r < cutoff:
-	# 					currentx += ss[0][i]
-	# 					currenty += ss[1][i]
-	# 					currentn += 1.
-	# 					already.append(i)
-	# 		totalx.append(currentx/currentn)
-	# 		totaly.append(currenty/currentn)
-	# 		already.append(j)
-	#### FIRST
-	already = []
-	for j in range(ss[0].size):
-		# currentn = 1.
-		# currentx = ss[0][j]
-		# currenty = ss[1][j]
-		if already.count(j) == 0:
-			for i in range(j+1,ss[0].size):
-				if already.count(i) == 0:
-					r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
-					if r < cutoff:
-						# currentx += ss[0][i]
-						# currenty += ss[1][i]
-						# currentn += 1.
-						already.append(i)
-
-			# totalx.append(currentx/currentn)
-			# totaly.append(currenty/currentn)
-			totalx.append(ss[0][j])
-			totaly.append(ss[1][j])
-			already.append(j)
-
-	return np.array((totalx,totaly))
-
-
-def _run(a):
-	a.run()
-	return a
+# 	totalx = []
+# 	totaly = []
+#
+# 	# ## AVERAGE
+# 	# already = []
+# 	# for j in range(ss[0].size):
+# 	# 	currentn = 1.
+# 	# 	currentx = ss[0][j]
+# 	# 	currenty = ss[1][j]
+# 	# 	if already.count(j) == 0:
+# 	# 		for i in range(j+1,ss[0].size):
+# 	# 			if already.count(i) == 0:
+# 	# 				r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
+# 	# 				if r < cutoff:
+# 	# 					currentx += ss[0][i]
+# 	# 					currenty += ss[1][i]
+# 	# 					currentn += 1.
+# 	# 					already.append(i)
+# 	# 		totalx.append(currentx/currentn)
+# 	# 		totaly.append(currenty/currentn)
+# 	# 		already.append(j)
+# 	#### FIRST
+# 	already = []
+# 	for j in range(ss[0].size):
+# 		# currentn = 1.
+# 		# currentx = ss[0][j]
+# 		# currenty = ss[1][j]
+# 		if already.count(j) == 0:
+# 			for i in range(j+1,ss[0].size):
+# 				if already.count(i) == 0:
+# 					r = np.sqrt((ss[0][i] - ss[0][j])**2. + (ss[1][i] - ss[1][j])**2.)
+# 					if r < cutoff:
+# 						# currentx += ss[0][i]
+# 						# currenty += ss[1][i]
+# 						# currentn += 1.
+# 						already.append(i)
+#
+# 			# totalx.append(currentx/currentn)
+# 			# totaly.append(currenty/currentn)
+# 			totalx.append(ss[0][j])
+# 			totaly.append(ss[1][j])
+# 			already.append(j)
+#
+# 	return np.array((totalx,totaly))
+#
+#
+# # def _run(a):
+# # 	a.run()
+# # 	return a
+#
+#
+#
+#
