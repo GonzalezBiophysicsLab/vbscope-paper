@@ -30,7 +30,7 @@ def kmeans(x,nstates):
 			mu[j] = float(np.sum(rr*x))/(np.sum(rr)+1e-16)
 
 		ll = np.sum(r*dist)
-		if np.abs(ll - ll_last)/j <= 1e-100:
+		if np.abs((ll - ll_last)/ll) <= 1e-100:
 			break
 		else:
 			ll_last = ll
