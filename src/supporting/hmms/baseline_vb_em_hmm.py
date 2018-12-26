@@ -11,7 +11,10 @@ from fxns.numba_math import psi,gammaln
 from fxns.gmm_related import initialize_params, result_bayesian_gmm
 from fxns.hmm_related import forward_backward,viterbi,result_bayesian_hmm,initialize_tmatrix
 
-from lds_baseline import LDS,guess_baseline
+from baseline_updates import update_baseline, update_vn, update_r2, calc_ll
+from baseline_kmeans import kmeans_baseline
+from baseline_filters import gaussian_filter
+from fxns.kmeans import kmeans
 
 @nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:]),nopython=True)
 def m_sufficient_statistics(x,r):
@@ -87,8 +90,9 @@ def calc_lowerbound(r,a,b,m,beta,pik,tm,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta
 def calc_model(r,m):
 	model = np.zeros(r.shape[0])
 	for i in range(model.size):
+		# model[i] = m[r[i].argmax()] ## hard
 		for j in range(r.shape[1]):
-			model[i] += r[i,j]*m[j]
+			model[i] += r[i,j]*m[j] ## soft
 	return model
 
 @nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.int64,nb.float64[:,:]))(nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:,:],nb.int64,nb.float64,nb.float64[:]),nopython=True)
@@ -102,8 +106,17 @@ def outer_loop(xx,mu,var,tm,maxiters,threshold,prior_strengths):
 	pi0 = prior_strengths[3] + np.zeros_like(mu)
 	tm0 = prior_strengths[4] + np.zeros_like(tm)
 
-	bg = guess_baseline(xx)
-	x = xx - bg
+	model,baseline = kmeans_baseline(xx,mu.size)
+	baseline = gaussian_filter(baseline,xx.size//20)
+	r2 = update_r2(xx,model,baseline)
+	vn = update_vn(xx,model,baseline,r2)
+	# baseline -= baseline[0]
+	x = xx - baseline
+
+	kmo = kmeans(x,mu.size)
+	for i in range(mu.size):
+		mu[i] = kmo[1][i]
+		var[i] = kmo[2].sum()
 
 	# initialize
 	prob = p_normal(x,mu,var)
@@ -111,6 +124,12 @@ def outer_loop(xx,mu,var,tm,maxiters,threshold,prior_strengths):
 	for i in range(r.shape[0]):
 		r[i] = prob[i]
 		r[i] /= np.sum(r[i]) + 1e-10 ## for stability
+
+	model = calc_model(r,mu)
+	baseline = update_baseline(xx,model,r2)
+	vn = update_vn(xx,model,baseline,r2)
+	r2 = update_r2(xx,model,baseline)
+	x = xx - baseline
 
 	a,b,m,beta,pik,nk,xbark,sk = m_updates(x,r,a0,b0,m0,beta0,pi0)
 
@@ -139,7 +158,6 @@ def outer_loop(xx,mu,var,tm,maxiters,threshold,prior_strengths):
 			prob[:,i] = (2.*np.pi)**-.5 * np.exp(-.5*(E_dld[:,i] - E_lnlam[i]))
 		r, xi, lnz = forward_backward(prob, np.exp(E_lntm), np.exp(E_lnpi))
 
-
 		ll0 = ll1
 		ll[iteration] = calc_lowerbound(r,a,b,m,beta,pik,tm,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta0,pi0,tm0,lnz)
 		ll1 = ll[iteration,0]
@@ -150,19 +168,20 @@ def outer_loop(xx,mu,var,tm,maxiters,threshold,prior_strengths):
 			if dl < threshold or np.isnan(ll1):
 				break
 
+		model = calc_model(r,m)
+		baseline = update_baseline(xx,model,r2)
+		vn = update_vn(xx,model,baseline,r2)
+		r2 = update_r2(xx,model,baseline)
+		x = xx - baseline
+
 		a,b,m,beta,pik,nk,xbark,sk = m_updates(x,r,a0,b0,m0,beta0,pi0)
 		pik = pi0 + r[0]
 		tm  = tm0 + xi.sum(0)
 
-		if iteration > 2:
-			bg = LDS(xx-calc_model(r,m))[1]
-			x = xx - bg
-
 		if iteration < maxiters:
 			iteration += 1
 
-
-	return bg,r,a,b,m,beta,pik,tm,E_lnlam,E_lnpi,E_lntm,iteration,ll
+	return baseline,r,a,b,m,beta,pik,tm,E_lnlam,E_lnpi,E_lntm,iteration,ll
 
 def vb_em_hmm_baseline(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None):
 	'''
@@ -199,17 +218,20 @@ if __name__ == '__main__':
 	import numpy as np
 	import matplotlib.pyplot as plt
 
-	from vb_em_hmm_baseline import vb_em_hmm_baseline
 	t,d = fake_data()
 	from lds_baseline import fake_data as fake_bg
-	bg = fake_bg(d.size,np.sqrt(np.var(d))/100.*5.,np.sqrt(np.var(d))/100.)[1]
-
+	bg = fake_bg(d.size,np.sqrt(np.var(d))/10.,np.sqrt(np.var(d))/10.)[1]
+	print('compiled')
 	nstates = 2
-	o = vb_em_hmm_baseline(d+bg,nstates,maxiters=200,threshold=1e-4)
+	o = vb_em_hmm_baseline(d+bg,nstates)#,maxiters=200,threshold=1e-5)
 
 	f,a = plt.subplots(2)
 	a[0].plot(d+bg)
-	a[1].plot(d+bg-o.bg - o.m.min())
-	a[1].plot(o.m[o.viterbi] - o.m.min())
+	a[0].plot(o.bg)
+	a[1].plot(d+bg-o.bg)
+	a[1].plot(d,lw=1,color='r',alpha=.8)
+	# a[1].plot(o.m[o.viterbi])
+	# a[1].plot(d+bg-baseline)
+	# a[1].plot(model)
 
 	plt.show()
