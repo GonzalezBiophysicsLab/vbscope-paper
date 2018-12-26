@@ -12,14 +12,17 @@ def erf(x):
 ########################### reformated for phython  ############################
 ################################################################################
 
-@nb.njit
-def polevl(x, coef, n):
-	m = coef.size
-	y = 0.
+@nb.njit(nb.double(nb.double,nb.double[:],nb.int64))
+def polevl(x,coef,n):
 
-	for i in range(n):
-		y = y*x + coef[m-n+i]
-	return y
+	ans = coef[0]
+	i = n+1
+	j = 1
+	while i > 0:
+		ans = ans*x + coef[j]
+		j += 1
+		i -= 1
+	return ans
 
 @nb.jit(["double[:](double[:])"],nopython=True)
 def ndtri(y0s):
