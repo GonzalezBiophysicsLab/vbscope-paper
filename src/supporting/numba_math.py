@@ -12,13 +12,13 @@ def erf(x):
 ########################### reformated for phython  ############################
 ################################################################################
 
-@nb.jit(nopython=True)
+@nb.njit
 def polevl(x, coef, n):
 	m = coef.size
-	y = coef[0]
+	y = 0.
 
-	for i in range(n-1):
-		y = y*x + coef[m-1-n+i]
+	for i in range(n):
+		y = y*x + coef[m-n+i]
 	return y
 
 @nb.jit(["double[:](double[:])"],nopython=True)
@@ -68,7 +68,7 @@ def ndtri(y0s):
 	 * ndtri domain       x >= 1         NPY_INFINITY
 	 *
 	 */
-	
+
 
 	/*
 	 * Cephes Math Library Release 2.1:  January, 1989

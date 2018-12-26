@@ -162,6 +162,7 @@ def outer_loop(xx,mu,var,tm,maxiters,threshold,prior_strengths):
 		ll[iteration] = calc_lowerbound(r,a,b,m,beta,pik,tm,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta0,pi0,tm0,lnz)
 		ll1 = ll[iteration,0]
 
+		print(iteration,ll1)
 		## likelihood
 		if iteration > 1:
 			dl = np.abs((ll1 - ll0)/ll0)
@@ -221,17 +222,25 @@ if __name__ == '__main__':
 	t,d = fake_data()
 	from lds_baseline import fake_data as fake_bg
 	bg = fake_bg(d.size,np.sqrt(np.var(d))/10.,np.sqrt(np.var(d))/10.)[1]
+	data = np.loadtxt('/Users/colin/Desktop/nice.dat')[:8600]
 	print('compiled')
-	nstates = 2
-	o = vb_em_hmm_baseline(d+bg,nstates)#,maxiters=200,threshold=1e-5)
 
+	o = vb_em_hmm_baseline(data,2)
 	f,a = plt.subplots(2)
-	a[0].plot(d+bg)
+	a[0].plot(data)
 	a[0].plot(o.bg)
-	a[1].plot(d+bg-o.bg)
-	a[1].plot(d,lw=1,color='r',alpha=.8)
-	# a[1].plot(o.m[o.viterbi])
-	# a[1].plot(d+bg-baseline)
-	# a[1].plot(model)
-
+	a[1].plot(data-o.bg)
 	plt.show()
+	# nstates = 2
+	# o = vb_em_hmm_baseline(d+bg,nstates)#,maxiters=200,threshold=1e-5)
+	#
+	# f,a = plt.subplots(2)
+	# a[0].plot(d+bg)
+	# a[0].plot(o.bg)
+	# a[1].plot(d+bg-o.bg)
+	# a[1].plot(d,lw=1,color='r',alpha=.8)
+	# # a[1].plot(o.m[o.viterbi])
+	# # a[1].plot(d+bg-baseline)
+	# # a[1].plot(model)
+	#
+	# plt.show()
