@@ -44,8 +44,9 @@ def update_r2(data,model,background):
 	left = 0.
 	right = 1e5
 	thresh = 1e-8
-
-	while 1:
+	maxiters = 100000
+	iteration = 0
+	while iteration < maxiters:
 		r2 = (right+left)/2.
 		val = r2**3. - B * (4. + r2)
 		if np.abs(val) < thresh:
@@ -55,6 +56,7 @@ def update_r2(data,model,background):
 			right = r2
 		else:
 			left = r2
+		iteration += 1
 	return r2
 
 @nb.njit(nb.double(nb.double[:],nb.double[:],nb.double[:],nb.double,nb.double))
