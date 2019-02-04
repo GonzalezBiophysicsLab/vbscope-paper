@@ -5,8 +5,8 @@ from PyQt5.QtGui import QKeySequence
 import matplotlib
 matplotlib.use('Qt5Agg')
 
-from ui_log import logger
-from ui_prefs import preferences
+from .ui_log import logger
+from .ui_prefs import preferences
 
 class gui(QMainWindow):
 	'''
@@ -265,7 +265,10 @@ class gui(QMainWindow):
 			self.showFullScreen()
 
 	def unsafe_close(self,event):
+
 		event.accept()
+		import sys
+		sys.exit()
 
 	def safe_close(self,event):
 		# event.ignore()
@@ -275,5 +278,7 @@ class gui(QMainWindow):
 			self._log.close()
 			self.prefs.close()
 			event.accept()
+			import sys
+			sys.exit()
 		else:
 			event.ignore()

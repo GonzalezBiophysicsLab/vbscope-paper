@@ -654,7 +654,7 @@ class plotter_gui(ui_general.gui):
 					self.log("Loaded HMM result from %s"%(fname),True)
 				except:
 					try:
-						import cPickle as pickle
+						import pickle as pickle
 						f = open(fname,'r')
 						self.data.hmm_result = pickle.load(f)
 						f.close()
@@ -670,12 +670,12 @@ class plotter_gui(ui_general.gui):
 	def load_traces(self,filename=None,checked=False,ncolors=2):
 		if filename is None:
 			fname,_ = QFileDialog.getOpenFileName(self,'Choose file to load traces','./')#,filter='TIF File (*.tif *.TIF)')
-			if fname is u"":
+			if fname is "":
 				return
 		else:
 			fname = filename
 
-		if not fname is u"":
+		if not fname is "":
 			success = False
 			if filename is None:
 				ncolors,success2 = QInputDialog.getInt(self,"Number of Color Channels","Number of Color Channels",value=2,min=1)
@@ -707,7 +707,7 @@ class plotter_gui(ui_general.gui):
 	def load_classes(self,filename=None,checked=False):
 		if filename is None:
 			fname,_ = QFileDialog.getOpenFileName(self,'Choose file to load classes','./')#,filter='TIF File (*.tif *.TIF)')
-			if fname is u"":
+			if fname is "":
 				return
 		else:
 			fname = filename
@@ -808,10 +808,10 @@ class plotter_gui(ui_general.gui):
 							from hashlib import md5
 							teatime = ctime()
 							hashed= md5(teatime + str(np.random.rand())).hexdigest()
-							ttype = np.array([[ (np.array([u'vbscope'],dtype='<U42'),)]],dtype=[('session', 'O')])
+							ttype = np.array([[ (np.array(['vbscope'],dtype='<U42'),)]],dtype=[('session', 'O')])
 							spoofid = np.array([hashed], dtype='<U38')
 							fake_attr = np.array('none')
-							cols = np.array([[np.array([u'fret'],dtype='<U4'),np.array([u'donor'], dtype='<U5'), np.array([u'acceptor'],dtype='<U8')]], dtype='O')
+							cols = np.array([[np.array(['fret'],dtype='<U4'),np.array(['donor'], dtype='<U5'), np.array(['acceptor'],dtype='<U8')]], dtype='O')
 							q = {'type':ttype,'id':spoofid,'attr':fake_attr,'columns':cols}
 							dt = np.dtype([('id', 'O'), ('index', 'O'), ('values', 'O'), ('attr', 'O')])
 							data = []

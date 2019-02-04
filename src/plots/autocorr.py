@@ -208,7 +208,7 @@ def recalc(gui):
 	## beta - stretched parameter
 
 	popplot.ens = obj()
-	popplot.ens.y = filter(acf_estimator(popplot.fpb),pp)
+	popplot.ens.y = list(filter(acf_estimator(popplot.fpb),pp))
 	popplot.ens.y /= popplot.ens.y[0] ## filtering can mess it up a little, therefore renormalize
 	popplot.ens.t = t
 
@@ -234,7 +234,7 @@ def recalc(gui):
 	for i in range(popplot.fpb.shape[0]):
 		ff = popplot.fpb[i].reshape((1,popplot.fpb.shape[1]))
 		if not np.all(np.isnan(ff)):
-			popplot.ind.y.append(filter(acf_estimator(ff),pp))
+			popplot.ind.y.append(list(filter(acf_estimator(ff),pp)))
 	popplot.ind.y = np.array(popplot.ind.y)
 	popplot.ind.y /= popplot.ind.y[:,0][:,None]
 	popplot.ind.t = t

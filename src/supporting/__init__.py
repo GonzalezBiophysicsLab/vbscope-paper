@@ -1,1 +1,1 @@
-from solve_bg import solve_bg
+from .solve_bg import solve_bg

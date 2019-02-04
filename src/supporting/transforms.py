@@ -41,7 +41,7 @@ def icp(reference,transformee,xshift=0.,yshift=0.,maxiters=100):
 			return t
 		else:
 			last = l
-	print "Didn't converge... which is weird."
+	print("Didn't converge... which is weird.")
 	return t
 
 def poly(src,dst,order=2):

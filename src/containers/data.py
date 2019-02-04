@@ -80,35 +80,35 @@ class data_container():
 			]
 		elif self.ncolors == 2:
 			r = [
-				[[0,dy],[0,dx/2]],
-				[[0,dy],[dx/2,dx]]
+				[[0,dy],[0,dx//2]],
+				[[0,dy],[dx//2,dx]]
 			]
 			shifts = [
 				[0,0],
-				[0,dx/2]
+				[0,dx//2]
 			]
 		elif self.ncolors == 3:
 			r = [
-				[[0,dy/2],[0,dx/2]],
-				[[0,dy/2],[dx/2,dx]],
-				[[dy/2,dy],[dx/2,dx]]
+				[[0,dy//2],[0,dx//2]],
+				[[0,dy//2],[dx//2,dx]],
+				[[dy//2,dy],[dx//2,dx]]
 			]
 			shifts = [
 				[0,0],
-				[0,dx/2],
-				[dy/2,dx/2]
+				[0,dx//2],
+				[dy//2,dx//2]
 			]
 		elif self.ncolors == 4:
 			r = [
-				[[0,dy/2],[0,dx/2]],
-				[[0,dy/2],[dx/2,dx]],
-				[[dy/2,dy],[dx/2,dx]],
-				[[dy/2,dy],[dx/2,dx]]
+				[[0,dy//2],[0,dx//2]],
+				[[0,dy//2],[dx//2,dx]],
+				[[dy//2,dy],[dx//2,dx]],
+				[[dy//2,dy],[dx//2,dx]]
 			]
 			shifts = [
 				[0,0],
-				[0,dx/2],
-				[dy/2,dx/2],
-				[dy/2,0]
+				[0,dx//2],
+				[dy//2,dx//2],
+				[dy//2,0]
 			]
 		return np.array(r),np.array(shifts)

@@ -1,9 +1,9 @@
-import region
-import hist_1d
-import hist_2d
-import tdp
-import tranM
-import intensities
-import crosscorr
-import vb_states
-import autocorr
+from . import region
+from . import hist_1d
+from . import hist_2d
+from . import tdp
+from . import tranM
+from . import intensities
+from . import crosscorr
+from . import vb_states
+from . import autocorr

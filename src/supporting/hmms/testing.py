@@ -1,11 +1,11 @@
 ## test
-from fxns.fake_data import fake_data
+from .fxns.fake_data import fake_data
 import numpy as np
 import matplotlib.pyplot as plt
 import time
 
 def test_ml_em_gmm():
-	from ml_em_gmm import ml_em_gmm
+	from .ml_em_gmm import ml_em_gmm
 	t,d = fake_data(outliers=True)
 
 	nstates = 5
@@ -21,21 +21,21 @@ def test_ml_em_gmm():
 
 
 def test_ml_em_hmm():
-	from ml_em_hmm import ml_em_hmm
+	from .ml_em_hmm import ml_em_hmm
 
 	t,d = fake_data()
 
 	nstates = 2
 	o = ml_em_hmm(d[:10],nstates)
-	print 'hi'
+	print('hi')
 	t0 = time.time()
 	o = ml_em_hmm(d,nstates)
 	t1 = time.time()
-	print t1-t0
-	print o.tmatrix
-	print o.mu
-	print o.var**.5
-	print o.r.shape
+	print(t1-t0)
+	print(o.tmatrix)
+	print(o.mu)
+	print(o.var**.5)
+	print(o.r.shape)
 
 	cm = plt.cm.jet
 	for i in range(nstates):
@@ -48,7 +48,7 @@ def test_ml_em_hmm():
 	plt.show()
 
 def test_vb_em_gmm():
-	from vb_em_gmm import vb_em_gmm
+	from .vb_em_gmm import vb_em_gmm
 	t,d = fake_data()
 
 	nstates = 3
@@ -93,18 +93,18 @@ def test_vb_em_gmm():
 
 def test_vb_em_hmm():
 
-	from vb_em_hmm import vb_em_hmm
+	from .vb_em_hmm import vb_em_hmm
 	t,d = fake_data()
 
 	# nstates = 2
 	lls = []
 	for nstates in range(1,11):
 		o = vb_em_hmm(d,nstates)
-		print nstates
+		print(nstates)
 		lls.append(o.likelihood)
 	l = [ll[-1,0] for ll in lls]
 	plt.figure()
-	plt.plot(range(1,11),l,'-o')
+	plt.plot(list(range(1,11)),l,'-o')
 	plt.show()
 	#
 	# print o.tmatrix
@@ -129,7 +129,7 @@ def test_vb_em_hmm():
 
 def test_consensus_vb_em_hmm():
 
-	from consensus_vb_em_hmm import consensus_vb_em_hmm,consensus_vb_em_hmm_parallel
+	from .consensus_vb_em_hmm import consensus_vb_em_hmm,consensus_vb_em_hmm_parallel
 	t,d = fake_data()
 	tt,dd = fake_data()
 	ddd = [d,dd[:-10]]
@@ -139,11 +139,11 @@ def test_consensus_vb_em_hmm():
 	for nstates in range(1,5):
 		o = consensus_vb_em_hmm_parallel(ddd,nstates,nrestarts=4,ncpu=4)
 		# o = consensus_vb_em_hmm(ddd,nstates)
-		print nstates
+		print(nstates)
 		lls.append(o.likelihood)
 	l = [ll[-1,0] for ll in lls]
 	plt.figure()
-	plt.plot(range(1,len(lls)+1),l,'-o')
+	plt.plot(list(range(1,len(lls)+1)),l,'-o')
 	plt.show()
 	#
 	# print o.tmatrix

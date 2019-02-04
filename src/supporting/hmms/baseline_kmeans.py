@@ -2,8 +2,8 @@ import numpy as np
 import numba as nb
 
 # from baseline_filters import gaussian_filter
-from fxns.kmeans import kmeans
-from baseline_updates import update_baseline, update_vn, update_r2, calc_ll
+from .fxns.kmeans import kmeans
+from .baseline_updates import update_baseline, update_vn, update_r2, calc_ll
 
 @nb.njit(nb.double[:](nb.double[:],nb.double[:],nb.int64))
 def update_model(data,baseline,nstates):

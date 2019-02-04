@@ -98,10 +98,10 @@ class dock_mesoscopic(QWidget):
 			self.plot.ax[0].fill_between(t,lb,ub,color=c[i],alpha=.4)
 			self.plot.ax[0].plot(t,powerlaw(t,*out[0]),color=c[i])
 			# self.plot.ax[0].plot(t,ub,color=c[i],ls='-')
-			print 'color %d:'%(i)
-			print '	k:',out[0][2]
-			print '	n:',out[0][3]
-			print '	<t>: %f +/- %f'%(e_t_powerlaw(out[0][2],out[0][3]),np.std(np.array([e_t_powerlaw(*rvs[j,2:]) for j in range(2)])))
+			print('color %d:'%(i))
+			print('	k:',out[0][2])
+			print('	n:',out[0][3])
+			print('	<t>: %f +/- %f'%(e_t_powerlaw(out[0][2],out[0][3]),np.std(np.array([e_t_powerlaw(*rvs[j,2:]) for j in range(2)]))))
 
 		pc = PatchCollection(rects,match_original=True)
 

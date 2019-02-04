@@ -143,7 +143,7 @@ def fit_biasd(gui):
 		fpb = fpb[keep]
 
 		p,c = b.likelihood.fit_histogram(fpb,prefs['biasd_tau'],minmax=(prefs['fret_min'],prefs['fret_max']))
-		print p
+		print(p)
 		gui.popout_plots['plot_hist1d'].ui.biasd_result = p
 
 def fit_vb(gui):

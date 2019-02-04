@@ -392,7 +392,7 @@ class traj_plot_container():
 		## Intensities
 		for i in range(self.gui.ncolors):
 			color = p['plot_channel_colors'][i]
-			for j,alpha in zip(range(3),alphas):
+			for j,alpha in zip(list(range(3)),alphas):
 				self.update_line(self.a[0][0].lines[3*i+j], color, alpha, lw)
 			self.update_line(self.a[0][1].lines[i], color, p['plot_line_alpha'], hw)
 
@@ -402,7 +402,7 @@ class traj_plot_container():
 				color = self.gui.prefs['plot_fret_color']
 			else:
 				color = self.gui.prefs['plot_channel_colors'][i+1]
-			for j,alpha in zip(range(3),alphas):
+			for j,alpha in zip(list(range(3)),alphas):
 				self.update_line(self.a[1][0].lines[3*i+j], color, alpha, lw)
 			self.update_line(self.a[1][1].lines[i], color, p['plot_line_alpha'], hw)
 

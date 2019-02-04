@@ -1,4 +1,4 @@
-from __future__ import print_function
+
 from PyQt5.QtWidgets import QMainWindow,QWidget,QHBoxLayout,QSizePolicy,QLineEdit, QTableView, QVBoxLayout, QWidget, QApplication, QStyledItemDelegate, QDoubleSpinBox, QShortcut, QFileDialog, QHeaderView,QPushButton, QStyle, QStyleOptionButton
 from PyQt5.QtCore import  QRegExp, QSortFilterProxyModel, Qt
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QKeySequence, QColor, QPalette
@@ -34,15 +34,15 @@ class QAlmostStandardItemModel(QStandardItemModel):
 	def enforce_type(self,old,new):
 		if not old is None:
 			if type(old) != type(new):
-				if not type(old) in [type(u'a'),str] and not type(new) in [type(u'a'),str]:
+				if not type(old) in [type('a'),str] and not type(new) in [type('a'),str]:
 					print('ignoring',old,new)
 					return old
 		return new
 
 	def ddata(self,*args):
 		d = super(QAlmostStandardItemModel,self).data(*args)
-		if type(d) is type(u'd'):
-		 	if d.count(',') > 0 and (d.count('[') > 0 or d.count('(') > 0):
+		if type(d) is type('d'):
+			if d.count(',') > 0 and (d.count('[') > 0 or d.count('(') > 0):
 				return np.array(eval(d))
 		return d
 
@@ -153,7 +153,7 @@ class preferences(QWidget):
 
 	def update_commands(self):
 		self.model.blockSignals(True)
-		for k,v in self.commands.items():
+		for k,v in list(self.commands.items()):
 			x = self.model.findItems(k)
 			if len(x) == 0:
 				self.model.insertRow(0)
@@ -197,7 +197,7 @@ class preferences(QWidget):
 
 		## Customs
 		if name == 'plot_colormap':
-			if not cm.__dict__.has_key(new_value):
+			if new_value not in cm.__dict__:
 				self.model.blockSignals(True)
 				self['plot_colormap'] = 'viridis'
 				self.model.blockSignals(False)
@@ -235,7 +235,7 @@ class preferences(QWidget):
 
 	def add_dictionary(self,dictionary):
 		self.model.blockSignals(True)
-		for k,v in dictionary.items():
+		for k,v in list(dictionary.items()):
 			if type(v) is list or type(v) is tuple:
 				v = str(v)
 			x = self.model.findItems(k)
@@ -286,7 +286,7 @@ class preferences(QWidget):
 			val = self.model.data(self.model.index(i,1))
 			if type(val) is float:
 				val = "{0:.{1}f}".format(val,self['pref_precision'])
-			elif type(val) is type(u'a'):
+			elif type(val) is type('a'):
 				val = "\"%s\""%(str(val))
 			if not key in self.commands:
 				total += "%s:%s\n"%(key,val)

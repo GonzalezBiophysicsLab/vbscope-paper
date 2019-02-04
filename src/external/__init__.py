@@ -1,1 +1,1 @@
-import tifffile
+from . import tifffile

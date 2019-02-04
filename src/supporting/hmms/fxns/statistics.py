@@ -1,6 +1,6 @@
 import numpy as np
 import numba as nb
-from numba_math import psi,gammaln
+from .numba_math import psi,gammaln
 
 @nb.jit(nb.double[:,:](nb.double[:],nb.double[:],nb.double[:]),nopython=True)
 def ln_p_normal(x,mu,var):

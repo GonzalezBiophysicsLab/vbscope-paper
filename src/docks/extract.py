@@ -279,7 +279,7 @@ class dock_extract(QWidget):
 					ps = pool.map(_fit_wrapper,[[l,z,sigma,xy[:,i].astype('double')] for i in range(xy.shape[1])])
 					pool.close()
 				else:
-					ps = map(_fit_wrapper,[(l,z,sigma,xy[:,i].astype('double')) for i in range(xy.shape[1])])
+					ps = list(map(_fit_wrapper,[(l,z,sigma,xy[:,i].astype('double')) for i in range(xy.shape[1])]))
 				for i in range(xy.shape[1]):
 					# xyi = xy[:,i].astype('double')
 					# p = fit(l,z,sigma,xyi)

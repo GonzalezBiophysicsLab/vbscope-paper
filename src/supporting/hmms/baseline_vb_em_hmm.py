@@ -5,16 +5,16 @@ import numba as nb
 from sys import platform
 import multiprocessing as mp
 
-from fxns.statistics import p_normal,dkl_dirichlet
-from fxns.kernel_sample import kernel_sample
-from fxns.numba_math import psi,gammaln
-from fxns.gmm_related import initialize_params, result_bayesian_gmm
-from fxns.hmm_related import forward_backward,viterbi,result_bayesian_hmm,initialize_tmatrix
+from .fxns.statistics import p_normal,dkl_dirichlet
+from .fxns.kernel_sample import kernel_sample
+from .fxns.numba_math import psi,gammaln
+from .fxns.gmm_related import initialize_params, result_bayesian_gmm
+from .fxns.hmm_related import forward_backward,viterbi,result_bayesian_hmm,initialize_tmatrix
 
-from baseline_updates import update_baseline, update_vn, update_r2, calc_ll
-from baseline_kmeans import kmeans_baseline
-from baseline_filters import gaussian_filter
-from fxns.kmeans import kmeans
+from .baseline_updates import update_baseline, update_vn, update_r2, calc_ll
+from .baseline_kmeans import kmeans_baseline
+from .baseline_filters import gaussian_filter
+from .fxns.kmeans import kmeans
 
 @nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:]),nopython=True)
 def m_sufficient_statistics(x,r):
@@ -162,7 +162,7 @@ def outer_loop(xx,mu,var,tm,maxiters,threshold,prior_strengths):
 		ll[iteration] = calc_lowerbound(r,a,b,m,beta,pik,tm,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta0,pi0,tm0,lnz)
 		ll1 = ll[iteration,0]
 
-		print(iteration,ll1)
+		print((iteration,ll1))
 		## likelihood
 		if iteration > 1:
 			dl = np.abs((ll1 - ll0)/ll0)
@@ -215,12 +215,12 @@ def vb_em_hmm_baseline(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=N
 
 
 if __name__ == '__main__':
-	from fxns.fake_data import fake_data
+	from .fxns.fake_data import fake_data
 	import numpy as np
 	import matplotlib.pyplot as plt
 
 	t,d = fake_data()
-	from lds_baseline import fake_data as fake_bg
+	from .lds_baseline import fake_data as fake_bg
 	bg = fake_bg(d.size,np.sqrt(np.var(d))/10.,np.sqrt(np.var(d))/10.)[1]
 	# data = np.loadtxt('/Users/colin/Desktop/nice.dat')[:8600]
 	# print('compiled')

@@ -13,9 +13,9 @@ class dock_play(QWidget):
 
 		#### Playbar
 		hbox_play = QHBoxLayout()
-		self.button_bck = QPushButton(u'\u2190')
-		self.button_play = QPushButton(u"\u25B6")
-		self.button_fwd = QPushButton(u'\u2192')
+		self.button_bck = QPushButton('\u2190')
+		self.button_play = QPushButton("\u25B6")
+		self.button_fwd = QPushButton('\u2192')
 		self.slider_frame = QSlider(Qt.Horizontal)
 
 		self.label_framenumber = QLabel('0 / 0')
@@ -101,7 +101,7 @@ class dock_play(QWidget):
 	def stop_playing(self):
 		self.timer_playing.stop()
 		self.flag_playing = False
-		self.button_play.setText(u'\u25B6')
+		self.button_play.setText('\u25B6')
 		self.slider_frame.setValue(self.gui.data.current_frame +1)
 		self.timer_playing = QTimer()
 

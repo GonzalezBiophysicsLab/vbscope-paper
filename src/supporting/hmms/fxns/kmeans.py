@@ -66,9 +66,9 @@ if __name__ == '__main__':
 	d = np.concatenate([np.random.normal(size=np.random.randint(low=50,high=500))+np.random.randint(low=-100,high=100) for _ in range(3)])
 
 	r,mu,var,pi = kmeans(d,4)
-	print mu
-	print var
-	print pi
+	print(mu)
+	print(var)
+	print(pi)
 
 	t = np.arange(d.size)
 	for i in range(mu.size):

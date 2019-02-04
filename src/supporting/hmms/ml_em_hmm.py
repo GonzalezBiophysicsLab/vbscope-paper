@@ -5,11 +5,11 @@ import numba as nb
 from sys import platform
 import multiprocessing as mp
 
-from fxns.numba_math import psi
-from fxns.statistics import p_normal,dirichlet_estep
-from fxns.hmm_related import forward_backward,viterbi,result_ml_hmm,initialize_tmatrix
-from fxns.kernel_sample import kernel_sample
-from fxns.gmm_related import initialize_params
+from .fxns.numba_math import psi
+from .fxns.statistics import p_normal,dirichlet_estep
+from .fxns.hmm_related import forward_backward,viterbi,result_ml_hmm,initialize_tmatrix
+from .fxns.kernel_sample import kernel_sample
+from .fxns.gmm_related import initialize_params
 
 
 
@@ -79,11 +79,11 @@ def ml_em_hmm_parallel(x,nstates,maxiters=1000,threshold=1e-10,nrestarts=1,ncpu=
 
 	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
 		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(ml_em_hmm, args=(x,nstates,maxiters,threshold)) for i in xrange(nrestarts)]
+		results = [pool.apply_async(ml_em_hmm, args=(x,nstates,maxiters,threshold)) for i in range(nrestarts)]
 		results = [p.get() for p in results]
 		pool.close()
 	else:
-		results = [ml_em_hmm(x,nstates,maxiters,threshold) for i in xrange(nrestarts)]
+		results = [ml_em_hmm(x,nstates,maxiters,threshold) for i in range(nrestarts)]
 
 	try:
 		best = np.nanargmax([r.likelihood for r in results])

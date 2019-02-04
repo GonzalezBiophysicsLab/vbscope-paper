@@ -197,7 +197,7 @@ class traj_container():
 					threshold,success2 = QInputDialog.getDouble(self.gui,"Photon Cutoff","Total number of photons required to keep a trajectory",value=1000.,min=0.,max=1e10,decimals=3)
 				else:
 					success2 = True
- 				if success2:
+				if success2:
 					keep = y > threshold
 					if self.remove_traces(keep):
 						self.gui.plot.initialize_plots()
@@ -363,7 +363,7 @@ class traj_container():
 						g = f.create_group("models/model_%08d"%(i))
 						_addhash(g)
 						m = hr.models[i]
-						for key,value in m.__dict__.items():
+						for key,value in list(m.__dict__.items()):
 							if type(value) is np.ndarray:
 								g.create_dataset(key,data=value)
 						g.create_dataset('iteration',data=np.array(m.iteration))
@@ -379,7 +379,7 @@ class traj_container():
 							g = f.create_group("models/trace_%08d/model_%08d"%(j,i))
 							_addhash(g)
 							m = hr.models[j][i]
-							for key,value in m.__dict__.items():
+							for key,value in list(m.__dict__.items()):
 								if type(value) is np.ndarray:
 									g.create_dataset(key,data=value)
 							g.create_dataset('iteration',data=np.array(m.iteration))
@@ -414,19 +414,19 @@ class traj_container():
 		ml_list = ['mu','var','r','ppi','tmatrix','likelihood','iteration']
 
 		if self.hmm_result.type.startswith('consensus'):
-			for g in f['models'].values():
-				r = [rr.value for rr in g['r'].values()]
+			for g in list(f['models'].values()):
+				r = [rr.value for rr in list(g['r'].values())]
 				m = result_consensus_bayesian_hmm(r,*[g[v].value for v in bayes_list[1:]])
-				m.viterbi = [v.value for v in g['viterbi'].values()]
+				m.viterbi = [v.value for v in list(g['viterbi'].values())]
 				self.hmm_result.models.append(m)
 			self.likelihoods = np.array([m.likelihood[-1,0] for m in self.hmm_result.models])
 			self.hmm_result.result = self.hmm_result.models[np.argmax(self.likelihoods)]
 
 		elif self.hmm_result.type == 'vb':
 			self.hmm_result.results = []
-			for g in f['models'].values():
+			for g in list(f['models'].values()):
 				trace = []
-				for gg in g.values():
+				for gg in list(g.values()):
 					m = result_bayesian_hmm(*[gg[v].value for v in bayes_list])
 					m.viterbi = gg['viterbi'].value
 					trace.append(m)
@@ -436,9 +436,9 @@ class traj_container():
 
 		elif self.hmm_result.type == 'ml':
 			self.hmm_result.results = []
-			for g in f['models'].values():
+			for g in list(f['models'].values()):
 				trace = []
-				for gg in g.values(): ## There's only one, but be general here...
+				for gg in list(g.values()): ## There's only one, but be general here...
 					m = result_ml_hmm(*[gg[v].value for v in ml_list])
 					m.viterbi = gg['viterbi'].value
 					trace.append(m)

@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QMessageBox,QFileDialog,QAction,QShortcut,QSizePolic
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QKeySequence
 
-from ui_general import gui
+from .ui_general import gui
 
 import numpy as np
 import matplotlib

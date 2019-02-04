@@ -168,7 +168,7 @@ try:
 		from tqdm import tqdm
 		cuda_stuff = setup_ratiometric(movie)
 		out = np.empty_like(movie,dtype='float32')
-		for i in tqdm(range(movie.shape[0])):
+		for i in tqdm(list(range(movie.shape[0]))):
 			out[i] = calc_ratiometric_frame(i,nframes,cuda_stuff)
 		return out
 
@@ -184,7 +184,7 @@ try:
 				out[t,x,y] = int(floor(z*4096))*16
 
 except:
-	print "No GPU"
+	print("No GPU")
 
 
 ################################################################################
@@ -246,41 +246,41 @@ def bin2x(movie):
 
 def _test():
 	import time
-	print 'start'
+	print('start')
 	t0 = time.time()
 	movie = generate_noise_movie(1000,512,512)
 	movie = bin2x(movie)
-	print movie.shape
+	print(movie.shape)
 	t1 = time.time()
-	print "Generate Movie: %f gb in %f sec"%(movie.size*2/1000000000.,t1-t0)
+	print("Generate Movie: %f gb in %f sec"%(movie.size*2/1000000000.,t1-t0))
 
 	t0 = time.time()
 	flat_field(movie,movie[:100])
 	t1=time.time()
-	print "Flat Field:",t1-t0
+	print("Flat Field:",t1-t0)
 	t0 = time.time()
 	pseudo_flat_field(movie,11)
 	t1=time.time()
-	print "Pseudo Flat Field:",t1-t0
+	print("Pseudo Flat Field:",t1-t0)
 	t0 = time.time()
 	dynamic_imaging(movie)
 	t1=time.time()
-	print "Dynamic Imaging:",t1-t0
+	print("Dynamic Imaging:",t1-t0)
 	t0 = time.time()
 	differential_imaging(movie,99)
 	t1=time.time()
-	print "Differential Imaging:",t1-t0
+	print("Differential Imaging:",t1-t0)
 	try:
 		t0 = time.time()
 		ratiometric_imaging(movie,20)
 		t1=time.time()
-		print "Ratiometric Imaging:",t1-t0
+		print("Ratiometric Imaging:",t1-t0)
 	except:
 		"You probably don't have CUDA for ratiometric imaging"
 	t0 = time.time()
 	normalize_movie_power(movie)
 	t1=time.time()
-	print "Normalize Power:",t1-t0
+	print("Normalize Power:",t1-t0)
 
 if False:
 	_test()

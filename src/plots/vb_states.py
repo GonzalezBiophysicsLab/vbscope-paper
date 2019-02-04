@@ -45,9 +45,9 @@ def plot(gui):
 			try:
 				bcolor = 'steelblue'
 				ecolor = 'black'
-				if cnames.keys().count(pp['bar_color']) > 0:
+				if list(cnames.keys()).count(pp['bar_color']) > 0:
 					bcolor = pp['bar_color']
-				if cnames.keys().count(pp['bar_edgecolor']) > 0:
+				if list(cnames.keys()).count(pp['bar_edgecolor']) > 0:
 					ecolor = pp['bar_edgecolor']
 				popplot.ax[0].bar(ns,y,width=1.0,color=bcolor,edgecolor=ecolor)
 			except:

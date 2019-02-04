@@ -5,11 +5,11 @@ import numba as nb
 from sys import platform
 import multiprocessing as mp
 
-from fxns.statistics import p_normal,dkl_dirichlet
-from fxns.kernel_sample import kernel_sample
-from fxns.numba_math import psi,gammaln
-from fxns.gmm_related import initialize_params, result_bayesian_gmm
-from fxns.hmm_related import forward_backward,viterbi,result_bayesian_hmm,initialize_tmatrix
+from .fxns.statistics import p_normal,dkl_dirichlet
+from .fxns.kernel_sample import kernel_sample
+from .fxns.numba_math import psi,gammaln
+from .fxns.gmm_related import initialize_params, result_bayesian_gmm
+from .fxns.hmm_related import forward_backward,viterbi,result_bayesian_hmm,initialize_tmatrix
 
 @nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:]),nopython=True)
 def m_sufficient_statistics(x,r):
@@ -176,11 +176,11 @@ def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None):
 def vb_em_hmm_model_selection_parallel(x, nmin=1, nmax=6, maxiters=1000, threshold=1e-10, nrestarts=1, prior_strengths=None, ncpu=1):
 	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
 		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(vb_em_hmm, args=(x,i,maxiters,threshold,prior_strengths)) for i in xrange(nmin,nmax+1)]
+		results = [pool.apply_async(vb_em_hmm, args=(x,i,maxiters,threshold,prior_strengths)) for i in range(nmin,nmax+1)]
 		results = [p.get() for p in results]
 		pool.close()
 	else:
-		results = [vb_em_hmm(x,i,maxiters,threshold,prior_strengths) for i in xrange(nmin,nmax+1)]
+		results = [vb_em_hmm(x,i,maxiters,threshold,prior_strengths) for i in range(nmin,nmax+1)]
 	results = [results[i] for i in np.argsort([r.mu.size for r in results])] # sort back into order
 	likelihoods = np.array([r.likelihood[-1,0] for r in results])
 
@@ -192,11 +192,11 @@ def vb_em_hmm_parallel(x,nstates,maxiters=1000,threshold=1e-10,nrestarts=1,prior
 
 	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
 		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(vb_em_hmm, args=(x,nstates,maxiters,threshold,prior_strengths)) for i in xrange(nrestarts)]
+		results = [pool.apply_async(vb_em_hmm, args=(x,nstates,maxiters,threshold,prior_strengths)) for i in range(nrestarts)]
 		results = [p.get() for p in results]
 		pool.close()
 	else:
-		results = [vb_em_hmm(x,nstates,maxiters,threshold,prior_strengths) for i in xrange(nrestarts)]
+		results = [vb_em_hmm(x,nstates,maxiters,threshold,prior_strengths) for i in range(nrestarts)]
 
 	try:
 		best = np.nanargmax([r.likelihood[-1,0] for r in results])

@@ -1,5 +1,5 @@
 import numpy as np
-from normal_minmax_dist import estimate_from_min
+from .normal_minmax_dist import estimate_from_min
 from scipy.ndimage import gaussian_filter
 
 def solve_bg(images,m=5,n=10,sigma=5):

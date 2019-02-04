@@ -1,6 +1,6 @@
 import numpy as np
-from kernel_sample import kernel_sample
-from kmeans import kmeans
+from .kernel_sample import kernel_sample
+from .kmeans import kmeans
 import time
 
 def initialize_params(x,nstates,flag_kmeans=False):

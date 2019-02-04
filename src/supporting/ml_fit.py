@@ -208,7 +208,7 @@ def ml_psf(l,z,sigma,xyi,maxiters=1000):
 		n0 = n.sum()
 		psum = np.sum(psi**2.)
 
-		for it in xrange(maxiters):
+		for it in range(maxiters):
 			b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
 			n = np.sum((m - b[:,None,None])*psi[None,:,:],axis=(1,2))/np.sum(psi**2.)
 			n1 = n.sum()

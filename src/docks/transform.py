@@ -139,7 +139,7 @@ class dock_transform(QWidget):
 
 				#### ASSSUME VBSCOPE (MATLAB) FORMAT
 				ncolor = self.gui.data.ncolors
-				dd = [d[:,2*i:2*i+2][:,::-1].T - 1. for i in range(d.shape[1]/2)]
+				dd = [d[:,2*i:2*i+2][:,::-1].T - 1. for i in range(d.shape[1]//2)]
 				self.estimate(dd)
 				self.plot_overlapped(dd)
 

@@ -40,12 +40,12 @@ class dock_tagviewer(QWidget):
 				for i in range(len(l0)):
 					si = add_group(l0[i],si)
 
-			for i in range(len(l0.keys())):
-				key = l0.keys()[i]
+			for i in range(len(list(l0.keys()))):
+				key = list(l0.keys())[i]
 				si_k = QStandardItem(key)
 				si_k.setEditable(False)
 
-				value = l0.values()[i]
+				value = list(l0.values())[i]
 				if type(value) is tuple or type(value) is list:
 					value = str(value)
 

@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QSizePolicy,QPushButton,QHBoxLayout,QVBoxLa
 from PyQt5.QtCore import Qt
 from PyQt5.Qt import QFont
 
-import cPickle as pickle
+import pickle as pickle
 import multiprocessing as mp
 
 import numpy as np
@@ -427,7 +427,7 @@ class dock_spotfind(QWidget):
 			# z[3] = p.b
 			# z = z[:,1:].mean(1)
 			z = np.array((p.m.max(),p.beta.max(),p.a.max(),p.b[p.a.argmax()]))
-			print z
+			print(z)
 			return z
 		return None
 
@@ -658,7 +658,7 @@ class dock_spotfind(QWidget):
 					from scipy.ndimage import label, center_of_mass
 					labels,num = label(self.spotprobs[i] > self.pp)
 					if num > 0:
-						coms = np.array(center_of_mass(self.spotprobs[i],labels,range(1,num+1))).T
+						coms = np.array(center_of_mass(self.spotprobs[i],labels,list(range(1,num+1)))).T
 						self.xys[i] = coms
 						###
 						# self.xys[i] = np.array(np.nonzero(prob*mmax > self.pp))
