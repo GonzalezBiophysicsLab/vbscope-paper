@@ -18,6 +18,7 @@ matplotlib.rcParams['figure.facecolor'] = 'white'
 
 from . import ui_general
 from .ui_batch_loader import gui_batch_loader
+from .ui_trace_filter import gui_trace_filter
 from ..containers import traj_plot_container, traj_container, popout_plot_container
 from .. import plots
 
@@ -272,8 +273,11 @@ class plotter_gui(ui_general.gui):
 		tools_biasd = QAction('BIASD',self)
 		tools_biasd.triggered.connect(lambda event: self.data.run_biasd())
 
+		tools_filter = QAction('Filter Traces',self, shortcut='Ctrl+F')
+		tools_filter.triggered.connect(self.show_trace_filter)
+
 		# for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_stepfret,tools_remove,tools_dead,tools_hmm]:
-		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons]:
+		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_filter]:
 			menu_cull.addAction(f)
 		for f in [tools_step,tools_stepfret]:
 			menu_photobleach.addAction(f)
@@ -539,6 +543,16 @@ class plotter_gui(ui_general.gui):
 			m.setChecked(not m.isChecked())
 
 ################################################################################
+
+	def show_trace_filter(self):
+		try:
+			if not self.ui_trace.isVisible():
+				self.ui_trace.setVisible(True)
+			self.ui_trace.raise_()
+		except:
+			self.ui_trace = gui_trace_filter(self)
+			self.ui_trace.setWindowTitle('Trace Filter')
+			self.ui_trace.show()
 
 	def show_batch_load(self):
 		try:
