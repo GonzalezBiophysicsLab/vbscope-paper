@@ -44,22 +44,26 @@ def _model_select_many_numba(data,bg_mu,bg_var,sbr_low,sbr_high,min_frames):
 		model_5 = ln_high[min_frames:-3].max() ## good,high
 		model_6 = ln_high[-3:].max() ## doesn't bleach,high
 
-		## ad hoc to catch negative intensities
-		aml = ln_low.argmax()
-		if aml > min_frames and aml < ln_low.size-3:
-			if trace[:aml].mean() < 0:
-				model_1 += model_2
-				model_2 = -np.inf
-		amh = ln_high.argmax()
-		if amh > min_frames and amh < ln_high.size-3:
-			if trace[:amh].mean() < 0:
-				model_4 += model_5
-				model_5 = -np.inf
+		# ## ad hoc to catch negative intensities
+		# aml = ln_low.argmax()
+		# if aml > min_frames and aml < ln_low.size-3:
+		# 	if trace[:aml].mean() < 0:
+		# 		model_1 += model_2
+		# 		model_2 = -np.inf
+		# amh = ln_high.argmax()
+		# if amh > min_frames and amh < ln_high.size-3:
+		# 	if trace[:amh].mean() < 0:
+		# 		model_4 += model_5
+		# 		model_5 = -np.inf
 
 		probs[i] = np.array((model_1,model_2,model_3,model_4,model_5,model_6))
 		emax = probs[i].max()
 		probs[i] = np.exp(probs[i]-emax)
 		probs[i] /= probs[i].sum()
+
+		## model priors
+		probs *= 1./6 ## equal priors
+		probs /= probs.sum()
 
 	return probs
 
