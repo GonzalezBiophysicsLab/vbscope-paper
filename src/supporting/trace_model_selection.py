@@ -62,8 +62,10 @@ def _model_select_many_numba(data,bg_mu,bg_var,sbr_low,sbr_high,min_frames):
 		probs[i] /= probs[i].sum()
 
 		## model priors
-		probs *= 1./6 ## equal priors
-		probs /= probs.sum()
+		for j in range(6):
+			probs[i,j] *= 1./6. ## equal priors
+		probs[i] /= np.sum(probs[i])
+
 
 	return probs
 
