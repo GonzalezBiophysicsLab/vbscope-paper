@@ -325,7 +325,8 @@ class traj_container():
 			oname = [oname]
 
 		if oname[0] != "" and not oname[0] is None:
-			try:
+			# try:
+			if 1:
 				def _addhash(hdf5_item):
 					"""
 					Acts on an h5py item to add identification attributes:
@@ -341,7 +342,7 @@ class traj_container():
 					hdf5_item.attrs['Time Created'] = time
 					# h5py items don't really hash, so.... do this, instead.
 					# Should be unique, and the point of the hash is for identification
-					hdf5_item.attrs['Unique ID'] = md5(time + str(hdf5_item.id.id) + str(np.random.rand())).hexdigest()
+					hdf5_item.attrs['Unique ID'] = md5((time + str(hdf5_item.id.id) + str(np.random.rand())).encode('utf-8')).hexdigest()
 
 				import h5py
 				hr = self.hmm_result
@@ -391,9 +392,9 @@ class traj_container():
 				# pickle.dump(self.hmm_result, f)
 				# f.close()
 				self.gui.log('Exported HMM results as %s'%(oname[0]),True)
-			except:
-				QMessageBox.critical(self.gui,'Export Traces','There was a problem trying to export the HMM results')
-				self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
+		# except:
+			# 	QMessageBox.critical(self.gui,'Export Traces','There was a problem trying to export the HMM results')
+			# 	self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
 
 	def hmm_load(self,fname):
 		import h5py
