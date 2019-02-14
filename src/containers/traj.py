@@ -391,7 +391,7 @@ class traj_container():
 				# pickle.dump(self.hmm_result, f)
 				# f.close()
 				self.gui.log('Exported HMM results as %s'%(oname[0]),True)
-		except:
+			except:
 				QMessageBox.critical(self.gui,'Export Traces','There was a problem trying to export the HMM results')
 				self.gui.log('Failed to export HMM results as %s'%(oname[0]),True)
 
