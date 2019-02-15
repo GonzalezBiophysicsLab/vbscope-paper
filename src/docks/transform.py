@@ -38,11 +38,11 @@ class dock_transform(QWidget):
 
 		self.label_load = QLabel('')
 
-		self.layout.addWidget(l,0,0)
-		self.layout.addWidget(self.spin_colors,0,1)
+		self.layout.addWidget(l,1,0)
+		self.layout.addWidget(self.spin_colors,1,1)
 
 		self.layout.addWidget(self.button_load,2,0)
-		self.layout.addWidget(self.label_load,1,0)
+		self.layout.addWidget(QLabel(),0,0)
 		self.layout.addWidget(self.button_estimate,3,0)
 		self.layout.addWidget(self.button_fftestimate,3,1)
 		self.layout.addWidget(self.button_export,2,1)
@@ -196,8 +196,9 @@ class dock_transform(QWidget):
 			r = regions[i]
 			clip = self.gui.prefs['spotfind_clip_border']
 			d = self.gui.data.movie[start:end+1,r[0][0]+clip:r[0][1]-clip,r[1][0]+clip:r[1][1]-clip].astype('f').mean(0)
-			bg = self.gui.docks['background'][1].calc_background(d).astype('f')
-			dd = d.copy() - bg
+			# bg = self.gui.docks['background'][1].calc_background(d).astype('f')
+			# dd = d.copy() - bg
+			dd = self.gui.docks['background'][1].bg_filter(d)
 
 			# r = regions[i]
 			# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
