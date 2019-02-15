@@ -430,7 +430,9 @@ class dock_spotfind(QWidget):
 			# z[3] = p.b
 			# z = z[:,1:].mean(1)
 			z = np.array((p.m.max(),p.beta.max(),p.a.max(),p.b[p.a.argmax()]))
-			print(z)
+			z[1] /= 1000.
+			z[2] /= 1000.
+			z[3] /= 1000.
 			return z
 		return None
 
@@ -683,6 +685,7 @@ class dock_spotfind(QWidget):
 		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
 		from src.supporting.hmms.fxns.gmm_related import initialize_params
 		from src.supporting import normal_minmax_dist as nmd
+		from src.supporting.trace_model_selection import estimate_bg_normal_min
 		from ..supporting import minmax
 		self.gui.set_status('Running...')
 		self.gui.app.processEvents()
@@ -691,7 +694,7 @@ class dock_spotfind(QWidget):
 			return
 
 		if self.priors is None:
-			self.vbmaxtestfind()
+			self.vbmaxtestfind(flag_update=False)
 			self.priors = self.get_priors().astype('double')
 
 		nc = self.gui.data.ncolors
@@ -717,7 +720,16 @@ class dock_spotfind(QWidget):
 		for i in range(nc):
 			r = regions[i]
 			probs[i] = np.zeros((total,nx,ny))[:,r[0][0]:r[0][1],r[1][0]:r[1][1]]
-			d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]]
+			d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('double')
+			d = self.bg_filter(d,0,.5,10.,'gaussian')
+
+			nxy = (p['spotfind_nsearch']-1)//2
+			nt = 0
+			mmin,mmax = minmax.minmax_map(d,nt,nxy,nxy,p['spotfind_clip_border'])
+
+			bg_values = estimate_bg_normal_min(d[mmin],nlocal)
+			# priors = np.array((bg_values[0]+3*np.sqrt(bg_values[1]),3.*np.sqrt(bg_values[1]),1.,bg_values[1]))
+			priors = np.array((bg_values[0]+7*np.sqrt(bg_values[1]),1./(3.*np.sqrt(bg_values[1])),1.,bg_values[1]))
 
 			prog = progressbar()
 			prog.setRange(start,end)
@@ -729,41 +741,47 @@ class dock_spotfind(QWidget):
 
 			self.flag_abort = False
 
-			if flag_calcbg:
-				bg = np.array(([self.gui.docks['background'][1].calc_background(d[t]) for t in range(start,end+1)]))
-			else:
-				bg = 0
-			nxy = (p['spotfind_nsearch']-1)//2
-			nt = 0
-			mmin,mmax = minmax.minmax_map(d-bg,nt,nxy,nxy,p['spotfind_clip_border'])
-
+			t0 = time.clock()
 			for t in range(start,end+1):
 				if not self.flag_abort:
-					prog.setValue(t)
-					self.gui.app.processEvents()
-					t0 = time.clock()
+
 					# bg = 0.0
 					# if flag_calcbg:
 						# bg = self.gui.docks['background'][1].calc_background(d[t])
-					image = d[t] - bg
+					image = d[t] #- bg
+					# image = nd.gaussian_filter(image,1) - nd.gaussian_filter(image,10)
 
 					# mmin,mmax = minmax.minmax_map(image.reshape((1,image.shape[0],image.shape[1])),p['spotfind_nsearch'],p['spotfind_clip_border'])
 					h0 = image[mmax[t]].astype('double')
 					l0 = image[mmin[t]]
-					bg_values = nmd.estimate_from_min(l0,nlocal)
 
+					# bg_values = nmd.estimate_from_min(l0,nlocal)
+
+					# if 1:
 					if t == start:
-						initials = initialize_params(h0,self.gui.prefs['spotfind_nstates']+1,flag_kmeans=True)
+						# initials = initialize_params(h0,self.gui.prefs['spotfind_nstates']+1,flag_kmeans=True)
+
+						# mu var ppi
+						init_mu = np.array([bg_values[0]+np.sqrt(bg_values[1])*3*i for i in range(self.gui.prefs['spotfind_nstates']+1)])
+						init_var = np.array([bg_values[1] for i in range(self.gui.prefs['spotfind_nstates']+1)])
+						init_ppi = np.ones((self.gui.prefs['spotfind_nstates']+1))
+						init_ppi /= init_ppi.sum()
+						initials = (init_mu,init_var,init_ppi)
 
 					# out = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
-					rr = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
+					outt = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = priors,flag_report=True)
 
 					pp = np.zeros_like(image)
-					pp[mmax[t]] = (1.-rr[:,0])
+					xsort = outt.mu.argsort()
+					pp[mmax[t]] = (1.-outt.r[:,xsort][:,0])
 					probs[i][t-start] += pp
-					t1 = time.clock()
-					prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(i,start+1,end+1,t+2, t1-t0))
-					self.gui.app.processEvents()
+
+					if t%9 == 0:
+						t1 = time.clock()
+						prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(i,start+1,end+1,t+2, (t1-t0)/9.))
+						prog.setValue(t)
+						self.gui.app.processEvents()
+						t0 = time.clock()
 			prog.close()
 			## Options
 			# compile with as a binomial process using mean of posterior w/ conj prior/likelihood
@@ -771,9 +789,25 @@ class dock_spotfind(QWidget):
 			# self.ppc.ui.ax[0].plot(np.arange(probs[i].shape[0]),(probs[i] > self.pp).sum((1,2)))
 			# self.ppc.ui.canvas.draw()
 
-			pmap = probs[i].astype('double').sum(0) / float(p['spotfind_frameson'])
-			nxy = (p['spotfind_nsearch']-1)//2
-			mmin,mmax = minmax.minmax_map(pmap.reshape((1,pmap.shape[0],pmap.shape[1])),0,nxy,nxy,p['spotfind_clip_border'])
+			pmap = probs[i].astype('double').mean(0)
+
+			## model selection
+			#### model 1 is a normal distribution for bg
+			#### model 2 is a uniform distribution above the bg
+			pframeon = float(self.gui.prefs['spotfind_frameson']) / float(probs[i].shape[0])
+			if pframeon > 1.:
+				pmap = pmap*0
+			else:
+				m1_mu = pframeon / 2. ## halfway to cutoff
+				m1_var = (pframeon/6.)**2. ## +/-3 sigma
+				model1 = 1./np.sqrt(2.*np.pi*m1_var)*np.exp(-.5/m1_var*(pmap-m1_mu)**2.)
+				model2 = (pmap >= m1_mu)*1./(1. - m1_mu)
+				## equal a-priori priors for both models
+				pmap = model2*.5 / (model1*.5 + model2*.5)
+
+			# pmap = probs[i].astype('double').sum(0) / float(p['spotfind_frameson'])
+			nxy = (self.gui.prefs['spotfind_nsearch']-1)//2
+			mmin,mmax = minmax.minmax_map(pmap.reshape((1,pmap.shape[0],pmap.shape[1])),0,nxy,nxy,self.gui.prefs['spotfind_clip_border'])
 			pp = np.zeros_like(pmap)
 			pp[mmax[0]] = pmap[mmax[0]]
 			self.spotprobs[i] = pp
@@ -783,7 +817,7 @@ class dock_spotfind(QWidget):
 		self.update_spots()
 		# return probs
 
-	def vbmaxtestfind(self):
+	def vbmaxtestfind(self,flag_update=True):
 		self.gui.set_status('Compiling...')
 		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm_parallel as gmm
 		from src.supporting import normal_minmax_dist as nmd
@@ -809,9 +843,9 @@ class dock_spotfind(QWidget):
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 			for i in range(nc):
 				r = regions[i]
-				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').mean(0)
-				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
-				d = d.copy() - bg
+				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f')
+				# d = self.bg_filter(d,0,.5,10.,'gaussian').mean(0)
+				d = self.bg_filter(d.mean(0),0,.5,10.,'gaussian')
 
 				nxy = (p['spotfind_nsearch']-1)//2
 				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
@@ -830,10 +864,11 @@ class dock_spotfind(QWidget):
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
 				self.spotprobs[i] = prob
 
-			self.gui.plot.image.set_array(self.disp_image)
-			self.gui.docks['contrast'][1].update_image_contrast()
+			if flag_update:
+				self.gui.plot.image.set_array(self.disp_image)
+				self.gui.docks['contrast'][1].update_image_contrast()
 
-			self.update_spots()
+				self.update_spots()
 
 	def simul_find(self):
 		self.gui.set_status('Compiling...')
@@ -862,8 +897,7 @@ class dock_spotfind(QWidget):
 			for i in range(nc):
 				r = regions[i]
 				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f')
-				bg = self.gui.docks['background'][1].calc_background(d.mean(0)).astype('f')
-				d = d - bg[None,:,:]
+				d = self.bg_filter(d,0,.5,10.,'gaussian').mean(0)
 
 				nxy = (p['spotfind_nsearch']-1)//2
 				mmin,mmax = minmax.minmax_map(d,nxy*10,nxy,nxy,p['spotfind_clip_border'])
@@ -923,9 +957,10 @@ class dock_spotfind(QWidget):
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 			for i in range(nc):
 				r = regions[i]
-				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').mean(0)
-				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
-				d = d.copy() - bg
+				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f')
+				d = self.bg_filter(d,0,.5,10.,'gaussian').mean(0)
+				# bg = self.gui.docks['background'][1].calc_background(d).astype('f')
+				# d = d.copy() - bg
 
 				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
 
@@ -966,9 +1001,8 @@ class dock_spotfind(QWidget):
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 			for i in range(nc):
 				r = regions[i]
-				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').mean(0)
-				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
-				d = d.copy() - bg
+				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
+				d = self.bg_filter(d,0,.5,10.,'gaussian').mean(0)
 
 				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
 
@@ -1136,6 +1170,36 @@ class dock_spotfind(QWidget):
 # # 	a.run()
 # # 	return a
 #
-#
-#
-#
+
+
+	def bg_filter(self,data,wtime,wspace1,wspace2,filter_type=None):
+		from scipy import ndimage as nd
+
+		self.gui.set_status('Removing Background')
+
+		if data.ndim == 2:
+			shape1 = (wspace1,)*2
+			shape2 = (wspace2,)*2
+		else:
+			shape1 = (wtime,wspace1,wspace1)
+			shape2 = (wtime,wspace2,wspace2)
+
+		f1 = None
+		f2 = None
+		if filter_type == 'uniform':
+			f1 = nd.uniform_filter
+			f2 = nd.uniform_filter
+		elif filter_type == 'gaussian':
+			f1 = nd.gaussian_filter
+			f2 = nd.gaussian_filter
+		elif filter_type == 'minmax':
+			f1 = nd.maximum_filter
+			f2 = nd.minimum_filter
+		elif filter_type == 'median':
+			f1 = nd.median_filter
+			f2 = nd.median_filter
+
+		if not f1 is None and not f2 is None:
+			data = f1(data,shape1) - f2(data,shape2)
+
+		return data

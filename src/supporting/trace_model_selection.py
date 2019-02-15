@@ -12,11 +12,26 @@ def normal_cdf(x,m,v):
 def normal_pdf(x,m,v):
 	return 1./np.sqrt(2.*np.pi*v)*np.exp(-.5/v*(x-m)**2.)
 
+def normal_min_cdf(x,m,v,n):
+	return (1.-normal_cdf(x,m,v))**(n)
+
 def estimate_bg_normal(data):
 	xs = np.logspace(np.log10(1./data.size),-1.,100)
 	ps = np.percentile(data.flatten(),xs*100.)
 
 	params, covars = (optimize.curve_fit(normal_cdf,ps,xs,p0 = np.array((np.median(data),np.var(data)))))
+
+	return params
+
+def p_normal_min_cdf(x,mu,var,n):
+	return (1.-normal_cdf(x,mu,var))**n
+
+def estimate_bg_normal_min(data,n):
+	xs = np.logspace(np.log10(1./data.size),-1.,100)
+	ps = np.percentile(data.flatten(),xs*100.)
+	xs = 1. - xs
+
+	params, covars = optimize.curve_fit(lambda xx, mm, vv: p_normal_min_cdf(xx,mm,vv,n),ps,xs,p0 = np.array((np.median(data),np.var(data))),maxfev=10000)
 
 	return params
 
