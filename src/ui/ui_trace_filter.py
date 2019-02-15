@@ -174,8 +174,6 @@ class trace_filter(QWidget):
 
 		self.probs = model_select_many(self.d[skip_frames:],low_sbr,high_sbr,min_frames)
 		self.window.set_status('Done')
-		nums = [int(np.sum(self.probs.argmax(1)==i)) for i in range(self.probs.shape[1])]
-		self.label_proportions.setText(str(nums))
 
 		pmax = self.probs.argmax(1)
 		self.model_lists = [None]*5
@@ -184,6 +182,9 @@ class trace_filter(QWidget):
 		self.model_lists[2] = np.nonzero(pmax == 4)[0] ## Bleaching, High SBR
 		self.model_lists[3] = np.nonzero(pmax == 2)[0] ## No bleaching, Low SBR
 		self.model_lists[4] = np.nonzero(pmax == 5)[0] ## No bleaching, High SBR
+
+		nums = [len(ml) for ml in self.model_lists]
+		self.label_proportions.setText(str(nums))
 
 		## Plots
 		self.window.set_status('Plotting')
@@ -241,6 +242,8 @@ class trace_filter(QWidget):
 			self.model_lists = [None]*5
 			self.ax.cla()
 			self.label_proportions.setText("")
+
+		self.calculate_model()
 
 
 	# def get_lists(self):

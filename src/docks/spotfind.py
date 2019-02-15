@@ -393,7 +393,6 @@ class dock_spotfind(QWidget):
 			mmin,mmax = minmax.minmax_map(d,nt,nxy,nxy,p['spotfind_clip_border'])
 
 			bg_values = estimate_bg_normal_min(d[mmin],nlocal)
-			# priors = np.array((bg_values[0]+3*np.sqrt(bg_values[1]),3.*np.sqrt(bg_values[1]),1.,bg_values[1]))
 			priors = np.array((bg_values[0]+7*np.sqrt(bg_values[1]),1./(3.*np.sqrt(bg_values[1])),1.,bg_values[1]))
 
 			prog = progressbar()
@@ -468,6 +467,7 @@ class dock_spotfind(QWidget):
 				model1 = 1./np.sqrt(2.*np.pi*m1_var)*np.exp(-.5/m1_var*(pmap-m1_mu)**2.)
 				model2 = (pmap >= m1_mu)*1./(1. - m1_mu)
 				## equal a-priori priors for both models
+				## .001 to prevent saturation... think of it as an unthought of model
 				pmap = model2*.5 / (model1*.5 + model2*.5)
 
 			pp = pmap
@@ -488,6 +488,8 @@ class dock_spotfind(QWidget):
 		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm_parallel as gmm
 		from src.supporting import normal_minmax_dist as nmd
 		from ..supporting import minmax as minmax
+		from src.supporting.trace_model_selection import estimate_bg_normal_min
+
 		self.gui.set_status('Running...')
 		self.gui.app.processEvents()
 
@@ -508,27 +510,32 @@ class dock_spotfind(QWidget):
 			nregion = self.gui.prefs['spotfind_nsearch']**2
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 			for i in range(nc):
+				self.gui.set_status('Finding spots - %d'%(i))
+				self.gui.app.processEvents()
+
 				r = regions[i]
 				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f')
 				# d = self.gui.docks['background'][1].bg_filter(d,0,.5,10.,'gaussian').mean(0)
 				d = self.gui.docks['background'][1].bg_filter(d.mean(0))
 
-				self.gui.set_status('Finding spots - %d'%(i))
-				self.gui.app.processEvents()
-
 				nxy = (p['spotfind_nsearch']-1)//2
-				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
+				nt = 0
+				mmin,mmax = minmax.minmax_map(d[None,:,:],nt,nxy,nxy,p['spotfind_clip_border'])
+
+				bg_values = estimate_bg_normal_min(d[mmin[0]],(2*nxy+1)**2)
+				priors = np.array((bg_values[0]+7*np.sqrt(bg_values[1]),1./(3.*np.sqrt(bg_values[1])),1.,bg_values[1]))
+
 				h0 = d[mmax[0]].astype('double')
 				l0 = d[mmin[0]]
-				bg_val = nmd.estimate_from_min(l0,nregion)
+				# bg_val = nmd.estimate_from_min(l0,nregion)
 
-				out = gmm(h0,self.gui.prefs['spotfind_nstates'],bg_val,nregion,initials=None,maxiters=self.gui.prefs['spotfind_maxiterations'],nrestarts=self.gui.prefs['spotfind_nrestarts'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths =self.priors,ncpu=p['computer_ncpu'])
+				out = gmm(h0,self.gui.prefs['spotfind_nstates'],bg_values,nregion,initials=None,maxiters=self.gui.prefs['spotfind_maxiterations'],nrestarts=self.gui.prefs['spotfind_nrestarts'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths =priors,ncpu=p['computer_ncpu'])
 
 				xsort = out.mu.argsort()
 				prob = np.zeros_like(d)
 				prob[mmax[0]] = (1.-out.r[:,xsort][:,0])
 				self.posterior = out
-				self.posterior.bg = bg_val
+				self.posterior.bg = bg_values
 
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
 				self.spotprobs[i] = prob

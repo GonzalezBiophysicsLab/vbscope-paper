@@ -19,18 +19,15 @@ class dock_background(QWidget):
 		super(dock_background, self).__init__(parent)
 
 		self.default_prefs = default_prefs
-
 		self.gui = parent
 
-		# self.flag_showing = False
-
+		self.method = 2
 		self.radius1 = .5
 		self.radius2 = 10
 
 		layout = QGridLayout()
 
 		self.combo_method = QComboBox()
-		# self.button_preview = QPushButton('Toggle Preview')
 		self.le_radius1 = QLineEdit()
 		self.le_radius2 = QLineEdit()
 
@@ -52,52 +49,21 @@ class dock_background(QWidget):
 		layout.addWidget(QLabel('Filter Radius (far):'),3,0)
 		layout.addWidget(self.le_radius2,3,1)
 		layout.addWidget(self.button_removebg,4,0)
-		# layout.addWidget(self.button_preview,3,1)
-
-		# self.button_flat = QPushButton("Flat Field")
-		# self.button_pseudo = QPushButton("Pseudo Flat Field")
-		# self.button_dynamic = QPushButton("Dynamic Imaging")
-		# self.button_differential = QPushButton("Differential Imaging")
-		# self.button_ratiometric = QPushButton("Ratiometric Imaging")
-		# self.button_normalize = QPushButton("Normalize Power")
-		# self.button_bin = QPushButton("Bin 2x")
-		#
-		# layout.addWidget(self.button_flat,4,0)
-		# layout.addWidget(self.button_pseudo,4,1)
-		# layout.addWidget(self.button_normalize,4,2)
-		# layout.addWidget(self.button_bin,4,3)
-		# layout.addWidget(self.button_differential,5,0)
-		# layout.addWidget(self.button_dynamic,5,1)
-		# layout.addWidget(self.button_ratiometric,5,2)
-		#
-		# self.button_flat.clicked.connect(self.flat)
-		# self.button_pseudo.clicked.connect(self.pseudo)
-		# self.button_normalize.clicked.connect(self.normalize)
-		# self.button_bin.clicked.connect(self.bin)
-		# self.button_differential.clicked.connect(self.differential)
-		# self.button_dynamic.clicked.connect(self.dynamic)
-		# self.button_ratiometric.clicked.connect(self.ratiometric)
 
 		self.setLayout(layout)
 
-		# self.button_preview.clicked.connect(self.preview)
-
 		self.combo_method.addItems(['None','Uniform','Gaussian','Contrast','Median'])
-		self.method = 1
 		self.combo_method.setCurrentIndex(self.method)
 		self.combo_method.currentIndexChanged.connect(self.update_method)
 
 	def update_radius1(self):
 		self.radius1 = float(self.le_radius1.text())
-		# self.update_background()
 
 	def update_radius2(self):
 		self.radius2 = float(self.le_radius2.text())
-		# self.update_background()
 
 	def update_method(self,i):
 		self.method = i
-
 
 	def bg_filter(self,data):
 		from scipy import ndimage as nd
