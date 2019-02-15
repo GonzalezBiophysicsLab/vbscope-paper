@@ -351,7 +351,7 @@ class obj(object): ## generic class to take anything you throw at it...
 
 class fit_solution(obj):
 	def __call__(self,t):
-		 if not self.fxn is None and not self.params is None:
+		if not self.fxn is None and not self.params is None:
 			return self.fxn(t,*self.params)
 
 ################################################################################

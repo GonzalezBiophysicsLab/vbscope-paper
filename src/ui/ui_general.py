@@ -278,7 +278,7 @@ class gui(QMainWindow):
 			self._log.close()
 			self.prefs.close()
 			event.accept()
-			import sys
-			sys.exit()
+			# import sys
+			# sys.exit()
 		else:
 			event.ignore()

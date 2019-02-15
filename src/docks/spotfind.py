@@ -64,6 +64,7 @@ class dock_spotfind(QWidget):
 		self.button_vb = QPushButton('VBGMM')
 		self.button_vbmax = QPushButton('Mean')
 		self.button_range = QPushButton('Range')
+		self.button_simul = QPushButton('Simul.')
 
 		self.label_bb = QLabel()
 		self.label_pp = QLabel()
@@ -143,6 +144,7 @@ class dock_spotfind(QWidget):
 		# hbox_ff.addWidget(self.button_vb)
 		hbox_ff.addWidget(self.button_range)
 		hbox_ff.addWidget(self.button_vbmax)
+		# hbox_ff.addWidget(self.button_simul)
 
 		whff.setLayout(hbox_ff)
 
@@ -207,6 +209,7 @@ class dock_spotfind(QWidget):
 		self.button_vb.clicked.connect(self.vbtestfind)
 		self.button_vbmax.clicked.connect(self.vbmaxtestfind)
 		self.button_range.clicked.connect(self.vbscope_range)
+		self.button_simul.clicked.connect(self.simul_find)
 		# self.button_find.clicked.connect(self.findspots)
 		# self.button_quick.clicked.connect(self.quick_find)
 		# self.button_search.clicked.connect(self.searchspots)
@@ -725,19 +728,28 @@ class dock_spotfind(QWidget):
 			self.gui.app.processEvents()
 
 			self.flag_abort = False
+
+			if flag_calcbg:
+				bg = np.array(([self.gui.docks['background'][1].calc_background(d[t]) for t in range(start,end+1)]))
+			else:
+				bg = 0
+			nxy = (p['spotfind_nsearch']-1)//2
+			nt = 0
+			mmin,mmax = minmax.minmax_map(d-bg,nt,nxy,nxy,p['spotfind_clip_border'])
+
 			for t in range(start,end+1):
 				if not self.flag_abort:
 					prog.setValue(t)
 					self.gui.app.processEvents()
 					t0 = time.clock()
-					bg = 0.0
-					if flag_calcbg:
-						bg = self.gui.docks['background'][1].calc_background(d[t])
+					# bg = 0.0
+					# if flag_calcbg:
+						# bg = self.gui.docks['background'][1].calc_background(d[t])
 					image = d[t] - bg
 
-					mmin,mmax = minmax.minmax_map(image,p['spotfind_nsearch'],p['spotfind_clip_border'])
-					h0 = image[mmax].astype('double')
-					l0 = image[mmin]
+					# mmin,mmax = minmax.minmax_map(image.reshape((1,image.shape[0],image.shape[1])),p['spotfind_nsearch'],p['spotfind_clip_border'])
+					h0 = image[mmax[t]].astype('double')
+					l0 = image[mmin[t]]
 					bg_values = nmd.estimate_from_min(l0,nlocal)
 
 					if t == start:
@@ -747,7 +759,7 @@ class dock_spotfind(QWidget):
 					rr = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
 
 					pp = np.zeros_like(image)
-					pp[mmax] = (1.-rr[:,0])
+					pp[mmax[t]] = (1.-rr[:,0])
 					probs[i][t-start] += pp
 					t1 = time.clock()
 					prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(i,start+1,end+1,t+2, t1-t0))
@@ -760,9 +772,10 @@ class dock_spotfind(QWidget):
 			# self.ppc.ui.canvas.draw()
 
 			pmap = probs[i].astype('double').sum(0) / float(p['spotfind_frameson'])
-			mmin,mmax = minmax.minmax_map(pmap,p['spotfind_nsearch'],p['spotfind_clip_border'])
+			nxy = (p['spotfind_nsearch']-1)//2
+			mmin,mmax = minmax.minmax_map(pmap.reshape((1,pmap.shape[0],pmap.shape[1])),0,nxy,nxy,p['spotfind_clip_border'])
 			pp = np.zeros_like(pmap)
-			pp[mmax] = pmap[mmax]
+			pp[mmax[0]] = pmap[mmax[0]]
 			self.spotprobs[i] = pp
 			self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += pp
 		self.gui.plot.image.set_array(self.disp_image)
@@ -800,21 +813,83 @@ class dock_spotfind(QWidget):
 				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
 				d = d.copy() - bg
 
-				mmin,mmax = minmax.minmax_map(d,p['spotfind_nsearch'],p['spotfind_clip_border'])
-				h0 = d[mmax].astype('double')
-				l0 = d[mmin]
+				nxy = (p['spotfind_nsearch']-1)//2
+				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
+				h0 = d[mmax[0]].astype('double')
+				l0 = d[mmin[0]]
 				bg_val = nmd.estimate_from_min(l0,nregion)
 
 				out = gmm(h0,self.gui.prefs['spotfind_nstates'],bg_val,nregion,initials=None,maxiters=self.gui.prefs['spotfind_maxiterations'],nrestarts=self.gui.prefs['spotfind_nrestarts'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths =self.priors,ncpu=p['computer_ncpu'])
 
 				xsort = out.mu.argsort()
 				prob = np.zeros_like(d)
-				prob[mmax] = (1.-out.r[:,xsort][:,0])
+				prob[mmax[0]] = (1.-out.r[:,xsort][:,0])
 				self.posterior = out
 				self.posterior.bg = bg_val
 
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
 				self.spotprobs[i] = prob
+
+			self.gui.plot.image.set_array(self.disp_image)
+			self.gui.docks['contrast'][1].update_image_contrast()
+
+			self.update_spots()
+
+	def simul_find(self):
+		self.gui.set_status('Compiling...')
+		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm_parallel as gmm
+		from src.supporting import normal_minmax_dist as nmd
+		from ..supporting import minmax as minmax
+		self.gui.set_status('Running...')
+		self.gui.app.processEvents()
+
+		if self.gui.data.flag_movie:
+			self.xys = [None for _ in range(self.gui.data.ncolors)]
+			self.spotprobs = [None for _ in range(self.gui.data.ncolors)]
+			self.gui.plot.clear_collections()
+			nc = self.gui.data.ncolors
+			start = self.spin_start.value() - 1
+			end = self.spin_end.value() - 1
+			total = end + 1 - start
+			d = self.gui.data.movie[start:end+1]
+
+			regions,self.shifts = self.gui.data.regions_shifts()
+
+			p = self.gui.prefs
+
+			nregion = self.gui.prefs['spotfind_nsearch']**2
+			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
+			for i in range(nc):
+				r = regions[i]
+				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f')
+				bg = self.gui.docks['background'][1].calc_background(d.mean(0)).astype('f')
+				d = d - bg[None,:,:]
+
+				nxy = (p['spotfind_nsearch']-1)//2
+				mmin,mmax = minmax.minmax_map(d,nxy*10,nxy,nxy,p['spotfind_clip_border'])
+				h0 = d[mmax].astype('double')
+				l0 = d[mmin]
+				bg_val = nmd.estimate_from_min(l0,(2*nxy+1.)**3. )
+
+				out = gmm(h0,self.gui.prefs['spotfind_nstates'],bg_val,nregion,initials=None,maxiters=self.gui.prefs['spotfind_maxiterations'],nrestarts=self.gui.prefs['spotfind_nrestarts'],threshold=self.gui.prefs['spotfind_threshold'],prior_strengths =self.priors,ncpu=p['computer_ncpu'])
+
+				xsort = out.mu.argsort()
+				prob = np.zeros_like(d)
+				prob[mmax] = (1.-out.r[:,xsort][:,0])
+				pmap = prob.astype('double').sum(0) / float(p['spotfind_frameson'])
+
+				nxy = (p['spotfind_nsearch']-1)//2
+				mmin,mmax = minmax.minmax_map(pmap.reshape((1,pmap.shape[0],pmap.shape[1])),0,nxy,nxy,p['spotfind_clip_border'])
+				pp = np.zeros_like(pmap)
+				pp[mmax[0]] = pmap[mmax[0]]
+				self.spotprobs[i] = pp
+				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += pp
+				# print(out.r[:,xsort].sum(0),prob.mean(),prob.shape,out.mu,xsort)
+				# self.posterior = out
+				# self.posterior.bg = bg_val
+
+				# self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += prob#d
+				# self.spotprobs[i] = prob
 
 			self.gui.plot.image.set_array(self.disp_image)
 			self.gui.docks['contrast'][1].update_image_contrast()
@@ -852,12 +927,12 @@ class dock_spotfind(QWidget):
 				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
 				d = d.copy() - bg
 
-				mmin,mmax = minmax.minmax_map(d,p['spotfind_nsearch'],p['spotfind_clip_border'])
+				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
 
-				out = gmm(d[mmax].astype('float64'),self.gui.prefs['spotfind_nstates'],maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'],nrestarts=self.gui.prefs['spotfind_nrestarts'],prior_strengths=self.priors)
+				out = gmm(d[mmax[0]].astype('float64'),self.gui.prefs['spotfind_nstates'],maxiters=self.gui.prefs['spotfind_maxiterations'],threshold=self.gui.prefs['spotfind_threshold'],nrestarts=self.gui.prefs['spotfind_nrestarts'],prior_strengths=self.priors)
 				xsort = out.mu.argsort()
 				prob = np.zeros_like(d)
-				prob[mmax] = (1.-out.r[:,xsort][:,0])
+				prob[mmax[0]] = (1.-out.r[:,xsort][:,0])
 				self.posterior = out
 
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
@@ -893,10 +968,10 @@ class dock_spotfind(QWidget):
 				bg = self.gui.docks['background'][1].calc_background(d).astype('f')
 				d = d.copy() - bg
 
-				mmin,mmax = minmax.minmax_map(d,p['spotfind_nsearch'],p['spotfind_clip_border'])
+				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
 
 				prob = np.zeros_like(d) + d.min()
-				prob[mmax] = d[mmax]
+				prob[mmax[0]] = d[mmax[0]]
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
 				self.spotprobs[i] = prob/d.max()
 
