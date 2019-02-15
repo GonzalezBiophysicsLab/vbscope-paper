@@ -62,6 +62,56 @@ def get_closest(c1,c2,transform):
 	# r = np.arange(np.min(dr.shape))
 	return a,rmin
 
+def interpolated_fft_phase_alignment(d1,d2):
+	from skimage import transform
+	from skimage.transform import SimilarityTransform,warp
+	from scipy.interpolate import RectBivariateSpline
+
+	## Calculate Cross-correlation
+	f1 = np.fft.fft2(d1)
+	f2 = np.fft.fft2(d2)
+	f = f1*np.conjugate(f2) / (np.abs(f1)*np.abs(f2))
+	d = np.abs(np.fft.ifft2(f))
+
+	## Find maximum in c.c.
+	s1,s2 = np.nonzero(d==d.max())
+
+	#### Interpolate for finer resolution
+	## cut out region
+	l = 5.
+	xmin = int(np.max((0.,s1-l)))
+	xmax = int(np.min((d.shape[0],s1+l)))
+	ymin = int(np.max((0.,s2-l)))
+	ymax = int(np.min((d.shape[1],s2+l)))
+	dd = d[xmin:xmax,ymin:ymax]
+
+	## calculate interpolation
+	x = np.arange(xmin,xmax)
+	y = np.arange(ymin,ymax)
+	interp = RectBivariateSpline(x,y,dd)
+
+	## interpolate new grid
+	x = np.linspace(xmin,xmax,(xmax-xmin)*10)
+	y = np.linspace(ymin,ymax,(ymax-ymin)*10)
+	di = interp(x,y)
+
+	## get maximum in interpolated c.c. for sub-pixel resolution
+	xy = np.nonzero(di==di.max())
+
+	## get interpolated shifts
+	s1 = x[xy[0][0]]
+	s2 = y[xy[1][0]]
+	if s1 > d.shape[0]/2:
+		s1 -= d.shape[0]
+	if s2 > d.shape[1]/2:
+		s2 -= d.shape[1]
+
+	## calculate warped img
+	tform = SimilarityTransform(translation=(-s2,-s1))
+	img = warp(d2, tform)
+
+	return -s1,-s2,img,tform
+
 
 ### Example:
 # from icp import icp

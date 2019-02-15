@@ -961,6 +961,8 @@ class dock_spotfind(QWidget):
 			from ..supporting import normal_minmax_dist as nd
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 
+			nxy = (p['spotfind_nsearch']-1)//2
+
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 			for i in range(nc):
 				r = regions[i]
