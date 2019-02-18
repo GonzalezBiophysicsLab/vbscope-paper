@@ -32,9 +32,11 @@ class data_container():
 			if filename.endswith('.npy'):
 				data = np.load(filename).astype('uint16')
 			elif filename.endswith('.tif') or filename.endswith('.stk'):
-				from ..external import tifffile
-				m = tifffile.TiffFile(filename)
-				data = m.asarray().astype(dtype='uint16')
+				from skimage.io import imread
+				data = imread(filename,plugin='tifffile')
+				# from ..external import tifffile
+				# m = tifffile.TiffFile(filename)
+				# data = m.asarray().astype(dtype='uint16')
 
 			self.__init__()
 
