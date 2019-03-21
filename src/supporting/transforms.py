@@ -70,7 +70,7 @@ def interpolated_fft_phase_alignment(d1,d2):
 	## Calculate Cross-correlation
 	f1 = np.fft.fft2(d1)
 	f2 = np.fft.fft2(d2)
-	f = f1*np.conjugate(f2) / (np.abs(f1)*np.abs(f2))
+	f = f1*np.conjugate(f2) #/ (np.abs(f1)*np.abs(f2)) ## normalizing can break things....
 	d = np.abs(np.fft.ifft2(f))
 
 	## Find maximum in c.c.

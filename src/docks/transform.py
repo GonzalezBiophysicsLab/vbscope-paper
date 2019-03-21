@@ -248,7 +248,9 @@ class dock_transform(QWidget):
 							c2[ii] -= shifts[j][ii]
 
 						# tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),1e-6,1e-6,maxiters=100)
+
 						s1,s2,_,tform = transforms.interpolated_fft_phase_alignment(imgs[j],imgs[i])
+
 						#### QUITE POSSIBLE THAT IT SHOULD BE S2,S1... or -S1,-S2... or -S2,-S1.... INSTEAD OF S1,S2....
 						tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),s1,s2,maxiters=100)
 						# tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),0.,0.,maxiters=100)
