@@ -114,9 +114,11 @@ class movie_viewer(gui):
 
 				self.plot.image.set_data(self.data.movie[self.data.current_frame])
 
-				self.docks['contrast'][1].slider_ceiling.setValue(65535)
-				self.docks['contrast'][1].slider_floor.setValue(0)
-				self.docks['contrast'][1].update_image_contrast()
+				if self.docks['contrast'][1].flag_first_time:
+					self.docks['contrast'][1].flag_first_time = False
+					self.docks['contrast'][1].guess_contrast()
+				else:
+					self.data.image_contrast = np.array((float(self.docks['contrast'][1].le_floor.text()),float(self.docks['contrast'][1].le_ceiling.text())))
 
 				self.plot.image.set_cmap(self.prefs['plot_colormap'])
 				self.plot.draw()
