@@ -79,8 +79,12 @@ class dock_contrast(QWidget):
 		self.clear_le_focus()
 
 	def guess_contrast(self):
-		self.gui.data.image_contrast[0] = self.gui.data.movie[self.gui.data.current_frame].min()
-		self.gui.data.image_contrast[1] = self.gui.data.movie[self.gui.data.current_frame].max()
+		try:
+			im = self.gui.plot.image.get_array()
+		except:
+			im = self.gui.data.movie[self.gui.data.current_frame]
+		self.gui.data.image_contrast[0] = im.min()
+		self.gui.data.image_contrast[1] = im.max()
 		self.gamma = 10.**-.1
 		self.update_les()
 		self.update_image_contrast()
