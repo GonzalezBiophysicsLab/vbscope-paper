@@ -43,13 +43,16 @@ class image_plot_container():
 		plt.close(self.f)
 
 	def draw(self):
-		self.ax.draw_artist(self.image)
-		[self.ax.draw_artist(c) for c in self.ax.collections]
-		if self.rectangle.visible:
-			for artist in self.rectangle.artists:
-				self.ax.draw_artist(artist)
-		self.canvas.update()
-		self.canvas.flush_events()
+		try:
+			self.ax.draw_artist(self.image)
+			[self.ax.draw_artist(c) for c in self.ax.collections]
+			if self.rectangle.visible:
+				for artist in self.rectangle.artists:
+					self.ax.draw_artist(artist)
+			self.canvas.update()
+			self.canvas.flush_events()
+		except:
+			pass
 
 	def clear_collections(self):
 		for i in range(len(self.ax.collections)):

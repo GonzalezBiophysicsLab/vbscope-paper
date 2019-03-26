@@ -412,12 +412,12 @@ class dock_spotfind(QWidget):
 					# bg = 0.0
 					# if flag_calcbg:
 						# bg = self.gui.docks['background'][1].calc_background(d[t])
-					image = d[t] #- bg
+					image = d[t-start] #- bg
 					# image = nd.gaussian_filter(image,1) - nd.gaussian_filter(image,10)
 
 					# mmin,mmax = minmax.minmax_map(image.reshape((1,image.shape[0],image.shape[1])),p['spotfind_nsearch'],p['spotfind_clip_border'])
-					h0 = image[mmax[t]].astype('double')
-					l0 = image[mmin[t]]
+					h0 = image[mmax[t-start]].astype('double')
+					l0 = image[mmin[t-start]]
 
 					# bg_values = nmd.estimate_from_min(l0,nlocal)
 
@@ -437,7 +437,7 @@ class dock_spotfind(QWidget):
 
 					pp = np.zeros_like(image)
 					xsort = outt.mu.argsort()
-					pp[mmax[t]] = (1.-outt.r[:,xsort][:,0])
+					pp[mmax[t-start]] = (1.-outt.r[:,xsort][:,0])
 					probs[i][t-start] += pp
 
 					if t%9 == 0:
