@@ -1,4 +1,5 @@
 *.pyc
 *.nbi
 *.nbc
+prefs*
 __pycache__
