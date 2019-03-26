@@ -33,25 +33,28 @@ class dock_transform(QWidget):
 		self.button_toggle = QPushButton('Toggle Aligned')
 		self.button_load = QPushButton('Load Alignment File')
 		self.button_estimate = QPushButton('Estimate from Spots')
+		self.button_fftestimate = QPushButton('Estimate from Image')
 		self.button_export = QPushButton('Export Alignment')
 
 		self.label_load = QLabel('')
 
-		self.layout.addWidget(l,0,0)
-		self.layout.addWidget(self.spin_colors,0,1)
+		self.layout.addWidget(l,1,0)
+		self.layout.addWidget(self.spin_colors,1,1)
 
-		self.layout.addWidget(self.button_load,1,0)
-		self.layout.addWidget(self.label_load,1,1)
-		self.layout.addWidget(self.button_estimate,2,0)
+		self.layout.addWidget(self.button_load,2,0)
+		self.layout.addWidget(QLabel(),0,0)
+		self.layout.addWidget(self.button_estimate,3,0)
+		self.layout.addWidget(self.button_fftestimate,3,1)
 		self.layout.addWidget(self.button_export,2,1)
-		self.layout.addWidget(self.button_preview,3,0)
-		self.layout.addWidget(self.button_toggle,3,1)
+		self.layout.addWidget(self.button_preview,4,0)
+		self.layout.addWidget(self.button_toggle,4,1)
 
 		self.button_export.clicked.connect(self.export)
 		self.button_preview.clicked.connect(self.preview)
 		self.button_toggle.clicked.connect(self.toggle)
 		self.button_load.clicked.connect(self.load)
 		self.button_estimate.clicked.connect(self.stochastic)
+		self.button_fftestimate.clicked.connect(self.fft_estimate)
 
 		self.spin_colors.valueChanged.connect(self.update_colors)
 
@@ -178,10 +181,58 @@ class dock_transform(QWidget):
 			self.estimate()
 			self.plot_overlapped()
 
+	def get_images(self):
+		sfd = self.gui.docks['spotfind'][1]
+
+		nc = self.gui.data.ncolors
+		start = sfd.spin_start.value() - 1
+		end = sfd.spin_end.value() - 1
+		# d = np.mean(self.gui.data.movie[start:end+1],axis=0)
+
+		regions,self.shifts = self.gui.data.regions_shifts()
+
+		imgs = []
+		for i in range(nc):
+			r = regions[i]
+			clip = self.gui.prefs['spotfind_clip_border']
+			d = self.gui.data.movie[start:end+1,r[0][0]+clip:r[0][1]-clip,r[1][0]+clip:r[1][1]-clip].astype('f').mean(0)
+			# bg = self.gui.docks['background'][1].calc_background(d).astype('f')
+			# dd = d.copy() - bg
+			dd = self.gui.docks['background'][1].bg_filter(d)
+
+			# r = regions[i]
+			# dd = d[r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').copy()
+			# dd -= self.gui.docks['background'][1].calc_background(dd).astype('f')
+			imgs.append(dd)
+		return imgs
+
+	def fft_estimate(self):
+		if self.gui.docks['spotfind'][1].flag_spots:
+			from ..supporting import transforms
+
+			imgs = self.get_images()
+			nc = self.gui.data.ncolors
+
+			ts = []
+			for i in range(nc):
+				tts = [None for j in range(nc)]
+				for j in range(nc):
+					if i != j:
+						s1,s2,_,tform = transforms.interpolated_fft_phase_alignment(imgs[j],imgs[i])
+						tts[j] = tform
+				ts.append(tts)
+			self.transforms = ts
+			self.flag_transforms = True
+			self.gui.statusbar.showMessage('Finished Finding Transforms')
+			self.plot_overlapped()
+
+
 	def estimate(self,cs=None):
 		from ..supporting import transforms
 
 		regions,shifts = self.gui.data.regions_shifts()
+
+		imgs = self.get_images()
 
 		ts = []
 		for i in range(self.gui.data.ncolors):
@@ -197,7 +248,12 @@ class dock_transform(QWidget):
 							c2[ii] -= shifts[j][ii]
 
 						# tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),1e-6,1e-6,maxiters=100)
-						tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),0.,0.,maxiters=100)
+
+						s1,s2,_,tform = transforms.interpolated_fft_phase_alignment(imgs[j],imgs[i])
+
+						#### QUITE POSSIBLE THAT IT SHOULD BE S2,S1... or -S1,-S2... or -S2,-S1.... INSTEAD OF S1,S2....
+						tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),s1,s2,maxiters=100)
+						# tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),0.,0.,maxiters=100)
 						self.gui.log("Alignment Loaded - ICP")
 
 					else:

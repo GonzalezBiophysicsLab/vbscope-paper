@@ -341,7 +341,7 @@ class traj_container():
 					hdf5_item.attrs['Time Created'] = time
 					# h5py items don't really hash, so.... do this, instead.
 					# Should be unique, and the point of the hash is for identification
-					hdf5_item.attrs['Unique ID'] = md5(time + str(hdf5_item.id.id) + str(np.random.rand())).hexdigest()
+					hdf5_item.attrs['Unique ID'] = md5((time + str(hdf5_item.id.id) + str(np.random.rand())).encode('utf-8')).hexdigest()
 
 				import h5py
 				hr = self.hmm_result

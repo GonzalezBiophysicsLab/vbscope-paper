@@ -65,7 +65,7 @@ class gui(QMainWindow):
 		self.qd_prefs.hide()
 		self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
 
-		qInstallMessageHandler(self.error_handler)
+#		qInstallMessageHandler(self.error_handler)
 
 		self.ui_update()
 		self.show()
@@ -278,7 +278,7 @@ class gui(QMainWindow):
 			self._log.close()
 			self.prefs.close()
 			event.accept()
-			import sys
-			sys.exit()
+			# import sys
+			# sys.exit()
 		else:
 			event.ignore()
