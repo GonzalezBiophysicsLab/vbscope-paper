@@ -65,7 +65,7 @@ class dock_extract(QWidget):
 		self.ui_p.show()
 
 	def get_spots(self):
-		self.gui.statusbar.showMessage('Determining which spots')
+		self.gui.statusbar.showMessage('Spot Finding')
 		self.gui.app.processEvents()
 
 		@nb.jit(["double[:,:](double[:,:],int64,int64)","int64[:,:](int64[:,:],int64,int64)"],nopython=True)
@@ -141,6 +141,14 @@ class dock_extract(QWidget):
 
 		regions,shifts = self.gui.data.regions_shifts()
 		ts = self.gui.docks['transform'][1].transforms
+		if ts is None:
+			self.gui.statusbar.showMessage('No alignment. Get one')
+			self.gui.app.processEvents()
+			return
+
+		self.gui.statusbar.showMessage('Spot Finding')
+		self.gui.app.processEvents()
+
 
 		for i in range(self.gui.data.ncolors):
 			s[i] = cull_rep_px(s[i].astype('double'),self.gui.data.movie.shape[1],self.gui.data.movie.shape[2])
@@ -299,7 +307,7 @@ class dock_extract(QWidget):
 		from time import time
 
 		l = (self.gui.prefs['extract_nintegrate']-1)/2
-		out = np.empty((self.gui.data.movie.shape[0],xy.shape[1]))
+		out = np.zeros((self.gui.data.movie.shape[0],xy.shape[1]))
 
 		prog = progress(out.shape[0],out.shape[1])
 		prog.setWindowTitle("Fitting Color %d"%(color))
@@ -317,11 +325,14 @@ class dock_extract(QWidget):
 						prog.setLabelText('Fitting spot %d/%d\nAvg. time/fit = %f s'%(i+1,out.shape[1],np.mean(ts[1:])))
 					prog.setValue(i)
 					self.gui.app.processEvents()
-				t0 = time()
-				o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['extract_ml_psf_maxiters'])
-				t1 = time()
-				out[:,i] = o
-				ts.append(t1-t0)
+				try:
+					t0 = time()
+					o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['extract_ml_psf_maxiters'])
+					t1 = time()
+					out[:,i] = o
+					ts.append(t1-t0)
+				except:
+					pass
 		prog.close()
 		return out
 

@@ -69,6 +69,10 @@ class dock_background(QWidget):
 		from scipy import ndimage as nd
 		self.gui.set_status('Removing Background')
 
+		wtime = 0
+		wspace1 = float(self.le_radius1.text())
+		wspace2 = float(self.le_radius2.text())
+
 		filter_type = None
 		if self.method == 1:
 			filter_type = 'uniform'
@@ -78,10 +82,9 @@ class dock_background(QWidget):
 			filter_type = 'minmax'
 		elif self.method == 4:
 			filter_type = 'median'
-
-		wtime = 0
-		wspace1 = float(self.le_radius1.text())
-		wspace2 = float(self.le_radius2.text())
+			wspace1 = max(1,int(wspace1))
+			wspace2 = max(1,int(wspace2))
+			wtime = max(1,int(wtime))
 
 		if data.ndim == 2:
 			shape1 = (wspace1,)*2
@@ -106,7 +109,10 @@ class dock_background(QWidget):
 			f2 = nd.median_filter
 
 		if not f1 is None and not f2 is None:
-			data = f1(data,shape1) - f2(data,shape2)
+			try:
+				data = f1(data,shape1) - f2(data,shape2)
+			except:
+					print('wtf')
 
 		return data
 

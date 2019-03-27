@@ -186,9 +186,9 @@ def ml_psf(l,z,sigma,xyi,maxiters=1000):
 	# try:
 	if 1:
 		xmin = int(max(0,xyi[0]-l))
-		xmax = int(min(z.shape[0]-1,xyi[0]+l) + 1)
+		xmax = int(min(z.shape[1]-1,xyi[0]+l) + 1)
 		ymin = int(max(0,xyi[1]-l))
-		ymax = int(min(z.shape[1]-1,xyi[1]+l) + 1)
+		ymax = int(min(z.shape[2]-1,xyi[1]+l) + 1)
 
 		gx,gy = np.mgrid[xmin:xmax,ymin:ymax]
 		gx = gx.astype('f')

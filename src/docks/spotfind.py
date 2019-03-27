@@ -322,15 +322,20 @@ class dock_spotfind(QWidget):
 			nc = self.gui.data.ncolors
 			for i in range(nc):
 				if not self.spotprobs[i] is None:
-					from scipy.ndimage import label, center_of_mass
-					labels,num = label(self.spotprobs[i] > self.pp)
-					if num > 0:
-						coms = np.array(center_of_mass(self.spotprobs[i],labels,list(range(1,num+1)))).T
-						self.xys[i] = coms
-						###
-						# self.xys[i] = np.array(np.nonzero(prob*mmax > self.pp))
-						self.xys[i][0] += self.shifts[i][0]
-						self.xys[i][1] += self.shifts[i][1]
+					# from scipy.ndimage import label, center_of_mass
+					# labels,num = label(self.spotprobs[i] > self.pp)
+					# if num > 0:
+					# 	coms = np.array(center_of_mass(self.spotprobs[i],labels,list(range(1,num+1)))).T
+					# 	self.xys[i] = coms
+					# 	###
+					# 	# self.xys[i] = np.array(np.nonzero(prob*mmax > self.pp))
+					# 	self.xys[i][0] += self.shifts[i][0]
+					# 	self.xys[i][1] += self.shifts[i][1]
+					# else:
+					# 	self.xys[i] = None
+					x,y = np.nonzero(self.spotprobs[i] > self.pp)
+					if x.size > 0:
+						self.xys[i] = np.array([x + self.shifts[i][0],y + self.shifts[i][1]])
 					else:
 						self.xys[i] = None
 
@@ -409,22 +414,12 @@ class dock_spotfind(QWidget):
 			for t in range(start,end+1):
 				if not self.flag_abort:
 
-					# bg = 0.0
-					# if flag_calcbg:
-						# bg = self.gui.docks['background'][1].calc_background(d[t])
 					image = d[t-start] #- bg
-					# image = nd.gaussian_filter(image,1) - nd.gaussian_filter(image,10)
 
-					# mmin,mmax = minmax.minmax_map(image.reshape((1,image.shape[0],image.shape[1])),p['spotfind_nsearch'],p['spotfind_clip_border'])
 					h0 = image[mmax[t-start]].astype('double')
 					l0 = image[mmin[t-start]]
 
-					# bg_values = nmd.estimate_from_min(l0,nlocal)
-
-					# if 1:
 					if t == start:
-						# initials = initialize_params(h0,self.gui.prefs['spotfind_nstates']+1,flag_kmeans=True)
-
 						# mu var ppi
 						init_mu = np.array([bg_values[0]+np.sqrt(bg_values[1])*3*i for i in range(self.gui.prefs['spotfind_nstates']+1)])
 						init_var = np.array([bg_values[1] for i in range(self.gui.prefs['spotfind_nstates']+1)])
@@ -432,7 +427,6 @@ class dock_spotfind(QWidget):
 						init_ppi /= init_ppi.sum()
 						initials = (init_mu,init_var,init_ppi)
 
-					# out = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = self.priors,flag_report=False)
 					outt = gmm(h0,p['spotfind_nstates'],bg_values,nlocal,initials,maxiters=p['spotfind_maxiterations'],threshold=p['spotfind_threshold'],prior_strengths = priors,flag_report=True)
 
 					pp = np.zeros_like(image)
@@ -447,37 +441,32 @@ class dock_spotfind(QWidget):
 						self.gui.app.processEvents()
 						t0 = time.clock()
 			prog.close()
-			## Options
-			# compile with as a binomial process using mean of posterior w/ conj prior/likelihood
-			# search again ugh.....
-			# self.ppc.ui.ax[0].plot(np.arange(probs[i].shape[0]),(probs[i] > self.pp).sum((1,2)))
-			# self.ppc.ui.canvas.draw()
 
-			pmap = probs[i].astype('double').mean(0)
+			## Compile maps into one map
+			pmap0 = probs[i].astype('double').mean(0)
+			mmin,mmax = minmax.minmax_map(pmap0.reshape((1,pmap0.shape[0],pmap0.shape[1])),0,nxy,nxy,self.gui.prefs['spotfind_clip_border'])
+			pmap = pmap0*mmax[0] ## Only use local max!
 
-			## model selection
-			#### model 1 is a normal distribution for bg
-			#### model 2 is a uniform distribution above the bg
-			pframeon = float(self.gui.prefs['spotfind_frameson']) / float(probs[i].shape[0])
-			if pframeon > 1.:
-				pmap = pmap*0
-			else:
-				m1_mu = pframeon / 2. ## halfway to cutoff
-				m1_var = (pframeon/6.)**2. ## +/-3 sigma
-				model1 = 1./np.sqrt(2.*np.pi*m1_var)*np.exp(-.5/m1_var*(pmap-m1_mu)**2.)
-				model2 = (pmap >= m1_mu)*1./(1. - m1_mu)
-				## equal a-priori priors for both models
-				## .001 to prevent saturation... think of it as an unthought of model
-				pmap = model2*.5 / (model1*.5 + model2*.5)
+			## Use model selection with something never on (M1) vs something on frameson (M2)
+			from scipy.special import betaln
+			a1 = 1.
+			b1 = float(probs[i].shape[0]) + 1.
+			m1 = (a1 - 1.)*np.log(pmap)
+			m1 += (b1 - 1.)*np.log(1.-pmap+1e-30)
+			m1 -= betaln(a1,b1)
 
-			pp = pmap
-			# nxy = (self.gui.prefs['spotfind_nsearch']-1)//2
-			# mmin,mmax = minmax.minmax_map(pmap.reshape((1,pmap.shape[0],pmap.shape[1])),0,nxy,nxy,self.gui.prefs['spotfind_clip_border'])
-			# pp = np.zeros_like(pmap)
-			# pp[mmax[0]] = pmap[mmax[0]]
+			a2 = float(self.gui.prefs['spotfind_frameson']) + 1.
+			b2 = float(probs[i].shape[0]) - float(self.gui.prefs['spotfind_frameson']) + 1.
+			m2 = (a2 - 1.)*np.log(pmap)
+			m2 += (b2 - 1.)*np.log(1.-pmap+1e-30)
+			m2 -= betaln(a2,b2)
 
-			self.spotprobs[i] = pp
-			self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += pp
+			pmap = 1./(np.exp(m1 - m2) + 1.)
+			pmap[np.isnan(pmap)] = 0.
+
+			self.spotprobs[i] = pmap
+			self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += pmap0
+
 		self.gui.plot.image.set_array(self.disp_image)
 		self.gui.docks['contrast'][1].update_image_contrast()
 		self.update_spots()

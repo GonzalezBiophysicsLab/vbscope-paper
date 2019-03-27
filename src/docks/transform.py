@@ -14,6 +14,7 @@ class dock_transform(QWidget):
 	def __init__(self,parent=None):
 		super(dock_transform, self).__init__(parent)
 
+		self.transforms = None
 		self.default_prefs = default_prefs
 
 		self.gui = parent

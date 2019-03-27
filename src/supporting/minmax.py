@@ -69,6 +69,7 @@ def _get_shape(data,footprint):
 		if len(footprint) == data.ndim:
 			shape = footprint
 	return shape
+
 def clip_edges(data,footprint,value=0):
 	shape = _get_shape(data,footprint)
 	if shape is None:
@@ -76,11 +77,12 @@ def clip_edges(data,footprint,value=0):
 		return data
 
 	for i in range(len(shape)):
-		s = [slice(0,data.shape[i]) for i in range(len(shape))]
-		s[i] = slice(0,shape[i])
-		data[tuple(s)] = value
-		s[i] = slice(data.shape[i]-shape[i],data.shape[i])
-		data[tuple(s)] = value
+		if shape[i] > 0:
+			s = [slice(0,data.shape[i]) for i in range(len(shape))]
+			s[i] = slice(0,shape[i])
+			data[tuple(s)] = value
+			s[i] = slice(data.shape[i]-shape[i],data.shape[i])
+			data[tuple(s)] = value
 	return data
 
 #
@@ -106,6 +108,7 @@ def clip(image,s):
 	iimage[:,:s] = 0
 	iimage[:,-s:] = 0
 	return iimage
+
 #
 # def max_map(image,s):
 # 	shifted = make_shift(image,s)
