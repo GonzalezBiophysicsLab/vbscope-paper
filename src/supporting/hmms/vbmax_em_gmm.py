@@ -158,7 +158,7 @@ def outer_loop(x,bg,nmax,mu,var,ppi,maxiters,threshold,prior_strengths):
 			iteration += 1
 	return r,a,b,m,beta,alpha,E_lnlam,E_lnpi,iteration,ll
 
-def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1e-6, prior_strengths=None, flag_report=True):
+def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1e-6, prior_strengths=None, flag_report=True, init_kmeans = False):
 	'''
 	Data convention is NxK
 	'''
@@ -171,7 +171,7 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 		prior_strengths = np.array((0.25,2.5,.01,1.))
 
 	if initials is None:
-		mu,var,ppi = initialize_params(x[x>np.percentile(x,95)],nstates+1)
+		mu,var,ppi = initialize_params(x[x>np.percentile(x,95)],nstates+1, init_kmeans)
 	else:
 		mu,var,ppi = initials
 	# mu = mu.max()/np.arange(1,mu.size+1)[::-1]
@@ -194,16 +194,19 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 
 def vbmax_em_gmm_parallel(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1e-10, nrestarts=1, prior_strengths=None, ncpu=1):
 
-	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
-		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(vbmax_em_gmm, args=(x,nstates,bg,nmax,initials,maxiters,threshold,prior_strengths,True)) for i in range(nrestarts)]
-		results = [p.get() for p in results]
-		pool.close()
-	else:
-		results = [vbmax_em_gmm(x,nstates,bg,nmax,initials,maxiters,threshold,prior_strengths,True) for i in range(nrestarts)]
+	# if platform != 'win32' and ncpu != 1 and nrestarts != 1:
+	# 	pool = mp.Pool(processes = ncpu)
+	# 	results = [pool.apply_async(vbmax_em_gmm, args=(x,nstates,bg,nmax,initials,maxiters,threshold,prior_strengths,True)) for i in range(nrestarts)]
+	# 	results = [p.get() for p in results]
+	# 	pool.close()
+	# else:
+	# 	results = [vbmax_em_gmm(x,nstates,bg,nmax,initials,maxiters,threshold,prior_strengths,True) for i in range(nrestarts)]
+	#
+	# try:
+	# 	best = np.nanargmax([r.likelihood[-1,0] for r in results])
+	# except:
+	# 	best = 0
+	# return results[best]
 
-	try:
-		best = np.nanargmax([r.likelihood[-1,0] for r in results])
-	except:
-		best = 0
-	return results[best]
+
+	return vbmax_em_gmm(x,nstates,bg,nmax,None,maxiters,threshold,prior_strengths,True, True)

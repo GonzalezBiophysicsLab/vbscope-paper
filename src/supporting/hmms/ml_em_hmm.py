@@ -50,7 +50,7 @@ def outer_loop(x,mu,var,ppi,tmatrix,maxiters,threshold):
 	return mu,var,r,ppi,tmatrix,iteration,ll1
 
 
-def ml_em_hmm(x,nstates,maxiters=1000,threshold=1e-6):
+def ml_em_hmm(x,nstates,maxiters=1000,threshold=1e-6,init_kmeans=False):
 	'''
 	Convention is NxK
 	'''
@@ -65,7 +65,7 @@ def ml_em_hmm(x,nstates,maxiters=1000,threshold=1e-6):
 	# ppi = o.ppi[:-1]
 	# ppi /= ppi.sum() ## ignore outliers
 
-	mu,var,ppi = initialize_params(x,nstates)
+	mu,var,ppi = initialize_params(x,nstates,init_kmeans)
 	tmatrix = initialize_tmatrix(nstates)
 
 	mu,var,r,ppi,tmatrix,iteration,likelihood = outer_loop(x,mu,var,ppi,tmatrix,maxiters,threshold)
@@ -76,17 +76,18 @@ def ml_em_hmm(x,nstates,maxiters=1000,threshold=1e-6):
 	return result
 
 def ml_em_hmm_parallel(x,nstates,maxiters=1000,threshold=1e-10,nrestarts=1,ncpu=1):
-
-	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
-		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(ml_em_hmm, args=(x,nstates,maxiters,threshold)) for i in range(nrestarts)]
-		results = [p.get() for p in results]
-		pool.close()
-	else:
-		results = [ml_em_hmm(x,nstates,maxiters,threshold) for i in range(nrestarts)]
-
-	try:
-		best = np.nanargmax([r.likelihood for r in results])
-	except:
-		best = 0
-	return results[best]
+	#
+	# if platform != 'win32' and ncpu != 1 and nrestarts != 1:
+	# 	pool = mp.Pool(processes = ncpu)
+	# 	results = [pool.apply_async(ml_em_hmm, args=(x,nstates,maxiters,threshold)) for i in range(nrestarts)]
+	# 	results = [p.get() for p in results]
+	# 	pool.close()
+	# else:
+	# 	results = [ml_em_hmm(x,nstates,maxiters,threshold) for i in range(nrestarts)]
+	#
+	# try:
+	# 	best = np.nanargmax([r.likelihood for r in results])
+	# except:
+	# 	best = 0
+	# return results[best]
+	return ml_em_hmm(x,nstates,maxiters,threshold,True)

@@ -65,7 +65,7 @@ def outer_loop(x,mu,var,ppi,maxiters,threshold):
 
 
 
-def ml_em_gmm(x,nstates,maxiters=1000,threshold=1e-6):
+def ml_em_gmm(x,nstates,maxiters=1000,threshold=1e-6,init_kmeans=True):
 	'''
 	Data convention is NxK
 
@@ -77,7 +77,7 @@ def ml_em_gmm(x,nstates,maxiters=1000,threshold=1e-6):
 	if x.ndim != 1:
 		raise Exception("Input data isn't 1D")
 
-	mu,var,ppi = initialize_params(x,nstates)
+	mu,var,ppi = initialize_params(x,nstates,init_kmeans)
 	mu,var,r,ppi,iteration,ll1 = outer_loop(x,mu,var,ppi,maxiters,threshold)
 	result = result_ml_gmm(mu,var,r,ppi,ll1,iteration)
 

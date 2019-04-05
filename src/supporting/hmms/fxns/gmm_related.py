@@ -4,18 +4,22 @@ from .kmeans import kmeans
 import time
 
 def initialize_params(x,nstates,flag_kmeans=False):
-
+	np.random.seed()
 	if not flag_kmeans:
 		# xx = x[np.random.randint(low=0,high=x.size,size=np.min((xx.size,100)),dtype='i')]
-		np.random.seed()
 		mu = kernel_sample(x,nstates)
 
-		distinv = 1./np.sqrt((x[:,None] - mu[None,:])**2.)
-		r = distinv/distinv.sum(1)[:,None]
-		var = np.sum(r*(x[:,None]-mu)**2.,axis=0)/np.sum(r,axis=0) + 1e-300
-		ppi = r.mean(0)
+		# distinv = 1./np.sqrt((x[:,None] - mu[None,:])**2.)
+		# r = np.exp(-distinv) + .1
+		# r = r/r.sum(1)[:,None]
+		# var = np.sum(r*(x[:,None]-mu)**2.,axis=0)/np.sum(r,axis=0) + 1e-300
+		# ppi = r.mean(0)
+		var = np.var(x)/nstates + np.zeros(nstates)
+		ppi = 1./nstates + np.zeros(nstates)
+
 	else:
 		r,mu,var,ppi = kmeans(x,nstates)
+		# mu = np.random.normal(loc=mu,scale=np.sqrt(var),size=nstates)
 
 	return mu,var,ppi
 

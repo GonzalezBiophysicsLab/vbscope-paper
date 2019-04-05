@@ -96,8 +96,8 @@ def outer_loop(x,mu,var,tm,maxiters,threshold,prior_strengths):
 	prob = p_normal(x,mu,var)
 	r = np.zeros_like(prob)
 	for i in range(r.shape[0]):
-		r[i] = prob[i]
-		r[i] /= np.sum(r[i]) + 1e-10 ## for stability
+		r[i] = prob[i] + .01
+		r[i] /= np.sum(r[i]) #+ 1e-10 ## for stability
 
 	a,b,m,beta,pik,nk,xbark,sk = m_updates(x,r,a0,b0,m0,beta0,pi0)
 
@@ -144,7 +144,8 @@ def outer_loop(x,mu,var,tm,maxiters,threshold,prior_strengths):
 			iteration += 1
 	return r,a,b,m,beta,pik,tm,E_lnlam,E_lnpi,E_lntm,iteration,ll
 
-def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None):
+
+def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None,init_kmeans=False):
 	'''
 	Data convention is NxK
 	'''
@@ -156,15 +157,15 @@ def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None):
 	if prior_strengths is None:
 		prior_strengths = np.array((0.25,2.5,.01,1.,1.))
 
-	# from ml_em_gmm import ml_em_gmm
-	# o = ml_em_gmm(x,nstates+1)
-	# mu = o.mu[:-1]
-	# var = o.var[:-1]
-	# ppi = o.ppi[:-1]
-	# ppi /= ppi.sum() ## ignore outliers
-
-	mu,var,ppi = initialize_params(x,nstates)
+	mu,var,ppi = initialize_params(x,nstates,init_kmeans)
 	tmatrix = initialize_tmatrix(nstates)
+
+	# from .ml_em_gmm import ml_em_gmms
+	# r = ml_em_gmm(x,nstates,maxiters,threshold,init_kmeans)
+	# mu = r.mu
+	# var = r.var
+	# ppi = r.ppi
+	# print(mu)
 
 	r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,iteration,likelihood = outer_loop(x,mu,var,tmatrix,maxiters,threshold,prior_strengths)
 
@@ -176,11 +177,11 @@ def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None):
 def vb_em_hmm_model_selection_parallel(x, nmin=1, nmax=6, maxiters=1000, threshold=1e-10, nrestarts=1, prior_strengths=None, ncpu=1):
 	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
 		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(vb_em_hmm, args=(x,i,maxiters,threshold,prior_strengths)) for i in range(nmin,nmax+1)]
+		results = [pool.apply_async(vb_em_hmm, args=(x,i,maxiters,threshold,prior_strengths,True)) for i in range(nmin,nmax+1)]
 		results = [p.get() for p in results]
 		pool.close()
 	else:
-		results = [vb_em_hmm(x,i,maxiters,threshold,prior_strengths) for i in range(nmin,nmax+1)]
+		results = [vb_em_hmm(x,i,maxiters,threshold,prior_strengths,True) for i in range(nmin,nmax+1)]
 	results = [results[i] for i in np.argsort([r.mu.size for r in results])] # sort back into order
 	likelihoods = np.array([r.likelihood[-1,0] for r in results])
 
@@ -190,16 +191,18 @@ def vb_em_hmm_model_selection_parallel(x, nmin=1, nmax=6, maxiters=1000, thresho
 
 def vb_em_hmm_parallel(x,nstates,maxiters=1000,threshold=1e-10,nrestarts=1,prior_strengths=None,ncpu=1):
 
-	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
-		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(vb_em_hmm, args=(x,nstates,maxiters,threshold,prior_strengths)) for i in range(nrestarts)]
-		results = [p.get() for p in results]
-		pool.close()
-	else:
-		results = [vb_em_hmm(x,nstates,maxiters,threshold,prior_strengths) for i in range(nrestarts)]
+	# if platform != 'win32' and ncpu != 1 and nrestarts != 1:
+	# 	pool = mp.Pool(processes = ncpu)
+	# 	results = [pool.apply_async(vb_em_hmm, args=(x,nstates,maxiters,threshold,prior_strengths,True)) for i in range(nrestarts)]
+	# 	results = [p.get() for p in results]
+	# 	pool.close()
+	# else:
+	# 	results = [vb_em_hmm(x,nstates,maxiters,threshold,prior_strengths,True) for i in range(nrestarts)]
+	#
+	# try:
+	# 	best = np.nanargmax([r.likelihood[-1,0] for r in results])
+	# except:
+	# 	best = 0
+	# return results[best]
 
-	try:
-		best = np.nanargmax([r.likelihood[-1,0] for r in results])
-	except:
-		best = 0
-	return results[best]
+	return vb_em_hmm(x,nstates,maxiters,threshold,prior_strengths,True)

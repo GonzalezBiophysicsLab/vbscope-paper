@@ -167,7 +167,7 @@ def outer_loop(x,mu,var,tm,maxiters,threshold,prior_strengths):
 	_,_,_,E_lntm,E_lnlam,E_lnpi = individual_e_step(flatx,a,b,beta,m,pik,tm)
 	return r,a,b,m,beta,pik,tm,E_lnlam,E_lnpi,E_lntm,iteration,ll
 
-def consensus_vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None):
+def consensus_vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None,init_kmeans=False):
 	'''
 	Data convention is NxTxK
 	'''
@@ -186,7 +186,7 @@ def consensus_vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=
 	# ppi = o.ppi[:-1]
 	# ppi /= ppi.sum() ## ignore outliers
 
-	mu,var,ppi = initialize_params(np.concatenate(x),nstates)
+	mu,var,ppi = initialize_params(np.concatenate(x),nstates,init_kmeans)
 	tmatrix = initialize_tmatrix(nstates)
 
 	r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,iteration,likelihood = outer_loop(x,mu,var,tmatrix,maxiters,threshold,prior_strengths)
@@ -200,17 +200,18 @@ def consensus_vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=
 
 
 def consensus_vb_em_hmm_parallel(x,nstates,maxiters=1000,threshold=1e-10,nrestarts=1,prior_strengths=None,ncpu=1):
-
-	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
-		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(consensus_vb_em_hmm, args=(x,nstates,maxiters,threshold,prior_strengths)) for i in range(nrestarts)]
-		results = [p.get() for p in results]
-		pool.close()
-	else:
-		results = [consensus_vb_em_hmm(x,nstates,maxiters,threshold,prior_strengths) for i in range(nrestarts)]
-
-	try:
-		best = np.nanargmax([r.likelihood[-1,0] for r in results])
-	except:
-		best = 0
-	return results[best]
+	#
+	# if platform != 'win32' and ncpu != 1 and nrestarts != 1:
+	# 	pool = mp.Pool(processes = ncpu)
+	# 	results = [pool.apply_async(consensus_vb_em_hmm, args=(x,nstates,maxiters,threshold,prior_strengths,True)) for i in range(nrestarts)]
+	# 	results = [p.get() for p in results]
+	# 	pool.close()
+	# else:
+	# 	results = [consensus_vb_em_hmm(x,nstates,maxiters,threshold,prior_strengths,True) for i in range(nrestarts)]
+	#
+	# try:
+	# 	best = np.nanargmax([r.likelihood[-1,0] for r in results])
+	# except:
+	# 	best = 0
+	# return results[best]
+	return consensus_vb_em_hmm(x,nstates,maxiters,threshold,prior_strengths,True)

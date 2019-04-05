@@ -141,7 +141,7 @@ def outer_loop(x,mu,var,ppi,maxiters,threshold,prior_strengths):
 			iteration += 1
 	return r,a,b,m,beta,alpha,E_lnlam,E_lnpi,iteration,ll
 
-def vb_em_gmm(x,nstates,maxiters=1000,threshold=1e-6,prior_strengths=None):
+def vb_em_gmm(x,nstates,maxiters=1000,threshold=1e-6,prior_strengths=None,init_kmeans=False):
 	'''
 	Data convention is NxK
 	'''
@@ -153,7 +153,7 @@ def vb_em_gmm(x,nstates,maxiters=1000,threshold=1e-6,prior_strengths=None):
 	if prior_strengths is None:
 		prior_strengths = np.array((0.25,2.5,.01,1.))
 
-	mu,var,ppi = initialize_params(x,nstates)
+	mu,var,ppi = initialize_params(x,nstates,init_kmeans)
 	# from ml_em_gmm import ml_em_gmm
 	# o = ml_em_gmm(x,nstates+1)
 	# mu = o.mu[:-1]
@@ -172,11 +172,11 @@ def vb_em_gmm_parallel(x,nstates,maxiters=1000,threshold=1e-10,nrestarts=1,prior
 
 	if platform != 'win32' and ncpu != 1 and nrestarts != 1:
 		pool = mp.Pool(processes = ncpu)
-		results = [pool.apply_async(vb_em_gmm, args=(x,nstates,maxiters,threshold,prior_strengths)) for i in range(nrestarts)]
+		results = [pool.apply_async(vb_em_gmm, args=(x,nstates,maxiters,threshold,prior_strengths,i==0)) for i in range(nrestarts)]
 		results = [p.get() for p in results]
 		pool.close()
 	else:
-		results = [vb_em_gmm(x,nstates,maxiters,threshold,prior_strengths) for i in range(nrestarts)]
+		results = [vb_em_gmm(x,nstates,maxiters,threshold,prior_strengths,i==0) for i in range(nrestarts)]
 
 	try:
 		best = np.nanargmax([r.likelihood[-1,0] for r in results])
