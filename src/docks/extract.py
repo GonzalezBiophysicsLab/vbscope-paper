@@ -220,6 +220,10 @@ class dock_extract(QWidget):
 
 			if self.combo_method.currentIndex() == 0:
 				xyi = np.round(xy).astype('i')
+
+				xyi[0][xyi[0] >= self.gui.data.movie.shape[1]] = self.gui.data.movie.shape[1] - 1
+
+				xyi[1][xyi[1] >= self.gui.data.movie.shape[2]] = self.gui.data.movie.shape[2] - 1
 				ns = self.gui.data.movie[:,xyi[0],xyi[1]]
 
 				# ## get global background
@@ -234,15 +238,34 @@ class dock_extract(QWidget):
 				# bs = np.median(np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])] ),axis=0)
 
 				## Okay - bg is mean infered from min-value order statistics of four corners for every spot. static
-				from ..supporting import normal_minmax_dist as nd
-				bs = np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])] )
-				bs = np.min(bs,axis=0)
-				bgg = np.zeros(bs.shape[1])
-				for i in range(bgg.size):
-					bgg[i] = nd.estimate_from_min(bs[:,i], 4.)[0]
-				bs = bgg[None,:]
+				## This approach errors out if xyi + 2 > movie size...
+				# from ..supporting import normal_minmax_dist as nd
+				# bs = np.array([self.gui.data.movie[:,xyi[0]+ii,xyi[1]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])] )
+				# bs = np.min(bs,axis=0)
+				# bgg = np.zeros(bs.shape[1])
+				# for i in range(bgg.size):
+				# 	bgg[i] = nd.estimate_from_min(bs[:,i], 4.)[0]
+				# bs = bgg[None,:]
 
-				traces.append(ns-bs)
+
+
+				# bgg[i] = np.median(self.gui.data.movie[-10,xyi[0][i],xyi[1][i]])
+				# from ..supporting import normal_minmax_dist as nd
+				# global_bg = np.percentile(np.median(self.gui.data.movie[-10:],axis=0).flatten(),1.)
+				bgg = np.zeros(ns.shape[1])# + global_bg
+				for i in range(bgg.size):
+					try:
+						bs = np.array([self.gui.data.movie[-10:,xyi[0][i]+ii,xyi[1][i]+jj] for ii,jj in zip([-2,-2,2,2],[-2,2,-2,2])])
+
+						bs = np.min(bs,axis=0)
+						bgg[i] = nd.median(bs)
+						# bgg[i] = nd.estimate_from_min(bs, 4.)[0]
+					except:
+						bgg[i] = np.median(self.gui.data.movie[-10:,xyi[0][i],xyi[1][i]])
+				ns = ns - bgg[None,:]
+
+
+				traces.append(ns)
 
 			elif self.combo_method.currentIndex() == 1:
 				# ns = self.ml_psf(np.round(xy).astype('i'),sigma)
