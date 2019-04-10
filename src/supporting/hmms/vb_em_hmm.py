@@ -111,6 +111,7 @@ def outer_loop(x,mu,var,tm,maxiters,threshold,prior_strengths):
 	ll0 = -np.inf
 	ll = np.zeros((maxiters,5))
 
+	# if 0:
 	while iteration < maxiters:
 		# E Step
 
@@ -120,7 +121,6 @@ def outer_loop(x,mu,var,tm,maxiters,threshold,prior_strengths):
 		E_lnpi = psi(pik)-psi(np.sum(pik))
 		for i in range(E_lntm.shape[0]):
 			E_lntm[i] = psi(tm[i])-psi(np.sum(tm[i]))
-
 
 		for i in range(prob.shape[1]):
 			prob[:,i] = (2.*np.pi)**-.5 * np.exp(-.5*(E_dld[:,i] - E_lnlam[i]))
@@ -136,12 +136,14 @@ def outer_loop(x,mu,var,tm,maxiters,threshold,prior_strengths):
 			if dl < threshold or np.isnan(ll1):
 				break
 
+
 		a,b,m,beta,pik,nk,xbark,sk = m_updates(x,r,a0,b0,m0,beta0,pi0)
 		pik = pi0 + r[0]
 		tm  = tm0 + xi.sum(0)
 
 		if iteration < maxiters:
 			iteration += 1
+
 	return r,a,b,m,beta,pik,tm,E_lnlam,E_lnpi,E_lntm,iteration,ll
 
 
@@ -160,12 +162,12 @@ def vb_em_hmm(x,nstates,maxiters=1000,threshold=1e-10,prior_strengths=None,init_
 	mu,var,ppi = initialize_params(x,nstates,init_kmeans)
 	tmatrix = initialize_tmatrix(nstates)
 
-	# from .ml_em_gmm import ml_em_gmms
+	# from .ml_em_gmm import ml_em_gmm
 	# r = ml_em_gmm(x,nstates,maxiters,threshold,init_kmeans)
 	# mu = r.mu
 	# var = r.var
 	# ppi = r.ppi
-	# print(mu)
+
 
 	r,a,b,m,beta,pi,tmatrix,E_lnlam,E_lnpi,E_lntm,iteration,likelihood = outer_loop(x,mu,var,tmatrix,maxiters,threshold,prior_strengths)
 

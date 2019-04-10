@@ -40,23 +40,33 @@ def kmeans(x,nstates):
 		for j in range(nstates):
 			pi[j] += r[i,j]
 
-	xkeep = pi > 0
-
-	r = r[:,xkeep]
-	mu = mu[xkeep]
-	pi = pi[xkeep]
+	# xkeep = pi > 0
+	# r = r[:,xkeep]
+	# mu = mu[xkeep]
+	# pi = pi[xkeep]
 
 	var = np.zeros_like(mu)
 	nn = np.zeros_like(mu) + 1e-6
+	mm = np.zeros_like(mu)
 	for i in range(nx):
 		for j in range(nstates):
-			if r[i,j] == 1:
-				var[j] += r[i,j]*x[i]**2.
-				nn[j] += 1
+			r2 = float(r[i,j]) + 1./float(r.shape[0])
+			# print(r2)
+			mm[j] += r2 * x[i]
+			var[j] += r2 * x[i]**2.
+			nn[j] += r2
+			# if r[i,j] == 1:
+				# var[j] += r[i,j]*x[i]**2.
+				# nn[j] += 1
+	mm /= nn
 	var /= nn
-	var -= mu**2.
-	pi /= float(nx)
-	return r,mu,var,pi
+	var -= mm**2.
+	pi = nn/np.sum(nn)
+	# var /= nn
+	# var -= mu**2.
+	# pi /= float(nx)
+	# return r,mu,var,pi
+	return r,mm,var,pi
 
 
 if __name__ == '__main__':

@@ -38,18 +38,21 @@ default_prefs = {
 'textbox_x':0.95,
 'textbox_y':0.93,
 'textbox_fontsize':8,
-'textbox_nmol':True
+'textbox_nmol':True,
+
+'nskip':1,
 }
 
 
 def get_neighbor_data(gui):
 	fpb = gui.data.get_plot_data()[0]
 	N = fpb.shape[0]
-	d = np.array([[fpb[i,:-1],fpb[i,1:]] for i in range(fpb.shape[0])])
+	nskip = gui.popout_plots['plot_tdp'].ui.prefs['nskip']
+	d = np.array([[fpb[i,:-nskip],fpb[i,nskip:]] for i in range(fpb.shape[0])])
 
 	if not gui.data.hmm_result is None:
 		v = gui.data.get_viterbi_data(signal=True)
-		vv = np.array([[v[i,:-1],v[i,1:]] for i in range(v.shape[0])])
+		vv = np.array([[v[i,:-nskip],v[i,nskip:]] for i in range(v.shape[0])])
 
 		for i in range(d.shape[0]):
 			d[i,:,vv[i,0]==vv[i,1]] = np.array((np.nan,np.nan))
@@ -91,11 +94,15 @@ def gen_histogram(gui,d1,d2):
 def colormap(gui):
 	prefs = gui.popout_plots['plot_tdp'].ui.prefs
 
-	## colormap
 	try:
-		cm = plt.cm.__dict__[prefs['color_cmap']]
+		import colorcet as cc
+		cm = cc.cm.__getattr__(prefs['color_cmap'])
 	except:
-		cm = plt.cm.rainbow
+		## colormap
+		try:
+			cm = plt.cm.__dict__[prefs['color_cmap']]
+		except:
+			cm = plt.cm.rainbow
 	try:
 		cm.set_under(prefs['color_floorcolor'])
 	except:

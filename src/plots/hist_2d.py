@@ -153,11 +153,15 @@ def get_data(gui):
 def colormap(gui):
 	prefs = gui.popout_plots['plot_hist2d'].ui.prefs
 
-	## colormap
 	try:
-		cm = plt.cm.__dict__[prefs['color_cmap']]
+		import colorcet as cc
+		cm = cc.cm.__getattr__(prefs['color_cmap'])
 	except:
-		cm = plt.cm.rainbow
+		## colormap
+		try:
+			cm = plt.cm.__dict__[prefs['color_cmap']]
+		except:
+			cm = plt.cm.rainbow
 	try:
 		cm.set_under(prefs['color_floorcolor'])
 	except:

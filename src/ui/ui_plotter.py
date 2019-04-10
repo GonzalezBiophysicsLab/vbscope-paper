@@ -374,15 +374,18 @@ class plotter_gui(ui_general.gui):
 				setup()
 
 	def plot_hist1d(self):
-		self.raise_plot('plot_hist1d', '1D Histogram', 1,1, lambda: plots.hist_1d.plot(self), plots.hist_1d.default_prefs,setup=lambda : plots.hist_1d.setup(self))
+		handle = 'plot_hist1d'
+		self.raise_plot(handle, '1D Histogram', 1,1, lambda: plots.hist_1d.plot(self), plots.hist_1d.default_prefs,setup=lambda : plots.hist_1d.setup(self))
 		plots.hist_1d.plot(self)
 
 	def plot_hist2d(self):
-		self.raise_plot('plot_hist2d', '2D Histogram', 1,1, lambda: plots.hist_2d.plot(self), plots.hist_2d.default_prefs)
+		handle = 'plot_hist2d'
+		self.raise_plot(handle, '2D Histogram', 1,1, lambda: plots.hist_2d.plot(self), plots.hist_2d.default_prefs)
 		plots.hist_2d.plot(self)
 
 	def plot_tdp(self):
-		self.raise_plot('plot_tdp', 'Transition Density Plot', 1,1, lambda: plots.tdp.plot(self), plots.tdp.default_prefs)
+		handle = 'plot_tdp'
+		self.raise_plot(handle, 'Transition Density Plot', 1,1, lambda: plots.tdp.plot(self), plots.tdp.default_prefs)
 		plots.tdp.plot(self)
 
 	def plot_acorr(self):

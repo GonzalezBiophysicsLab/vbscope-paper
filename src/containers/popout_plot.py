@@ -7,7 +7,7 @@ from matplotlib.widgets import  RectangleSelector
 
 from PyQt5.QtWidgets import QSizePolicy,QVBoxLayout,QWidget,QToolBar,QAction,QHBoxLayout,QPushButton,QMainWindow,QDockWidget
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QMouseEvent
 import numpy as np
 from ..ui.ui_prefs import preferences
 
@@ -54,7 +54,8 @@ class popout_plot_container_widget(QWidget):
 			'subplots_top':0.99,
 			'subplots_bottom':0.155,
 			'subplots_hspace':0.04,
-			'subplots_wspace':0.03
+			'subplots_wspace':0.03,
+			'mouse_location':False,
 		})
 
 		self.prefs.edit_callback = self.replot
@@ -74,6 +75,9 @@ class popout_plot_container_widget(QWidget):
 			self.ax = np.array([self.ax])
 		self.canvas = FigureCanvas(self.f)
 		self.toolbar = NavigationToolbar(self.canvas,None)
+
+		self.canvas.default_mouseMoveEvent = self.canvas.mouseMoveEvent
+		self.canvas.mouseMoveEvent = lambda e: self.ignore(e)
 
 		sp_fixed= QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 		sp_exp = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -109,9 +113,20 @@ class popout_plot_container_widget(QWidget):
 		self.setLayout(self.vbox)
 		self.f.tight_layout()
 
-		self.canvas.resizeEvent = lambda e: e.ignore()
-		self.f.resizeEvent = lambda e: e.ignore()
-		self.resizeEvent = lambda e: e.ignore()
+		self.canvas.resizeEvent = lambda e: self.ignore(e)
+		self.f.resizeEvent = lambda e: self.ignore(e)
+		self.resizeEvent = lambda e: self.ignore(e)
+
+
+	def ignore(self,e):
+		if type(e) is QMouseEvent:
+			if self.prefs['mouse_location']:
+				self.canvas.default_mouseMoveEvent(e)
+				return
+			else:
+				e.ignore()
+		else:
+			e.ignore()
 
 	def keyPressEvent(self,event):
 		if event.key() == Qt.Key_Escape and not self.prefs.le_filter.hasFocus():
@@ -187,6 +202,7 @@ class popout_plot_container_widget(QWidget):
 		self.canvas.update()
 		self.canvas.flush_events()
 		self.canvas.draw()
+
 
 	def figure_out_ticks(self,ymin,ymax,nticks):
 		m = nticks
