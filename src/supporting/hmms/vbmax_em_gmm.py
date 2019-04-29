@@ -101,7 +101,7 @@ def outer_loop(x,bg,nmax,mu,var,ppi,maxiters,threshold,prior_strengths):
 
 	## priors - from vbFRET
 	beta0 = prior_strengths[0] + np.zeros_like(mu)
-	m0 = mu + np.zeros_like(mu)
+	m0 = mu.copy() + np.zeros_like(mu)
 	a0 = prior_strengths[1] + np.zeros_like(mu)
 	b0 = prior_strengths[2] + np.zeros_like(mu)
 	alpha0 = prior_strengths[3] + np.zeros_like(mu)
@@ -161,6 +161,7 @@ def outer_loop(x,bg,nmax,mu,var,ppi,maxiters,threshold,prior_strengths):
 def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1e-6, prior_strengths=None, flag_report=True, init_kmeans = False):
 	'''
 	Data convention is NxK
+	bg should be the background normal, not the max val or min val
 	'''
 
 	if x.ndim != 1:
@@ -171,17 +172,11 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 		prior_strengths = np.array((0.25,2.5,.01,1.))
 
 	if initials is None:
-		mu,var,ppi = initialize_params(x[x>np.percentile(x,95)],nstates+1, init_kmeans)
+		mu,var,ppi = initialize_params(x,nstates+1, init_kmeans)
 	else:
 		mu,var,ppi = initials
-	# mu = mu.max()/np.arange(1,mu.size+1)[::-1]
-	# ppi = np.ones_like(mu)/mu.size
-	# from ml_em_gmm import ml_em_gmm
-	# o = ml_em_gmm(x,nstates+1)
-	# mu = o.mu[:-1]
-	# var = o.var[:-1]
-	# ppi = o.ppi[:-1]
-	# ppi /= ppi.sum() ## ignore outliers
+
+	# bgg = np.array([bg[0] + nmd._estimate_mu(nmax,bg[1]), bg[1] * nmd._estimate_var(nmax)])
 
 	r,a,b,m,beta,alpha,E_lnlam,E_lnpi,iteration,ll = outer_loop(x,bg,nmax,mu,var,ppi,maxiters,threshold,prior_strengths)
 

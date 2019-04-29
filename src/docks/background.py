@@ -21,9 +21,9 @@ class dock_background(QWidget):
 		self.default_prefs = default_prefs
 		self.gui = parent
 
-		self.method = 2
-		self.radius1 = .5
-		self.radius2 = 10
+		self.method = 4
+		self.radius1 = 1
+		self.radius2 = 5
 
 		layout = QGridLayout()
 
@@ -110,7 +110,17 @@ class dock_background(QWidget):
 
 		if not f1 is None and not f2 is None:
 			try:
-				data = f1(data,shape1) - f2(data,shape2)
+				out = np.zeros_like(data)
+
+				nc = self.gui.data.ncolors
+				regions,self.shifts = self.gui.data.regions_shifts()
+				for i in range(nc):
+					r = regions[i]
+					if data.ndim == 3:
+						out[:, r[0][0]:r[0][1], r[1][0]:r[1][1]] = f1(data[:, r[0][0]:r[0][1], r[1][0]:r[1][1]], shape1) - f2(data[:,r[0][0]:r[0][1],r[1][0]:r[1][1]],shape2)
+					if data.ndim == 2:
+						out[r[0][0]:r[0][1],r[1][0]:r[1][1]] = f1(data[r[0][0]:r[0][1],r[1][0]:r[1][1]],shape1) - f2(data[r[0][0]:r[0][1],r[1][0]:r[1][1]],shape2)
+				return out
 			except:
 					print('wtf')
 

@@ -98,13 +98,13 @@ def _estimate_var(n):
 # @nb.jit(["double[:](double[:],int32)","double[:](float32[:],int64)"],nopython=True)
 def estimate_from_min(d,n):
 	v = np.var(d)  * _estimate_var(n)
-	m = np.mean(d) + _estimate_mu(n,v)
+	m = np.median(d) + _estimate_mu(n,v)
 	return np.array((m,v))
 
 # @nb.jit(["double[:](double[:],int32)","double[:](float32[:],int64)"],nopython=True)
 def estimate_from_max(d,n):
 	v = np.var(d)  * _estimate_var(n)
-	m = np.mean(d) - _estimate_mu(n,v)
+	m = np.median(d) - _estimate_mu(n,v)
 	return np.array((m,v))
 
 
