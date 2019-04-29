@@ -11,6 +11,7 @@ from src import docks
 from src.containers import data_container
 from src.containers import popout_plot_container
 from src import plots
+from .ui_ensemble_plot import gui_ensemble_plot
 
 default_prefs = {
 	'render_title':'vbscope',
@@ -38,6 +39,7 @@ class vbscope_gui(movie_viewer):
 
 		self.prefs['ui_width']  = (QDesktopWidget().availableGeometry(self).size() * 0.7).width()
 		self.prefs['ui_height'] = (QDesktopWidget().availableGeometry(self).size() * 0.7).height()
+		self.move(0,0)
 
 		self.ui_update()
 		self.show()
@@ -73,7 +75,6 @@ class vbscope_gui(movie_viewer):
 			menu_analysis.addAction(self.docks[mm][0].toggleViewAction())
 		self.menu_movie.addAction(self.docks['tag_viewer'][0].toggleViewAction())
 
-
 	def setup_vbscope_plots(self):
 		menu_plot = self.menubar.addMenu('Plots')
 		plt_region = QAction('Region plot',self)
@@ -85,6 +86,10 @@ class vbscope_gui(movie_viewer):
 		self.popout_plots = {
 			'plot_region':None
 		}
+
+		plots_ensemble = QAction('Ensemble Plots',self)
+		plots_ensemble.triggered.connect(self.show_ensemble_plot)
+		menu_plot.addAction(plots_ensemble)
 		self.ui_update()
 
 	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots=1,callback=None,dprefs=None):
@@ -115,6 +120,16 @@ class vbscope_gui(movie_viewer):
 			self.docks['spotfind'][1].setup_sliders()
 			self.docks['spotfind'][1].flush_old()
 			self.docks['tag_viewer'][1].init_model()
+
+	def show_ensemble_plot(self):
+		try:
+			if not self.ui_ensemble_plot.isVisible():
+				self.ui_ensemble_plot.setVisible(True)
+			self.ui_ensemble_plot.raise_()
+		except:
+			self.ui_ensemble_plot = gui_ensemble_plot(self)
+			self.ui_ensemble_plot.setWindowTitle('Ensemble Plots')
+			self.ui_ensemble_plot.show()
 
 
 def launch_vbscope(scriptable=True):

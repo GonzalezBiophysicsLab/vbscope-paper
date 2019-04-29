@@ -17,7 +17,8 @@ default_prefs = {
 	'extract_magnification':60.0,
 	'extract_binning':2,
 	'extract_nintegrate':7,
-	'extract_ml_psf_maxiters':1000
+	'extract_ml_psf_maxiters':1000,
+	'extract_fast_avg':False,
 }
 
 class dock_extract(QWidget):
@@ -345,12 +346,12 @@ class dock_extract(QWidget):
 			if not self.flag_cancel:
 				if i%10 == 0:
 					if i > 0:
-						prog.setLabelText('Fitting spot %d/%d\nAvg. time/fit = %f s'%(i+1,out.shape[1],np.mean(ts[1:])))
+						prog.setLabelText('Fitting spot %d/%d\nAvg. time/fit = %f s'%(i+1,out.shape[1],np.mean(ts[-10:])))
 					prog.setValue(i)
 					self.gui.app.processEvents()
 				try:
 					t0 = time()
-					o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['extract_ml_psf_maxiters'])
+					o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['extract_ml_psf_maxiters'],fastflag=self.gui.prefs['extract_fast_avg'])
 					t1 = time()
 					out[:,i] = o
 					ts.append(t1-t0)

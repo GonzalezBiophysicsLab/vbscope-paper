@@ -180,20 +180,31 @@ def fit(l,z,s,xy):
 # 	return out
 
 from scipy.special import erf
-from scipy.ndimage import center_of_mass as com
+# from scipy.ndimage import center_of_mass as com
+# from .numba_math import erf
+## numba doesn't really speed this up.....
+def ml_psf(l,z,sigma,xyi,maxiters=1000,fastflag=False):
 
-def ml_psf(l,z,sigma,xyi,maxiters=1000):
-	# try:
-	if 1:
+	try:
+	# if 1:
 		xmin = int(max(0,xyi[0]-l))
 		xmax = int(min(z.shape[1]-1,xyi[0]+l) + 1)
 		ymin = int(max(0,xyi[1]-l))
 		ymax = int(min(z.shape[2]-1,xyi[1]+l) + 1)
 
+		# gx = np.zeros((xmax-xmin,ymax-ymin),dtype=nb.double)
+		# gy = np.zeros_like(gx)
+		# m = np.zeros((z.shape[0],gx.shape[0],gx.shape[1]),dtype=nb.double)
+		# for i in range(xmin,xmax):
+		# 	for j in range(ymin,ymax):
+		# 		gx[i-xmin,j-ymin] = float(i)
+		# 		gy[i-xmin,j-ymin] = float(j)
+		# 		for t in range(z.shape[0]):
+		# 			m[t,i-xmin,j-ymin] = float(z[t,i,j])
 		gx,gy = np.mgrid[xmin:xmax,ymin:ymax]
-		gx = gx.astype('f')
-		gy = gy.astype('f')
-		m = z[:,xmin:xmax,ymin:ymax].astype('f')
+		gx = gx.astype('f').flatten()
+		gy = gy.astype('f').flatten()
+		m = z[:,xmin:xmax,ymin:ymax].astype('f').reshape((z.shape[0],gx.size))
 
 		## Find COM
 		# xyi = com(m.sum(0)) + xyi - l
@@ -203,22 +214,50 @@ def ml_psf(l,z,sigma,xyi,maxiters=1000):
 		psi = dex*dey
 
 		# b = np.mean(m*(1.-psi[None,:,:]),axis=(1,2))
-		b = np.mean(m,axis=(1,2))
-		n = z[:,np.round(xyi[0]).astype('i'),np.round(xyi[1]).astype('i')]
+		# b = np.zeros(m.shape[0],dtype=nb.double)
+		# n = np.zeros_like(b)
+		# for t in range(b.size):
+		# 	b[t] = np.min(m[t])
+		# 	n[t] = np.max(m[t]-b[t])
+		# b = np.mean(m,axis=(1,2))
+		# b = np.mean(m,axis=(1))
+		# n = z[:,int(np.round(xyi[0])),int(np.round(xyi[1]))]
+		b = np.min(m,axis=1)
+		n = np.max(m,axis=1)-b
 		# n = ((m-b[:,None,None])*psi[None,:,:]).sum((1,2))/np.sum(psi**2.)
+
 
 		n0 = n.sum()
 		psum = np.sum(psi**2.)
+		if fastflag:
+			npm = np.mean
+		else:
+			npm = np.median
 
-		for it in range(maxiters):
-			b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
-			n = np.sum((m - b[:,None,None])*psi[None,:,:],axis=(1,2))/np.sum(psi**2.)
+		for iter in range(maxiters):
+			# for t in range(b.size):
+			# 	b[t] = np.median(m[t] - n[t]*psi)
+			# 	n[t] = np.sum((m[t] - b[t])*psi)/psum
+
+			## b = np.mean(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
+			# b = np.median(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
+			# n = np.sum((m - b[:,None,None])*psi[None,:,:],axis=(1,2))/np.sum(psi**2.)
+
+			b = npm(m - n[:,None]*psi[None,:],axis=(1))
+			n = np.sum((m - b[:,None])*psi[None,:],axis=(1))/psum
 			n1 = n.sum()
-			if np.isclose(n1,n0):
+
+			if np.abs((n1-n0)/n0) < 1e-5:
 				break
 			else:
 				n0 = n1
-	# except:
-	# 	n = np.zeros(z.shape[0])
-	# 	b = np.zeros(z.shape[0])
+				# iter += 1
+		if fastflag:
+			b = np.median(m - n[:,None]*psi[None,:],axis=(1))
+			n = np.sum((m - b[:,None])*psi[None,:],axis=(1))/psum
+		# b = np.median(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
+		# n = np.sum((m - b[:,None,None])*psi[None,:,:],axis=(1,2))/np.sum(psi**2.)
+	except:
+		n = np.zeros(z.shape[0])
+		b = np.zeros(z.shape[0])
 	return n
