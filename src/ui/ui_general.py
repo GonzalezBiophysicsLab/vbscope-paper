@@ -39,7 +39,7 @@ class gui(QMainWindow):
 
 	## add_dock - add a dock
 
-	def __init__(self,app=None,main_widget=None):
+	def __init__(self,app=None,main_widget=None,flag_floatprefs=False):
 		super(QMainWindow,self).__init__()
 		self.app = app
 		self.app_name = ""
@@ -61,9 +61,13 @@ class gui(QMainWindow):
 		self.qd_prefs.setWidget(self.prefs)
 		self.qd_prefs.setAllowedAreas( Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		self.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
-		self.qd_prefs.setFloating(True)
-		self.qd_prefs.hide()
-		self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
+
+		if not flag_floatprefs:
+			self.addDockWidget(Qt.LeftDockWidgetArea, self.qd_prefs)
+		else:
+			self.qd_prefs.setFloating(True)
+			self.qd_prefs.hide()
+			self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
 
 #		qInstallMessageHandler(self.error_handler)
 

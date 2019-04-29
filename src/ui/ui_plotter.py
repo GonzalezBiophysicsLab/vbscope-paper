@@ -71,7 +71,7 @@ class plotter_gui(ui_general.gui):
 		self.data = traj_container(self)
 
 		self._main_widget = QWidget()
-		super(plotter_gui,self).__init__(self.gui.app,self._main_widget)
+		super(plotter_gui,self).__init__(self.gui.app,self._main_widget,flag_floatprefs=True)
 		self.prefs.add_dictionary(default_prefs)
 		try:
 			self.prefs.load_preferences(fname='./prefs.txt')
