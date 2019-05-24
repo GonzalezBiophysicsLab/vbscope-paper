@@ -19,6 +19,7 @@ matplotlib.rcParams['figure.facecolor'] = 'white'
 from . import ui_general
 from .ui_batch_loader import gui_batch_loader
 from .ui_trace_filter import gui_trace_filter
+from .ui_classifier import gui_classifier
 from ..containers import traj_plot_container, traj_container, popout_plot_container
 from .. import plots
 
@@ -201,7 +202,11 @@ class plotter_gui(ui_general.gui):
 
 # 		### Load
 		menu_load = self.menubar.addMenu('Load')
-		load_load_traces = QAction('Load Traces', self, shortcut='Ctrl+O')
+
+		load_load_data = QAction('Load Data', self, shortcut='Ctrl+O')
+		load_load_data.triggered.connect(lambda event: self.load_hdf5())
+
+		load_load_traces = QAction('Load Traces', self)
 		load_load_traces.triggered.connect(lambda event: self.load_traces())
 
 		load_load_classes = QAction('Load Classes', self, shortcut='Ctrl+P')
@@ -213,25 +218,28 @@ class plotter_gui(ui_general.gui):
 		load_batch = QAction('Batch Load',self, shortcut='Ctrl+B')
 		load_batch.triggered.connect(self.show_batch_load)
 
-		for f in [load_load_traces,load_load_classes,load_load_hmm,load_batch]:
+		for f in [load_load_data,load_load_traces,load_load_classes,load_load_hmm,load_batch]:
 			menu_load.addAction(f)
 			#
 		### save
 		menu_save = self.menubar.addMenu('Export')
 
-		export_traces = QAction('Save Traces', self, shortcut='Ctrl+S')
+		export_traces = QAction('Save Traces', self)
 		export_traces.triggered.connect(lambda event: self.export_traces())
+
+		export_data = QAction('Save Data', self, shortcut='Ctrl+S')
+		export_data.triggered.connect(lambda event: self.export_hdf5())
 
 		export_processed_traces = QAction('Save Processed Traces', self)
 		export_processed_traces.triggered.connect(lambda event: self.export_processed_traces())
 
-		export_classes = QAction('Save Classes', self, shortcut='Ctrl+D')
+		export_classes = QAction('Save Classes', self)
 		export_classes.triggered.connect(lambda event: self.export_classes())
 
 		export_hmm = QAction('Save HMM',self)
 		export_hmm.triggered.connect(lambda event: self.data.hmm_export(prompt_export=True))
 
-		for f in [export_traces,export_classes,export_processed_traces,export_hmm]:
+		for f in [export_data,export_traces,export_classes,export_processed_traces,export_hmm]:
 			menu_save.addAction(f)
 
 		### tools
@@ -276,6 +284,9 @@ class plotter_gui(ui_general.gui):
 		tools_filter = QAction('Filter Traces',self, shortcut='Ctrl+F')
 		tools_filter.triggered.connect(self.show_trace_filter)
 
+		tools_select = QAction('Selection Classifier',self)
+		tools_select.triggered.connect(self.show_classifier)
+
 		# for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_step,tools_stepfret,tools_remove,tools_dead,tools_hmm]:
 		for f in [tools_cullpb,tools_cullmin,tools_cullmax,tools_cullphotons,tools_filter]:
 			menu_cull.addAction(f)
@@ -283,7 +294,7 @@ class plotter_gui(ui_general.gui):
 			menu_photobleach.addAction(f)
 		for f in [menu_cull,menu_photobleach]:
 			menu_tools.addMenu(f)
-		for f in [tools_remove,tools_dead,tools_order]:
+		for f in [tools_remove,tools_dead,tools_order,tools_select]:
 			menu_tools.addAction(f)
 		for f in [tools_vbhmm,tools_vbhmmmodel,tools_conhmm,tools_conhmmmodel,tools_mlhmm]:
 			menu_hmm.addAction(f)
@@ -546,6 +557,16 @@ class plotter_gui(ui_general.gui):
 			m.setChecked(not m.isChecked())
 
 ################################################################################
+
+	def show_classifier(self):
+		try:
+			if not self.ui_classifier.isVisible():
+				self.ui_classifier.setVisible(True)
+			self.ui_classifier.raise_()
+		except:
+			self.ui_classifier = gui_classifier(self)
+			self.ui_classifier.setWindowTitle('Selection Classifier')
+			self.ui_classifier.show()
 
 	def show_trace_filter(self):
 		try:
@@ -852,6 +873,77 @@ class plotter_gui(ui_general.gui):
 
 					except:
 						QMessageBox.critical(self,'Export Processed Traces','There was a problem trying to export the processed traces')
+
+	def load_hdf5(self,filename=None,checked=False,ncolors=2):
+		if filename is None:
+			fname,_ = QFileDialog.getOpenFileName(self,'Choose file to load data','./')
+			if fname is "":
+				return
+		else:
+			fname = filename
+
+		if not fname is "":
+			success = False
+			import h5py
+			try:
+				f = h5py.File(fname,'r')
+				d = f['data'][:]
+				ncolors = d.shape[1]
+				classes = f['class'][:]
+				pre_list = f['pre_time'][:]
+				post_list = f['post_time'][:]
+				f.close()
+
+				self.initialize_data(d,sort=False)
+				self.initialize_sliders()
+				self.plot.index = 0
+
+				self.data.class_list = classes
+				self.data.pre_list = pre_list
+				self.data.pb_list = post_list
+				self.plot.initialize_plots()
+
+				self.data.calc_all_cc()
+
+				self.plot.update_plots()
+				self.update_display_traces()
+
+				self.log("Loaded data from %s"%(fname),True)
+				return
+			except:
+				self.log("Could not load %s"%(fname),True)
+
+	def export_hdf5(self,oname = None):
+		n = self.ncolors
+		if self.data.d is None:
+			return
+		if oname is None:
+			oname = QFileDialog.getSaveFileName(self, 'Export data', '.hdf5','*.hdf5')
+		else:
+			oname = [oname]
+		if oname[0] != "":
+			try:
+				checked = self.classes_get_checked()
+
+				import h5py
+				f = open(oname[0],'w')
+				f.close()
+				f = h5py.File(oname[0],'w')
+				f.attrs['type'] = 'vbscope'
+				f.attrs['ncolors'] = n
+				f.create_dataset('data',data=self.data.d[checked],dtype='float32',compression="gzip")
+				f.flush()
+				f.create_dataset('pre_time',data=self.data.pre_list[checked],dtype='int32',compression="gzip")
+				f.create_dataset('post_time',data=self.data.pb_list[checked],dtype='int32',compression="gzip")
+				f.create_dataset('class',data=self.data.class_list[checked],dtype='int8',compression="gzip")
+				f.flush()
+				f.close()
+				self.log("Exported data",True)
+
+			except:
+				msg = 'There was a problem trying to export the traces'
+				QMessageBox.critical(self,'Export Data',msg)
+
 
 	## Save raw donor-acceptor trajectories (bleedthrough corrected) in vbscope format (commas)
 	def export_traces(self,oname = None):
