@@ -629,22 +629,38 @@ class plotter_gui(ui_general.gui):
 			ds = []
 			cs = []
 			for i in range(len(ltraj)):
-				try:
-					# d = np.loadtxt(ltraj[i],delimiter=',').T
-					d = self.quicksafe_load(ltraj[i]).T
-					dd = np.array([d[j::ncolors] for j in range(ncolors)])
-					d = np.moveaxis(dd,1,0)
+				# try:
+				if 1:
+					if ltraj[i].endswith('.hdf5'):
+						import h5py
+						f = h5py.File(ltraj[i],'r')
+						d = f['data'][:]
+						c = np.zeros((d.shape[0],5),dtype='int32')
+						c[:,0] = f['class'][:]
+						c[:,1] = f['pre_time'][:]
+						c[:,3] = c[:,1].copy()
+						c[:,2] = f['post_time'][:]
+						c[:,4] = c[:,2].copy()
+						f.close()
+						ds.append(d)
+						cs.append(c)
 
-					if not lclass[i] is None:
-						# c = np.loadtxt(lclass[i],delimiter=',').astype('i')
-						c = self.quicksafe_load(lclass[i]).astype('i')
 					else:
-						c = np.zeros((d.shape[0],1+2*ncolors),dtype='i')
-						c[:,2::2] = d.shape[2]
-					ds.append(d)
-					cs.append(c)
-				except:
-					self.log("Could not load:\n\t%s\n\t%s"%(ltraj[i],lclass[i]),True)
+						# d = np.loadtxt(ltraj[i],delimiter=',').T
+						d = self.quicksafe_load(ltraj[i]).T
+						dd = np.array([d[j::ncolors] for j in range(ncolors)])
+						d = np.moveaxis(dd,1,0)
+
+						if not lclass[i] is None:
+							# c = np.loadtxt(lclass[i],delimiter=',').astype('i')
+							c = self.quicksafe_load(lclass[i]).astype('i')
+						else:
+							c = np.zeros((d.shape[0],1+2*ncolors),dtype='i')
+							c[:,2::2] = d.shape[2]
+						ds.append(d)
+						cs.append(c)
+				# except:
+					# self.log("Could not load:\n\t%s\n\t%s"%(ltraj[i],lclass[i]),True)
 
 			if len(cs) > 0:
 				cc = np.concatenate(cs,axis=0)
@@ -666,6 +682,8 @@ class plotter_gui(ui_general.gui):
 				self.data.pre_list = cc[:,1::2].max(1)
 				self.data.pb_list = cc[:,2::2].min(1)
 				self.plot.update_plots()
+
+				print(np.sum(np.isnan(self.data.pre_list)),np.sum(np.isnan(self.data.pb_list)),np.sum(np.isnan(self.data.class_list)))
 
 				try:
 					self.ui_batch.close()
