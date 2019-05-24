@@ -634,7 +634,7 @@ class plotter_gui(ui_general.gui):
 					if ltraj[i].endswith('.hdf5'):
 						import h5py
 						f = h5py.File(ltraj[i],'r')
-						d = f['data'][:]
+						d = f['data'][:].astype('double')
 						c = np.zeros((d.shape[0],5),dtype='int32')
 						c[:,0] = f['class'][:]
 						c[:,1] = f['pre_time'][:]
@@ -905,7 +905,7 @@ class plotter_gui(ui_general.gui):
 			import h5py
 			try:
 				f = h5py.File(fname,'r')
-				d = f['data'][:]
+				d = f['data'][:].astype('double')
 				ncolors = d.shape[1]
 				classes = f['class'][:]
 				pre_list = f['pre_time'][:]
