@@ -127,11 +127,11 @@ class classifier(QWidget):
 		## Process the phrases
 		params = {
 			'pre':'self.gui.data.pre_list',
-			'post':'self.gui.data.pb_list',
-			'length':'self.gui.data.pb_list - self.gui.data.pre_list',
+			'post':'self.gui.data.post_list',
+			'length':'self.gui.data.post_list - self.gui.data.pre_list',
 			'class':'self.gui.data.class_list',
-			'all':'np.ones(self.gui.data.pb_list.size,dtype=\'bool\')',
-			'none':'np.zeros(self.gui.data.pb_list.size,dtype=\'bool\')',
+			'all':'np.ones(self.gui.data.post_list.size,dtype=\'bool\')',
+			'none':'np.zeros(self.gui.data.post_list.size,dtype=\'bool\')',
 		}
 
 		for i in range(len(ss)):

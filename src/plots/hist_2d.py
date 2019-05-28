@@ -109,7 +109,7 @@ def get_data(gui):
 			y = fpb[i].copy()
 			fpb[i] = np.nan
 			pre = gui.data.pre_list[i]
-			post = gui.data.pb_list[i]
+			post = gui.data.post_list[i]
 			if pre < post:
 				yy = y[pre:post]
 				if popplot.prefs['filter']:

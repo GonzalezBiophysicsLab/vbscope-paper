@@ -167,7 +167,7 @@ class traj_plot_container():
 			ll = t.size / downsample
 			intensities = np.array([np.sum(intensities[i,:ll*downsample].reshape((ll,downsample)),axis=1) for i in range(self.gui.ncolors)])
 			t = t[:ll*downsample].reshape((ll,downsample))[:,0]
-		pbtime = int(self.gui.data.pb_list[self.index] / downsample)
+		pbtime = int(self.gui.data.post_list[self.index] / downsample)
 		pretime = int(self.gui.data.pre_list[self.index] / downsample)
 
 		rel = intensities[1:] / (1e-300+intensities.sum(0)[None,:])

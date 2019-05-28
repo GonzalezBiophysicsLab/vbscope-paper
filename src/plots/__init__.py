@@ -7,3 +7,4 @@ from . import intensities
 from . import crosscorr
 from . import vb_states
 from . import autocorr
+from . import photobleach

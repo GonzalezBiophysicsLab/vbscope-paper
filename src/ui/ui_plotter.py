@@ -110,6 +110,7 @@ class plotter_gui(ui_general.gui):
 		self.prefs.commands['run hmm'] = self.data.run_vbhmm_model
 		self.prefs.commands['photobleach'] = self.data.photobleach_step
 		self.prefs.commands['hist1d'] = self.plot_hist1d
+		self.prefs.commands['photobleach'] = self.plot_photobleach
 		self.prefs.commands['hist2d'] = self.plot_hist2d
 		self.prefs.commands['acorr'] = self.plot_acorr
 		self.prefs.commands['cycle'] = self.cycle_batch
@@ -188,7 +189,7 @@ class plotter_gui(ui_general.gui):
 		## Calculate/set photobleaching, initialize class list
 		self.data.update_fret()
 		self.data.pre_list = np.zeros(self.data.d.shape[0],dtype='i')
-		self.data.pb_list = self.data.pre_list.copy() + self.data.d.shape[2]
+		self.data.post_list = self.data.pre_list.copy() + self.data.d.shape[2]
 		self.data.class_list = np.zeros(self.data.d.shape[0])
 
 		self.data.calc_all_cc()
@@ -306,6 +307,8 @@ class plotter_gui(ui_general.gui):
 		### plots
 		menu_plots = self.menubar.addMenu('Plots')
 
+		plots_photobleach = QAction('Photobleaching', self)
+		plots_photobleach.triggered.connect(self.plot_photobleach)
 		plots_1d = QAction('1D Histogram', self)
 		plots_1d.triggered.connect(self.plot_hist1d)
 		plots_2d = QAction('2D Histogram', self)
@@ -323,7 +326,7 @@ class plotter_gui(ui_general.gui):
 		plots_vb_states = QAction('VB States', self)
 		plots_vb_states.triggered.connect(self.plot_vb_states)
 
-		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_acorr, plots_intensities,plots_crosscorr,plots_vb_states]:
+		for f in [plots_1d,plots_2d,plots_tdp, plots_tranM, plots_acorr, plots_intensities,plots_crosscorr,plots_vb_states,plots_photobleach]:
 			menu_plots.addAction(f)
 
 		### classes
@@ -362,7 +365,8 @@ class plotter_gui(ui_general.gui):
 			'plot_acorr':None,
 			'plot_tranM':None,
 			'plot_intensities':None,
-			'crosscorr':None
+			'crosscorr':None,
+			'photobleach':None,
 		}
 
 	def raise_plot(self,plot_handle,plot_name_str="Plot",nplots_x=1, nplots_y=1,callback=None,dprefs=None,setup=None):
@@ -383,6 +387,11 @@ class plotter_gui(ui_general.gui):
 			self.popout_plots[plot_handle].ui.clf()
 			if not setup is None:
 				setup()
+
+	def plot_photobleach(self):
+		handle = 'plot_photobleach'
+		self.raise_plot(handle, 'Photobleaching', 1,1, lambda: plots.photobleach.plot(self), plots.photobleach.default_prefs,setup=lambda : plots.photobleach.setup(self))
+		plots.photobleach.plot(self)
 
 	def plot_hist1d(self):
 		handle = 'plot_hist1d'
@@ -444,7 +453,7 @@ class plotter_gui(ui_general.gui):
 
 		if kk == Qt.Key_R:
 			self.data.pre_list[self.plot.index] = 0
-			self.data.pb_list[self.plot.index] = self.data.d.shape[2]-1
+			self.data.post_list[self.plot.index] = self.data.d.shape[2]-1
 			self.data.safe_hmm()
 			self.plot.update_plots()
 			return
@@ -462,7 +471,7 @@ class plotter_gui(ui_general.gui):
 					qq = self.data.d[self.plot.index].sum(0)
 				else:
 					qq = self.data.d[self.plot.index,1]
-				self.data.pb_list[self.plot.index] = get_point_pbtime(qq,1.,1.,1.,1000.)
+				self.data.post_list[self.plot.index] = get_point_pbtime(qq,1.,1.,1.,1000.)
 				self.data.safe_hmm()
 				self.plot.update_plots()
 				return
@@ -493,7 +502,7 @@ class plotter_gui(ui_general.gui):
 			try:
 				## Right click - set photobleaching point
 				if event.button == 3 and self.plot.toolbar._active is None:
-					self.data.pb_list[self.plot.index] = int(np.round(event.xdata/self.prefs['tau']))
+					self.data.post_list[self.plot.index] = int(np.round(event.xdata/self.prefs['tau']))
 					self.data.safe_hmm()
 					self.plot.update_plots()
 				## Left click - set pre-truncation point
@@ -510,7 +519,7 @@ class plotter_gui(ui_general.gui):
 							qq = self.data.d[self.plot.index].sum(0)
 						else:
 							qq = self.data.d[self.plot.index,1]
-						self.data.pb_list[self.plot.index] = get_point_pbtime(qq,1.,1.,1.,1000.)
+						self.data.post_list[self.plot.index] = get_point_pbtime(qq,1.,1.,1.,1000.)
 						self.data.safe_hmm()
 						self.plot.update_plots()
 			except:
@@ -522,7 +531,7 @@ class plotter_gui(ui_general.gui):
 		# # try:
 		# 	# self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} - {n4:2f}".format(n1 = self.plot.index + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[self.plot.index]), n4=self.data.deadprob[self.plot.index], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
 		# 	i = self.plot.index
-		# 	# dd = self.data.d[i,:,self.data.pre_list[i]:self.data.pb_list[i]]
+		# 	# dd = self.data.d[i,:,self.data.pre_list[i]:self.data.post_list[i]]
 		# 	self.label_current.setText("{n1:0{w}} / {n2:0{w}} - {n3:1d} : {n4:.2e}".format(n1 = i + 0, n2 = self.data.d.shape[0] - 1, n3 = int(self.data.class_list[i]), n4=self.data.cc_list[i], w =int(np.floor(np.log10(self.data.d.shape[0]))+1)))
 		# # except:
 		# 	# pass
@@ -680,10 +689,10 @@ class plotter_gui(ui_general.gui):
 
 				self.data.class_list = cc[:,0]
 				self.data.pre_list = cc[:,1::2].max(1)
-				self.data.pb_list = cc[:,2::2].min(1)
+				self.data.post_list = cc[:,2::2].min(1)
 				self.plot.update_plots()
 
-				print(np.sum(np.isnan(self.data.pre_list)),np.sum(np.isnan(self.data.pb_list)),np.sum(np.isnan(self.data.class_list)))
+				print(np.sum(np.isnan(self.data.pre_list)),np.sum(np.isnan(self.data.post_list)),np.sum(np.isnan(self.data.class_list)))
 
 				try:
 					self.ui_batch.close()
@@ -781,7 +790,7 @@ class plotter_gui(ui_general.gui):
 			if success:
 				self.data.class_list = d[:,0]
 				self.data.pre_list = d[:,1::2].max(1)
-				self.data.pb_list = d[:,2::2].min(1)
+				self.data.post_list = d[:,2::2].min(1)
 				self.data.calc_all_cc()
 				if filename is None:
 					self.plot.update_plots()
@@ -822,7 +831,7 @@ class plotter_gui(ui_general.gui):
 							for i in range(dd.shape[0]):
 								if checked[i] == 1:
 									pre = self.data.pre_list[i]
-									post = self.data.pb_list[i]
+									post = self.data.post_list[i]
 									identities = np.append(identities, np.repeat(j,post-pre))
 									for k in range(self.ncolors):
 										ds[k] = np.append(ds[k],dd[i,k,pre:post])
@@ -840,7 +849,7 @@ class plotter_gui(ui_general.gui):
 							# Photobleaching
 							for i in range(dd.shape[0]):
 								pre = self.data.pre_list[i]
-								post = self.data.pb_list[i]
+								post = self.data.post_list[i]
 								dd[i,:,:post-pre] = dd[i,:,pre:post]
 								dd[i,:,post-pre:] = np.nan
 
@@ -874,7 +883,7 @@ class plotter_gui(ui_general.gui):
 							for i in range(dd.shape[0]):
 								if checked[i] == 1:
 									pre = self.data.pre_list[i]
-									post = self.data.pb_list[i]
+									post = self.data.post_list[i]
 									hashed= md5(teatime + str(np.random.rand())).hexdigest()
 									spoofid = np.array([hashed], dtype='<U38')
 									o = np.array((spoofid,np.arange(post-pre),np.vstack((np.zeros(post-pre),dd[i,:,pre:post])).T,fake_attr),dtype=dt)
@@ -918,7 +927,7 @@ class plotter_gui(ui_general.gui):
 
 				self.data.class_list = classes
 				self.data.pre_list = pre_list
-				self.data.pb_list = post_list
+				self.data.post_list = post_list
 				self.plot.initialize_plots()
 
 				self.data.calc_all_cc()
@@ -952,7 +961,7 @@ class plotter_gui(ui_general.gui):
 				f.create_dataset('data',data=self.data.d[checked],dtype='float32',compression="gzip")
 				f.flush()
 				f.create_dataset('pre_time',data=self.data.pre_list[checked],dtype='int32',compression="gzip")
-				f.create_dataset('post_time',data=self.data.pb_list[checked],dtype='int32',compression="gzip")
+				f.create_dataset('post_time',data=self.data.post_list[checked],dtype='int32',compression="gzip")
 				f.create_dataset('class',data=self.data.class_list[checked],dtype='int8',compression="gzip")
 				f.flush()
 				f.close()
@@ -997,7 +1006,7 @@ class plotter_gui(ui_general.gui):
 			q[:,0] = self.data.class_list
 			for i in range(n):
 				q[:,1+2*i] = self.data.pre_list
-				q[:,1+2*i+1] = self.data.pb_list
+				q[:,1+2*i+1] = self.data.post_list
 			checked = self.classes_get_checked()
 			q = q[checked]
 

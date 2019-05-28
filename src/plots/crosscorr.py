@@ -23,7 +23,7 @@ def get_data(gui):
 					d[i,j] = wiener(d[i,j])
 				except:
 					pass
-	q = np.array([gui.data.calc_cross_corr(d[i,:,gui.data.pre_list[i]:gui.data.pb_list[i]]) for i in range(d.shape[0])])
+	q = np.array([gui.data.calc_cross_corr(d[i,:,gui.data.pre_list[i]:gui.data.post_list[i]]) for i in range(d.shape[0])])
 	checked = gui.classes_get_checked()
 	n = np.arange(q.size)
 	return n[checked],q[checked]

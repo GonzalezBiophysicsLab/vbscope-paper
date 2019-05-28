@@ -12,7 +12,7 @@ class traj_container():
 		self.hmm_result = None
 		self.d = None
 		self.pre_list = np.array(())
-		self.pb_list = np.array(())
+		self.post_list = np.array(())
 		self.class_list = np.array((()))
 		self.fret = np.array(())
 
@@ -62,14 +62,14 @@ class traj_container():
 			return np.zeros_like(x)
 
 	def calc_all_cc(self):
-		self.cc_list = np.array([self.calc_cross_corr(self.d[j,:,self.pre_list[j]:self.pb_list[j]])[0] for j in range(self.d.shape[0])])
+		self.cc_list = np.array([self.calc_cross_corr(self.d[j,:,self.pre_list[j]:self.post_list[j]])[0] for j in range(self.d.shape[0])])
 
 	def cross_corr_order(self):
 		self.calc_all_cc()
 		order = self.cc_list.argsort()
 		self.d = self.d[order]
 		self.pre_list = self.pre_list[order]
-		self.pb_list = self.pb_list[order]
+		self.post_list = self.post_list[order]
 		self.class_list = self.class_list[order]
 		if not self.hmm_result is None:
 			if self.hmm_result.type is 'consensus vbfret':
@@ -147,7 +147,7 @@ class traj_container():
 	def cull_pb(self):
 		if not self.d is None and self.gui.ncolors == 2:
 			self.safe_hmm()
-			dt = self.pb_list-self.pre_list
+			dt = self.post_list-self.pre_list
 			keep = dt > self.gui.prefs['min_length']
 
 			if self.remove_traces(keep):
@@ -165,12 +165,12 @@ class traj_container():
 			return False
 		else:
 			d = self.d[mask]
-			pbt = self.pb_list[mask].copy()
+			pbt = self.post_list[mask].copy()
 			pret = self.pre_list[mask].copy()
 			classes = self.class_list[mask].copy()
 			self.gui.plot.index = 0
 			self.gui.initialize_data(d,sort=False)
-			self.pb_list = pbt
+			self.post_list = pbt
 			self.pre_list = pret
 			self.class_list = classes
 			return True
@@ -213,7 +213,7 @@ class traj_container():
 		for j in range(self.gui.ncolors-1):
 			for i in range(fpb.shape[1]):
 				fpb[j][i,:self.pre_list[i]] = np.nan
-				fpb[j][i,self.pb_list[i]:] = np.nan
+				fpb[j][i,self.post_list[i]:] = np.nan
 				# if self.gui.prefs['synchronize_start_flag'] != 'True':
 				# 	fpb[j][i,:self.gui.prefs['plotter_min_time']] = np.nan
 				# 	fpb[j][i,self.gui.prefs['plotter_max_time']:] = np.nan
@@ -231,9 +231,9 @@ class traj_container():
 		if self.gui.ncolors == 2:
 			for i in range(d.shape[0]):
 				if checked[i]:
-					ff = d[i,1,self.pre_list[i]:self.pb_list[i]]
+					ff = d[i,1,self.pre_list[i]:self.post_list[i]]
 					pbt = get_point_pbtime(ff,1.,1.,1.,1000.)
-					self.pb_list[i] = self.pre_list[i]+pbt
+					self.post_list[i] = self.pre_list[i]+pbt
 		self.gui.log('Removed acceptor bleaching from FRET range',True)
 
 
@@ -248,13 +248,13 @@ class traj_container():
 						vi = self.hmm_result.result.viterbi[ii]
 						if signal:
 							vi = self.hmm_result.result.m[vi]
-						v[i,self.pre_list[i]:self.pb_list[i]] = vi
+						v[i,self.pre_list[i]:self.post_list[i]] = vi
 					elif self.hmm_result.type == 'vb' or self.hmm_result.type == 'ml':
 						r = self.hmm_result.results[ii]
 						vi = r.viterbi
 						if signal:
 							vi = r.mu[vi]
-						v[i,self.pre_list[i]:self.pb_list[i]] = vi
+						v[i,self.pre_list[i]:self.post_list[i]] = vi
 
 			# if self.gui.prefs['synchronize_start_flag'] != 'True':
 			# 	v[i,:self.gui.prefs['plotter_min_time']] = np.nan
@@ -309,7 +309,7 @@ class traj_container():
 
 		for i in range(z.shape[0]):
 			if checked[i]:
-				yy = z[i,self.pre_list[i]:self.pb_list[i]].copy()
+				yy = z[i,self.pre_list[i]:self.post_list[i]].copy()
 				if color == 'E_FRET': ## Clip traces and redistribute randomly
 					bad = np.bitwise_or((yy < -1.),np.bitwise_or((yy > 2),np.isnan(yy)))
 					yy[bad] = np.random.uniform(low=-1,high=2,size=int(bad.sum()))
@@ -468,7 +468,7 @@ class traj_container():
 					v = self.hmm_result.results[j].viterbi
 
 				pre = int(self.pre_list[i])
-				post = int(self.pb_list[i])
+				post = int(self.post_list[i])
 				q = self.d[i,:,pre:post]
 
 				labels,numlabels = ndilabel(v)
@@ -810,8 +810,8 @@ class traj_container():
 			else:
 				qq = q[:,1]
 			l2 = pb_ensemble(qq)[1]
-			# self.pb_list = np.array([np.min((l1[i],l2[i])) for i in range(l1.size)])
-			self.pb_list = l2
+			# self.post_list = np.array([np.min((l1[i],l2[i])) for i in range(l1.size)])
+			self.post_list = l2
 			self.gui.log('Automated photobleaching ensemble method ran',True)
 			self.gui.plot.update_plots()
 
