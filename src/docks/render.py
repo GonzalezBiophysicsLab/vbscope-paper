@@ -4,7 +4,7 @@ from PyQt5.Qt import QFont
 
 import numpy as np
 
-from ..ui import progressbar
+from ..ui.ui_progressbar import progressbar
 
 class dock_render(QWidget):
 	def __init__(self,parent=None):

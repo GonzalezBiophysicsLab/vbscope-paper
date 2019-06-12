@@ -1,14 +1,46 @@
-from PyQt5.QtWidgets import QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget, QFileDialog
+from PyQt5.QtWidgets import QApplication,QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget, QFileDialog,QDesktopWidget
 from PyQt5.QtCore import Qt, qInstallMessageHandler
 from PyQt5.QtGui import QKeySequence
 
 import matplotlib
 matplotlib.use('Qt5Agg')
+import numpy as np
 
 from .ui_log import logger
 from .ui_prefs import preferences
+from .ui_progressbar import progressbar
 
-class gui(QMainWindow):
+from ..containers import data_container,plot_container
+from .. import docks
+
+# from src.ui import movie_viewer
+from src import docks
+from src.containers import data_container
+# from src import plots
+from .ui_ensemble_plot import gui_ensemble_plot
+
+
+default_prefs = {
+	'movie_playback_fps':100,
+	'movie_tau':1.,
+
+	'plot_colormap':'Greys_r',
+	'plot_contrast_scale':20.,
+
+	'render_renderer':'ffmpeg',
+	'render_title':'Movie Render',
+	'render_artist':'Movie Viewer',
+	'render_fps':100,
+	'render_codec':'h264',
+	'render_title':'vbscope',
+	'render_artist':'vbscope',
+	'plot_fontsize':12,
+
+	'channels_colors':['green','red','blue','purple'],
+	'channels_wavelengths':np.array((570.,680.,488.,800.))
+}
+
+class vbscope_gui(QMainWindow):
 	'''
 	UI Objects of Importance:
 		* app
@@ -39,55 +71,135 @@ class gui(QMainWindow):
 
 	## add_dock - add a dock
 
-	def __init__(self,app=None,main_widget=None,flag_floatprefs=False):
+	def __init__(self,app=None):
 		super(QMainWindow,self).__init__()
 		self.app = app
-		self.app_name = ""
+		self.app_name = "vbscope"
+		self.setWindowTitle(self.app_name)
 
-		if not main_widget is None:
-			self.setCentralWidget(main_widget)
+		self.data  = data_container(self)
+		self.plot  = plot_container()
+
+		self.setCentralWidget(self.plot.canvas)
 
 		self.closeEvent = self.safe_close
-
-		self.init_menus()
-		self.init_docks()
-		self.init_statusbar()
-		self.init_shortcuts()
 
 		self._log = logger()
 
 		self.prefs = preferences(self)
+		self.prefs.add_dictionary(default_prefs)
+
 		self.qd_prefs = QDockWidget("Preferences",self)
 		self.qd_prefs.setWidget(self.prefs)
 		self.qd_prefs.setAllowedAreas( Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		self.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
 
-		if not flag_floatprefs:
-			self.addDockWidget(Qt.LeftDockWidgetArea, self.qd_prefs)
-		else:
-			self.qd_prefs.setFloating(True)
-			self.qd_prefs.hide()
-			self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
+		# if not flag_floatprefs:
+		self.addDockWidget(Qt.LeftDockWidgetArea, self.qd_prefs)
+		# else:
+		# 	self.qd_prefs.setFloating(True)
+		# 	self.qd_prefs.hide()
+		# 	self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
 
-#		qInstallMessageHandler(self.error_handler)
+		self.init_statusbar()
+		self.init_docks()
+		self.setup_docks()
+		self.init_menus()
+		self.setup_vbscope_plots()
+		self.setup_vbscope_menus()
+		self.setup_shortcuts()
+
+		self.about_text = "From the Gonzalez Lab (Columbia University).\n\nPrinciple authors: JH,CKT,RLG.\nMany thanks to the entire lab for their input."
+
+		self.prefs['ui_width']  = (QDesktopWidget().availableGeometry(self).size() * 0.7).width()
+		self.prefs['ui_height'] = (QDesktopWidget().availableGeometry(self).size() * 0.7).height()
+		self.move(0,0)
 
 		self.ui_update()
 		self.show()
 
-################################################################################
+	def setup_vbscope_menus(self):
+		self.menu_movie = self.menubar.addMenu('Movie')
+		m = ['tools','contrast','play','rotate','render']
+		# if not self.flag_min_docks:
+			# [m.append(mm) for mm in ['render']]
+		for mm in m:
+			self.menu_movie.addAction(self.docks[mm][0].toggleViewAction())
+		## Add menu items
+		menu_analysis = self.menubar.addMenu('Analysis')
+		m = ['spotfind', 'background', 'transform', 'extract']
+		for mm in m:
+			menu_analysis.addAction(self.docks[mm][0].toggleViewAction())
+		self.menu_movie.addAction(self.docks['tag_viewer'][0].toggleViewAction())
 
-	def error_handler(self,msg_type, msg_log_context, msg_string):
-		self.log(msg_string)
+	def setup_vbscope_plots(self):
+		menu_plot = self.menubar.addMenu('Plots')
+		# plt_region = QAction('Region plot',self)
+		# plt_region.triggered.connect(self.plot_region)
+		#
+		# for a in [plt_region]:
+		# 	menu_plot.addAction(a)
+		#
+		# # self.popout_plots = {
+		# # 	'plot_region':None
+		# # }
 
-	def init_shortcuts(self):
-		f12 = QShortcut(QKeySequence("F12"), self, self.full_screen)
-		f1 = QShortcut(QKeySequence("F1"), self, self.open_main)
-		for f in [f1,f12]:
-			f.setContext(Qt.ApplicationShortcut)
+		plots_ensemble = QAction('Ensemble Plots',self)
+		plots_ensemble.triggered.connect(self.show_ensemble_plot)
+		menu_plot.addAction(plots_ensemble)
+		self.ui_update()
+
+	def show_ensemble_plot(self):
+		try:
+			if not self.ui_ensemble_plot.isVisible():
+				self.ui_ensemble_plot.setVisible(True)
+			self.ui_ensemble_plot.raise_()
+		except:
+			self.ui_ensemble_plot = gui_ensemble_plot(self)
+			self.ui_ensemble_plot.setWindowTitle('Ensemble Plots')
+			self.ui_ensemble_plot.show()
+
+	def setup_shortcuts(self):
+		self.shortcut_esc = QShortcut(QKeySequence(Qt.Key_Escape),self,self.plot.remove_rectangle)
 
 	def init_statusbar(self):
 		self.statusbar = self.statusBar()
 		self.statusbar.showMessage('Initialized')
+
+	def setup_docks(self):
+		self.add_dock('tools', 'Plot Toolbar', self.plot.toolbar, 'tb', 't')
+		self.add_dock('contrast', 'Contrast', docks.contrast.dock_contrast(self), 'tb', 't')
+		self.add_dock('play', 'Play', docks.play.dock_play(self), 'tb', 't')
+		self.add_dock('rotate', 'Rotate', docks.rotate.dock_rotate(self), 'tb', 't')
+		self.add_dock('render', 'Render Movie', docks.render.dock_render(self), 'tb', 't')
+
+		# Display docks in tabs
+		self.tabifyDockWidget(self.docks['tools'][0],self.docks['contrast'][0])
+		self.tabifyDockWidget(self.docks['contrast'][0],self.docks['play'][0])
+		self.tabifyDockWidget(self.docks['play'][0],self.docks['rotate'][0])
+		self.tabifyDockWidget(self.docks['rotate'][0],self.docks['render'][0])
+		self.docks['tools'][0].raise_()
+
+		## Add Docks
+		self.add_dock('tag_viewer', 'Tag Viewer', docks.tag_viewer.dock_tagviewer(self), 'tb', 't')
+		self.add_dock('spotfind', 'Spot Find', docks.spotfind.dock_spotfind(self), 'lr', 'r')
+		self.add_dock('background', 'Background', docks.background.dock_background(self), 'lr', 'r')
+		self.add_dock('transform', 'Transform', docks.transform.dock_transform(self), 'lr', 'r')
+		self.add_dock('extract', 'Extract', docks.extract.dock_extract(self), 'lr', 'r')
+		# self.add_dock('mesoscopic', 'Mesoscopic', docks.mesoscopic.dock_mesoscopic(self), 'lr', 'r')
+
+		## Display docks in tabs
+		self.tabifyDockWidget(self.docks['rotate'][0],self.docks['render'][0])
+		self.tabifyDockWidget(self.docks['spotfind'][0],self.docks['background'][0])
+		self.tabifyDockWidget(self.docks['background'][0],self.docks['transform'][0])
+		self.tabifyDockWidget(self.docks['transform'][0],self.docks['extract'][0])
+		# self.tabifyDockWidget(self.docks['extract'][0],self.docks['mesoscopic'][0])
+
+		## Hide/show certain docks
+		self.docks['tag_viewer'][0].hide()
+		# self.docks['mesoscopic'][0].hide()
+		self.docks['tools'][0].raise_()
+		self.docks['spotfind'][0].raise_()
 
 	def add_dock(self,name,title,widget,areas,loc):
 		self.docks[name] = [QDockWidget(title, self), widget]
@@ -153,11 +265,64 @@ class gui(QMainWindow):
 
 ################################################################################
 
-	def load(self):
-		'''
-		Overload me
-		'''
-		pass
+	def load(self,fname=None):
+		self.docks['play'][1].stop_playing()
+		if fname is None:
+			fname = QFileDialog.getOpenFileName(self,'Choose Movie to load','./')
+		else:
+			fname = [fname]
+		if fname[0] != "":
+			d = data_container(self)
+			success = d.load(fname[0])
+
+			if success:
+				self.data = d
+				# print self.data.total_frames
+
+				y,x = self.data.movie.shape[1:]
+				self.plot.image.set_extent([-.5,x-.5,-.5,y-.5])
+				self.plot.ax.set_xlim(-.5,x-.5)
+				self.plot.ax.set_ylim(-.5,y-.5)
+
+				self.plot.ax.set_visible(True) # Turn on the plot -- first initialization
+				self.plot.canvas.draw() # Need to initialize on first showing -- for fast plotting
+
+				self.docks['play'][1].slider_frame.setMaximum(self.data.total_frames)
+				self.docks['play'][1].slider_frame.setValue(self.data.current_frame+1)
+				self.docks['play'][1].update_frame_slider()
+				self.docks['play'][1].update_label()
+
+
+				self.docks['render'][1].spin_start.setMaximum(self.data.total_frames)
+				self.docks['render'][1].spin_end.setMaximum(self.data.total_frames)
+				self.docks['render'][1].spin_end.setValue(self.data.total_frames)
+
+				self.plot.image.set_data(self.data.movie[self.data.current_frame])
+
+				if self.docks['contrast'][1].flag_first_time:
+					self.docks['contrast'][1].flag_first_time = False
+					self.docks['contrast'][1].guess_contrast()
+				else:
+					self.data.image_contrast = np.array((float(self.docks['contrast'][1].le_floor.text()),float(self.docks['contrast'][1].le_ceiling.text())))
+
+				self.plot.image.set_cmap(self.prefs['plot_colormap'])
+				self.plot.draw()
+
+				self.log('Loaded %s'%(self.data.filename),True)
+
+				self.setWindowTitle('%s - %s'%(self.app_name,self.data.filename))
+				self.prefs['movie_filename'] =self.data.filename
+
+				self.docks['spotfind'][1].setup_sliders()
+				self.docks['spotfind'][1].flush_old()
+				self.docks['tag_viewer'][1].init_model()
+				return True
+
+			else:
+				message = 'Could not load file: %s.'%(fname[0])
+				QMessageBox.critical(None,'Could Not Load File',message)
+				self.log(message,True)
+		return False
 
 	def log(self,line,timestamp = False):
 		self._log.log(line,timestamp)
@@ -179,7 +344,7 @@ class gui(QMainWindow):
 				sw = self.qd_prefs.size().width()
 			self.prefs['ui_width'] = s.width()-sw
 			self.prefs['ui_height'] = s.height()
-			super(gui,self).resizeEvent(event)
+			super(vbscope_gui,self).resizeEvent(event)
 
 	def open_log(self):
 		self._open_ui(self._log)
@@ -207,22 +372,10 @@ class gui(QMainWindow):
 			self.qd_prefs.setHidden(True)
 		self.resize_prefs()
 
-	def open_main(self):
-		self._open_ui(self)
-
-	def _open_ui(self,ui):
-		try:
-			if not ui.isVisible():
-				ui.setVisible(True)
-			ui.raise_()
-		except:
-			ui.show()
-		ui.showNormal()
-		ui.activateWindow()
-
 	def ui_update(self):
-		# self.resize(QDesktopWidget().availableGeometry(self).size() * 0.5)
-		# self.menubar.setStyleSheet('background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 lightgray, stop:1 darkgray)')
+		self.plot.toolbar.setStyleSheet('color:%s;background-color:%s;'%(self.prefs['ui_fontcolor'],self.prefs['ui_bgcolor']))
+		self.plot.f.set_facecolor(self.prefs['ui_bgcolor'])
+		self.plot.canvas.draw()
 
 		for s in [self,self._log,self.prefs]:
 			s.setStyleSheet('''
@@ -239,50 +392,29 @@ class gui(QMainWindow):
 		self.blockSignals(False)
 		self.setWindowTitle(self.app_name)
 
-	def quicksafe_load(self,fname):
-		import numpy as np
-		try:
-			f = open(fname,'r')
-			l = f.readline()
-			f.close()
-			if l.count(',') > 0:
-				delim = ','
-			else:
-				delim = ' '
-
-			f = open(fname,'r')
-			d = []
-			for line in f:
-				d.append([float(n) for n in line.split(delim)])
-			return np.array(d)
-		except:
-			return np.loadtxt(fname)
-
-		# return np.loadtxt(fname,delimiter=delim)
-
-################################################################################
-
-	def full_screen(self):
-		if self.isFullScreen():
-			self.showNormal()
-		else:
-			self.showFullScreen()
-
-	def unsafe_close(self,event):
-
-		event.accept()
-		import sys
-		sys.exit()
-
 	def safe_close(self,event):
-		# event.ignore()
 		reply = QMessageBox.question(self,"Quit?","Are you sure you want to quit?",QMessageBox.Yes | QMessageBox.No)
 		if reply == QMessageBox.Yes:
-			# self.app.quit()
-			self._log.close()
-			self.prefs.close()
 			event.accept()
-			# import sys
-			# sys.exit()
 		else:
 			event.ignore()
+
+
+def launch_vbscope(scriptable=True):
+	'''
+	Launch the main window as a standalone GUI (ie without vbscope analyze movies), or for scripting.
+	----------------------
+	Example:
+	from vbscope import launch
+	----------------------
+	'''
+
+	import sys
+	app = QApplication([])
+	app.setStyle('fusion')
+	g = vbscope_gui(app)
+
+	if scriptable:
+		return g
+	else:
+		sys.exit(app.exec_())

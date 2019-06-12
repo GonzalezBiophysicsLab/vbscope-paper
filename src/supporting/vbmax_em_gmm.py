@@ -2,22 +2,62 @@
 
 import numpy as np
 import numba as nb
-from sys import platform
 import multiprocessing as mp
 
-# from .fxns.statistics import p_normal
-# from .fxns.kernel_sample import kernel_sample
-from .fxns.numba_math import psi,gammaln,erf
-from .fxns.gmm_related import initialize_params, result_bayesian_gmm
+from .numba_math import psi,gammaln,erf
 
-# @nb.njit
-# def lnp_maxval(x,mu,tau,n):
-# 	m = x.size
-# 	y = m*np.log(n)
-# 	y += (n-1.)*np.sum(np.log(.5)+np.log((1.+erf(np.sqrt(tau/2.)*(x-mu)))))
-# 	y += .5*m*(np.log(tau) - np.log(2.*np.pi))
-# 	y -= .5*tau*np.sum((x-mu)**2.)
-# 	return y
+class result(object):
+	def __init__(self, *args):
+		self.args = args
+class result_bayesian_gmm(result):
+	def __init__(self,r,a,b,m,beta,alpha,E_lnlam,E_lnpi,likelihood,iteration):
+		self.r = r
+		self.a = a
+		self.b = b
+		self.m = m
+		self.beta = beta
+		self.alpha = alpha
+		self.E_lnlam = E_lnlam
+		self.E_lnpi = E_lnpi
+		self.iteration = iteration
+		self.likelihood = likelihood
+
+		self.mu = m
+		self.var = 1./np.exp(E_lnlam)
+		self.ppi = self.r.sum(0) / self.r.sum()
+		# self.ppi = np.exp(E_lnpi)
+
+	def report(self):
+		s = 'VB GMM\n-----------\n'
+		s += 'N States: %d\n'%(self.mu.size)
+		s += 'ln l: %f\niters: %d\n'%(self.likelihood[-1,0],self.iteration)
+		s += 'mu:  %s\n'%(self.mu)
+		s += '+/-: %s\n'%(1./np.sqrt(self.beta))
+		s += 'var: %s\n'%(self.var)
+		s += 'f:   %s\n'%(self.ppi)
+		return s
+
+# def initialize_params(x,nstates,flag_kmeans=False):
+# 	from .kmeans import kmeans
+# 	np.random.seed()
+# 	# if not flag_kmeans:
+# 		# xx = x[np.random.randint(low=0,high=x.size,size=np.min((xx.size,100)),dtype='i')]
+# 		# mu = kernel_sample(x,nstates)
+#
+# 		# distinv = 1./np.sqrt((x[:,None] - mu[None,:])**2.)
+# 		# r = np.exp(-distinv) + .1
+# 		# r = r/r.sum(1)[:,None]
+# 		# var = np.sum(r*(x[:,None]-mu)**2.,axis=0)/np.sum(r,axis=0) + 1e-300
+# 		# ppi = r.mean(0)
+# 		# var = np.var(x)/nstates + np.zeros(nstates)
+# 		# ppi = 1./nstates + np.zeros(nstates)
+#
+# 	# else:
+# 	if 1:
+# 		r,mu,var,ppi = kmeans(x,nstates)
+# 		# mu = np.random.normal(loc=mu,scale=np.sqrt(var),size=nstates)
+#
+# 	return mu,var,ppi
 
 # @nb.njit
 def neglnp_maxval(theta,x,n):
@@ -65,10 +105,15 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 	if prior_strengths is None:
 		prior_strengths = np.array((0.25,2.5,.01,1.))
 
-	if initials is None:
-		mu,var,ppi = initialize_params(x,nstates+1, init_kmeans)
-	else:
-		mu,var,ppi = initials
+	# if initials is None:
+	# 	mu,var,ppi = initialize_params(x,nstates+1, init_kmeans)
+	# else:
+	# 	mu,var,ppi = initials
+	mu = np.linspace(bg[0],np.percentile(x,95),nstates+1)
+	var = np.zeros(nstates+1) + np.var(x) - bg[1]
+	var[0] = bg[1]
+	ppi = np.ones(nstates+1)/(nstates+1.)
+
 
 	#######
 	## priors - from vbFRET
@@ -155,10 +200,11 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 		if iteration < maxiters:
 			iteration += 1
 
+
 	if flag_report:
 		result = result_bayesian_gmm(r,a,b,m,beta,alpha,E_lnlam,E_lnpi,ll[:iteration+1],iteration)
 		result.prior_strengths = prior_strengths
-
+		print(result.iteration,result.likelihood[-1])
 		return result
 	return r
 

@@ -340,8 +340,8 @@ class dock_spotfind(QWidget):
 
 	def vbscope_range(self):
 		self.gui.set_status('Compiling...')
-		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
-		from src.supporting import normal_minmax_dist as nmd
+		from ..supporting.vbmax_em_gmm import vbmax_em_gmm as gmm
+		from ..supporting import normal_minmax_dist as nmd
 		from ..supporting import minmax as minmax
 		self.gui.set_status('Running...')
 		self.gui.app.processEvents()
@@ -408,7 +408,8 @@ class dock_spotfind(QWidget):
 						self.cleanup_progress()
 						return None
 					result.wait()
-					if 1:#self.parallel_total%10 == 0:
+					if self.parallel_total > 0:
+					# self.parallel_total%1 == 0:
 						t1 = time.clock()
 						self.todo_prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(self.todo_prog_data[0],self.todo_prog_data[1]+1,self.todo_prog_data[2]+1,self.parallel_total +2, (t1-self.todo_t0)/self.parallel_total))
 						self.todo_prog.setValue(self.parallel_total)
@@ -491,8 +492,8 @@ class dock_spotfind(QWidget):
 
 	def vb_maxval_gmm_find(self):
 		self.gui.set_status('Compiling...')
-		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
-		from src.supporting import normal_minmax_dist as nmd
+		from ..supporting.vbmax_em_gmm import vbmax_em_gmm as gmm
+		from ..supporting import normal_minmax_dist as nmd
 		from ..supporting import minmax as minmax
 		self.gui.set_status('Running...')
 		self.gui.app.processEvents()
@@ -600,7 +601,7 @@ class dock_spotfind(QWidget):
 			self.update_spots()
 
 def calc_unimixmax_map(d,bg,nregion):
-	from src.supporting import normal_minmax_dist as nmd
+	from ..supporting import normal_minmax_dist as nmd
 
 	## Most things should be background, but w/e.... equal a priori
 	prior_bg = 0.5
@@ -613,7 +614,7 @@ def calc_unimixmax_map(d,bg,nregion):
 	return pp
 
 def calc_unimix_map(d,bg):
-	from src.supporting import normal_minmax_dist as nmd
+	from ..supporting import normal_minmax_dist as nmd
 
 	## Most things should be background, but w/e.... equal a priori
 	prior_bg = 0.5
