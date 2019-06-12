@@ -14,8 +14,8 @@ from ..containers import data_container,plot_container
 from .. import docks
 
 # from src.ui import movie_viewer
-from src import docks
-from src.containers import data_container
+from .. import docks
+from ..containers import data_container
 # from src import plots
 from .ui_ensemble_plot import gui_ensemble_plot
 
@@ -116,7 +116,7 @@ class vbscope_gui(QMainWindow):
 		self.move(0,0)
 
 		self.ui_update()
-		self.show()
+		self.resize_prefs()
 
 	def setup_vbscope_menus(self):
 		self.menu_movie = self.menubar.addMenu('Movie')
@@ -349,6 +349,17 @@ class vbscope_gui(QMainWindow):
 	def open_log(self):
 		self._open_ui(self._log)
 
+	def _open_ui(self,ui):
+		try:
+			if not ui.isVisible():
+				ui.setVisible(True)
+			ui.raise_()
+		except:
+			ui.show()
+		ui.showNormal()
+		ui.activateWindow()
+
+
 	def resize_prefs(self):
 		w = self.prefs['ui_width']
 		h = self.prefs['ui_height']
@@ -417,4 +428,5 @@ def launch_vbscope(scriptable=True):
 	if scriptable:
 		return g
 	else:
+		g.show()
 		sys.exit(app.exec_())

@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QSizePolicy,QLabel,QPushButton,QComboBox,QGridLayout
+from PyQt5.QtWidgets import QWidget, QSizePolicy,QLabel,QPushButton,QComboBox,QGridLayout,QFileDialog,QMessageBox
 from PyQt5.QtCore import Qt
 
 import numpy as np
@@ -36,6 +36,7 @@ class dock_extract(QWidget):
 		self.combo_reduction.addItems(['all','1','2','3','4'])
 
 		self.button_plotter = QPushButton('Plots')
+		self.button_save = QPushButton('Save')
 
 		layout = QGridLayout()
 		layout.addWidget(QLabel())
@@ -44,7 +45,8 @@ class dock_extract(QWidget):
 		layout.addWidget(QLabel("Method:"),2,0)
 		layout.addWidget(self.combo_method,2,1)
 		layout.addWidget(self.button_extract,3,0)
-		layout.addWidget(self.button_plotter,3,1)
+		layout.addWidget(self.button_save,4,0)
+		layout.addWidget(self.button_plotter,4,1)
 		self.setLayout(layout)
 
 		self.combo_method.setCurrentIndex(1)
@@ -52,6 +54,7 @@ class dock_extract(QWidget):
 
 		self.button_extract.clicked.connect(self.extract)
 		self.button_plotter.clicked.connect(self.launch_plotter)
+		self.button_save.clicked.connect(self.save_traces)
 
 		self.traces = None
 		self.bgs=None
@@ -60,10 +63,45 @@ class dock_extract(QWidget):
 	def launch_plotter(self):
 		self.gui.plot.clear_collections()
 		self.gui.plot.canvas.draw()
-		from ..ui.ui_plotter import plotter_gui
-		self.ui_p = plotter_gui(self.traces,gui=self.gui)
-		self.ui_p.setWindowTitle('Plots')
-		self.ui_p.show()
+		try:
+			from smfret_plot import plotter_gui
+			self.ui_p = plotter_gui(self.traces,gui=self.gui)
+			self.ui_p.setWindowTitle('Plots')
+			self.ui_p.show()
+		except:
+			msg = 'There was a problem trying to launch the smfret_plot program. Check python path'
+			QMessageBox.critical(self,'Export Data',msg)
+
+
+	def save_traces(self,event=None,oname=None):
+		if self.traces is None:
+			return
+		if oname is None:
+			oname = QFileDialog.getSaveFileName(self.gui, 'Export data', '.hdf5','*.hdf5')
+		else:
+			oname = [oname]
+		if oname[0] != "":
+			try:
+				n = self.traces.shape[1]
+
+				import h5py
+				f = open(oname[0],'w')
+				f.close()
+				f = h5py.File(oname[0],'w')
+				f.attrs['type'] = 'vbscope'
+				f.attrs['ncolors'] = n
+				f.create_dataset('data',data=self.traces,dtype='float32',compression="gzip")
+				f.flush()
+				f.create_dataset('pre_time',data=np.zeros(self.traces.shape[0],dtype='int32'),dtype='int32',compression="gzip")
+				f.create_dataset('post_time',data=np.zeros(self.traces.shape[0],dtype='int32')+self.traces.shape[0],dtype='int32',compression="gzip")
+				f.create_dataset('class',data=np.zeros(self.traces.shape[0],dtype='int8'),dtype='int8',compression="gzip")
+				f.flush()
+				f.close()
+				self.gui.log("Exported data",True)
+
+			except:
+				msg = 'There was a problem trying to export the traces'
+				QMessageBox.critical(self,'Export Data',msg)
 
 	def get_spots(self):
 		self.gui.statusbar.showMessage('Spot Finding')

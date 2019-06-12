@@ -204,7 +204,6 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 	if flag_report:
 		result = result_bayesian_gmm(r,a,b,m,beta,alpha,E_lnlam,E_lnpi,ll[:iteration+1],iteration)
 		result.prior_strengths = prior_strengths
-		print(result.iteration,result.likelihood[-1])
 		return result
 	return r
 
