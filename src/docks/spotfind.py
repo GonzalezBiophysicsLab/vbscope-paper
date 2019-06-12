@@ -28,6 +28,8 @@ default_prefs = {
 
 
 class dock_spotfind(QWidget):
+	parallel_total = 0
+
 	def __init__(self,parent=None):
 		super(dock_spotfind, self).__init__(parent)
 
@@ -323,7 +325,8 @@ class dock_spotfind(QWidget):
 		self.flag_abort = True
 
 	def estimate_prior_set(self,d):
-		strength = 100.
+		strength = np.max((1.,d.size/1000.))
+		# strength = 100.
 		priors = np.array((strength,.5*strength,.5*np.sum((d-d.mean())**2.),strength),dtype='double')
 		return priors
 
@@ -340,7 +343,6 @@ class dock_spotfind(QWidget):
 		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
 		from src.supporting import normal_minmax_dist as nmd
 		from ..supporting import minmax as minmax
-		from ..ui.ui_progressbar import progressbar
 		self.gui.set_status('Running...')
 		self.gui.app.processEvents()
 
@@ -372,21 +374,11 @@ class dock_spotfind(QWidget):
 
 			r = regions[i]
 			probs =  np.zeros((total,*self.disp_image.shape))[:,r[0][0]:r[0][1],r[1][0]:r[1][1]]
+			self.todo = [None,]*(end+1-start)
 
-			prog = progressbar()
-			prog.setRange(start,end)
-			prog.setWindowTitle("Finding Spots")
-			prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(i,start+1,end+1,start+1, 0.))
-			prog.canceled.connect(self.cancel_expt)
-			prog.show()
-			self.gui.app.processEvents()
-
-			self.flag_abort = False
-
-			t0 = time.clock()
 			for t in range(start,end+1):
-				if self.flag_abort:
-					break
+				# if self.flag_abort:
+					# break
 
 				d = self.gui.docks['background'][1].bg_filter(self.gui.data.movie[t, r[0][0]:r[0][1], r[1][0]:r[1][1]].astype('double'))
 
@@ -402,26 +394,73 @@ class dock_spotfind(QWidget):
 				if (p['spotfind_rangefast'] and t == start) or (not p['spotfind_rangefast']):
 					bg_values = nmd.estimate_from_min(l0,nregion)
 
-				out = gmm(h0, self.gui.prefs['spotfind_nstates'], bg_values, nregion, initials=None, maxiters=self.gui.prefs['spotfind_maxiterations'], threshold=self.gui.prefs['spotfind_threshold'], prior_strengths=self.priors[i])
-
-				probs[t-start][mmax[0]] = (1.-out.r[:,0])
+				self.todo[t-start] = [gmm, t,t-start, i, mmax[0], h0, bg_values, nregion, p['spotfind_nstates'], p['spotfind_maxiterations'],p['spotfind_threshold'],self.priors]
 
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d/float(total)
 
-				if t%9 == 0:
-					t1 = time.clock()
-					prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(i,start+1,end+1,t+2, (t1-t0)/9.))
-					prog.setValue(t)
-					self.gui.app.processEvents()
-					t0 = time.clock()
-			prog.close()
+			self.setup_todo_prog(i,start,end)
+			with mp.Pool(processes=p['computer_ncpu']) as pool:
+				# out = pool.map_async(run_todo,todo)
+				results = [pool.apply_async(run_todo,args=(tt,),callback=self.receive_prog) for tt in self.todo]
+				for result in results:
+					if self.flag_abort:
+						del pool
+						self.cleanup_progress()
+						return None
+					result.wait()
+					if 1:#self.parallel_total%10 == 0:
+						t1 = time.clock()
+						self.todo_prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(self.todo_prog_data[0],self.todo_prog_data[1]+1,self.todo_prog_data[2]+1,self.parallel_total +2, (t1-self.todo_t0)/self.parallel_total))
+						self.todo_prog.setValue(self.parallel_total)
+						self.gui.app.processEvents()
 
-			# pmap = self.compile_map(probs)
-			# self.spotprobs[i] = pmap
+			for result in self.todo:
+				if result[0]:
+					probs[result[2]][result[3]] = result[4]
+			self.cleanup_progress()
+
+				# results = [pool.apply_async(run_todo,args=(tt,self.flag_abort),callback=self.update_todo_prog) for tt in self.todo]
+				# pool.close()
+				# pool.join()
+			# self.todo = [result.get() for result in results]
+
+			# 	results = [p.get() for p in results]
+			# 	pool.close()
+			# out = map(self.run_todo,todo)
+			# for result in self.todo:
+				# if result[0]:
+					# probs[result[2]][result[3]] = result[4]
+			# self.cleanup_progress()
+
 			self.spotprobs[i] = probs
 
 		self.gui.plot.image.set_array(self.disp_image)
 		self.update_spots()
+
+	def setup_todo_prog(self,i,start,end):
+		from ..ui.ui_progressbar import progressbar
+		self.todo_prog = progressbar()
+		self.todo_prog.setRange(start,end)
+		self.todo_prog.setWindowTitle("Finding Spots")
+		self.todo_prog.setLabelText('Setting up color %d'%(i))
+		self.todo_prog.canceled.connect(self.cancel_expt)
+		self.todo_prog.show()
+		self.gui.app.processEvents()
+
+		self.todo_prog_data = [i,start,end]
+		self.parallel_total = 0
+
+		self.flag_abort = False
+		self.todo_t0 = time.clock()
+
+	def receive_prog(self,result):
+		self.parallel_total += 1
+		self.todo[result[2]] = result
+
+	def cleanup_progress(self):
+		self.todo_prog.close()
+		self.flag_abort = True
+		self.todo_prog = None
 
 	def compile_map(self,probs):
 		from ..supporting import minmax as minmax
@@ -585,3 +624,10 @@ def calc_unimix_map(d,bg):
 	pp = 1./(1.+np.exp(pbg+np.log(prior_bg)-pu-np.log(prior_uni)))
 
 	return pp
+
+
+def run_todo(params):
+	gmm, t,ti, i, mmax, h0, bg_values, nregion, nstates, maxiters, threshold, priors = params
+
+	out = gmm(h0, nstates, bg_values, nregion, initials=None, maxiters=maxiters, threshold=threshold, prior_strengths=priors[i])
+	return [True,t,ti,mmax,1-out.r[:,0]]

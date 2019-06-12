@@ -5,158 +5,52 @@ import numba as nb
 from sys import platform
 import multiprocessing as mp
 
-from .fxns.statistics import p_normal
-from .fxns.kernel_sample import kernel_sample
+# from .fxns.statistics import p_normal
+# from .fxns.kernel_sample import kernel_sample
 from .fxns.numba_math import psi,gammaln,erf
 from .fxns.gmm_related import initialize_params, result_bayesian_gmm
 
-@nb.njit(nb.double[:](nb.double[:],nb.double,nb.double))
+# @nb.njit
+# def lnp_maxval(x,mu,tau,n):
+# 	m = x.size
+# 	y = m*np.log(n)
+# 	y += (n-1.)*np.sum(np.log(.5)+np.log((1.+erf(np.sqrt(tau/2.)*(x-mu)))))
+# 	y += .5*m*(np.log(tau) - np.log(2.*np.pi))
+# 	y -= .5*tau*np.sum((x-mu)**2.)
+# 	return y
+
+# @nb.njit
+def neglnp_maxval(theta,x,n):
+	mu,tau = theta
+	m = x.size
+	y = m*np.log(n)
+	y += (n-1.)*np.sum(np.log(.5)+np.log((1.+erf(np.sqrt(tau/2.)*(x-mu)))))
+	y += .5*m*(np.log(tau) - np.log(2.*np.pi))
+	y -= .5*tau*np.sum((x-mu)**2.)
+	return -y
+	# return -lnp(x,mu,tau,n)
+
+# @nb.jit
+def solve_em(x,n):
+	from scipy.optimize import minimize
+	guess = np.array((x.mean(),1./x.var()/np.sqrt(n)))
+	out = minimize(neglnp_maxval,x0=guess,args=(x,n),method='Nelder-Mead')
+	return out
+
+# @nb.njit(nb.double[:](nb.double[:],nb.double,nb.double))
 def lnp_normal(x,mu,var):
 	y = np.log(2.*np.pi) + np.log(var) + (x-mu)**2./var
 	return -.5 * y * (var > 0.)
 
-@nb.njit(nb.double[:](nb.double[:],nb.int64,nb.double,nb.double))
+def p_normal(x,mu,var):
+	return np.exp(lnp_normal(x,mu,var))
+
+# @nb.njit(nb.double[:](nb.double[:],nb.int64,nb.double,nb.double))
 def lnp_normal_max(x,n,mu,var):
 	prec = 1./var
 	y = .5+.5*erf((x-mu)*np.sqrt(prec/2.))
 	return (n-1.)*np.log(y) + np.log(float(n)) + lnp_normal(x,mu,var)
 
-@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:]),nopython=True)
-def m_sufficient_statistics(x,r):
-	#### M Step
-	## Sufficient Statistics
-	xbark = np.zeros(r.shape[1])
-	sk = np.zeros_like(xbark)
-
-	nk = np.sum(r,axis=0) + 1e-300
-	for i in range(nk.size): ## ignore the outlier class
-		xbark[i] = 0.
-		for j in range(r.shape[0]):
-			xbark[i] += r[j,i]*x[j]
-		xbark[i] /= nk[i]
-
-		sk[i] = 0.
-		for j in range(r.shape[0]):
-			sk[i] += r[j,i]*(x[j] - xbark[i])**2.
-		sk[i] /= nk[i]
-	return nk,xbark,sk
-
-@nb.jit(nb.types.Tuple((nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]))(nb.float64[:],nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]),nopython=True)
-def m_updates(x,r,a0,b0,m0,beta0,alpha0):
-	#### M Step
-	## Updates
-	nk,xbark,sk = m_sufficient_statistics(x,r)
-
-	beta = np.zeros_like(m0)
-	m = np.zeros_like(m0)
-	a = np.zeros_like(m0)
-	b = np.zeros_like(m0)
-	alpha = np.zeros_like(m0)
-
-	## Hyperparameters
-	for i in range(nk.size):
-		beta[i] = beta0[i] + nk[i]
-		m[i] = 1./beta[i] *(beta0[i]*m0[i] + nk[i]*xbark[i])
-		a[i] = a0[i] + (nk[i]+1.)/2.
-		b[i] = .5*(b0[i] + nk[i]*sk[i] + beta0[i]*nk[i]/(beta0[i]+nk[i])*(xbark[i]-m0[i])**2.)
-		alpha[i] = alpha0[i] + nk[i]
-	return a,b,m,beta,alpha,nk,xbark,sk
-
-
-@nb.jit(nb.float64[:](nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:]),nopython=True)
-def calc_lowerbound(r,a,b,m,beta,alpha,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta0,alpha0):
-
-	lt71 = 0.
-	lt74 = 0.
-	lt77 = 0.
-	## Precompute
-	lnb0 = a0*np.log(b0) - gammaln(a0)
-	lnbk = a*np.log(b) - gammaln(a)
-	hk = -lnbk -(a-1.)*E_lnlam + a
-	for i in range(1,m.shape[0]):
-		## Data
-		lt71 += .5 * nk[i] * (E_lnlam[i] - 1./beta[i] - a[i]/b[i]*(sk[i] - (xbark[i]-m[i])**2.) - np.log(2.*np.pi))
-
-		## Normal Wishart
-		lt74 += .5*(np.log(beta0[i]/2./np.pi) + E_lnlam[i] - beta0[i]/beta[i] - beta0[i]*a[i]/b[i]*(m[i]-m0[i])**2.)
-		lt74 += lnb0[i] + (a0[i]-1.)*E_lnlam[i] - a[i]*b0[i]/b[i]
-		lt77 += .5*E_lnlam[i] + .5*np.log(beta[i]/2.*np.pi) - .5 - hk[i]
-		Fgw = lt74 - lt77
-
-	## Dirichlet
-	Fa = gammaln(alpha0.sum()) - np.sum(gammaln(alpha0)) + np.sum((alpha0-1.)*E_lnpi)
-	Fa -= np.sum((a-1.)*E_lnpi) + gammaln(alpha.sum()) - np.sum(gammaln(alpha))
-
-	## Multinomial
-	Fpi = 0.
-	for i in range(r.shape[0]):
-		for j in range(r.shape[1]):
-			Fpi += r[i,j]*(E_lnpi[j] - np.log(1e-300+r[i,j]))
-
-	ll1 = lt71 + Fgw + Fa + Fpi
-	return np.array((ll1,lt71,Fgw,Fa,Fpi))
-
-@nb.jit(nb.types.Tuple((nb.float64[:,:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.float64[:],nb.int64,nb.float64[:,:]))(nb.float64[:],nb.double[:],nb.int64,nb.float64[:],nb.float64[:],nb.float64[:],nb.int64,nb.float64,nb.float64[:]),nopython=True)
-def outer_loop(x,bg,nmax,mu,var,ppi,maxiters,threshold,prior_strengths):
-
-	## priors - from vbFRET
-	beta0 = prior_strengths[0] + np.zeros_like(mu)
-	m0 = mu.copy() + np.zeros_like(mu)
-	a0 = prior_strengths[1] + np.zeros_like(mu)
-	b0 = prior_strengths[2] + np.zeros_like(mu)
-	alpha0 = prior_strengths[3] + np.zeros_like(mu)
-
-	# initialize
-	prob = p_normal(x,mu,var)
-	r = np.zeros_like(prob)
-	for i in range(r.shape[0]):
-		r[i] = ppi*prob[i]
-		r[i] /= np.sum(r[i]) + 1e-10
-
-	a,b,m,beta,alpha,nk,xbark,sk = m_updates(x,r,a0,b0,m0,beta0,alpha0)
-
-	E_dld = np.zeros_like(prob)
-	E_lnlam = np.zeros_like(mu)
-	E_lnpi = np.zeros_like(mu)
-
-	iteration = 0
-	ll1 = -np.inf
-	ll0 = -np.inf
-	ll = np.zeros((maxiters,5))
-
-	while iteration < maxiters:
-		# E Step
-
-		for i in range(prob.shape[0]):
-			E_dld[i] = 1./beta + a/b*(x[i]-m)**2.
-		E_lnlam = psi(a)-np.log(b)
-		E_lnpi = psi(alpha)-psi(np.sum(alpha))
-
-		r[:,0] = np.exp(lnp_normal_max(x,nmax,bg[0],bg[1]))
-		for i in range(r.shape[0]):
-			if x[i] <= bg[0]:
-				r[i,1:] = 0
-			else:
-				r[i,1:] = np.exp(E_lnpi[1:] + .5*E_lnlam[1:] - .5*np.log(2.*np.pi) - .5*E_dld[i,1:])
-			r[i] /= np.sum(r[i])+1e-10 ## for numerical stability
-
-		ll0 = ll1
-		ll[iteration] = calc_lowerbound(r,a,b,m,beta,alpha,nk,xbark,sk,E_lnlam,E_lnpi,a0,b0,m0,beta0,alpha0)
-		ll1 = ll[iteration,0]
-
-		## likelihood
-		if iteration > 1:
-			dl = np.abs((ll1 - ll0)/ll0)
-			if dl < threshold or np.isnan(ll1):
-				break
-
-		a,b,m,beta,alpha,nk,xbark,sk = m_updates(x,r,a0,b0,m0,beta0,alpha0)
-		m[0] = bg[0]
-		b[0] = bg[1]*a[0]
-
-		if iteration < maxiters:
-			iteration += 1
-	return r,a,b,m,beta,alpha,E_lnlam,E_lnpi,iteration,ll
 
 def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1e-6, prior_strengths=None, flag_report=True, init_kmeans = False):
 	'''
@@ -176,9 +70,90 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 	else:
 		mu,var,ppi = initials
 
-	# bgg = np.array([bg[0] + nmd._estimate_mu(nmax,bg[1]), bg[1] * nmd._estimate_var(nmax)])
+	#######
+	## priors - from vbFRET
+	beta0 = prior_strengths[0] + np.zeros_like(mu)
+	m0 = mu.copy() + np.zeros_like(mu)
+	a0 = prior_strengths[1] + np.zeros_like(mu)
+	b0 = prior_strengths[2] + np.zeros_like(mu)
+	alpha0 = prior_strengths[3] + np.zeros_like(mu)
 
-	r,a,b,m,beta,alpha,E_lnlam,E_lnpi,iteration,ll = outer_loop(x,bg,nmax,mu,var,ppi,maxiters,threshold,prior_strengths)
+	# initialize
+	prob = p_normal(x[:,None],mu[None,:],var[None,:])
+	r = ppi[None,:]*prob
+	r /= (r.sum(1) + 1e-10)[:,None]
+	# a,b,m,beta,alpha,nk,xbark,sk = m_updates(x,r,a0,b0,m0,beta0,alpha0)
+	nk = np.sum(r,axis=0)+1e-300
+	xbark = np.sum(r*x[:,None],axis=0)/nk
+	sk = np.sum(r*(x[:,None]-xbark[None,:])**2.,axis=0)/nk
+	beta = beta0+nk
+	m = 1./beta * (beta0*m0 + nk*xbark)
+	a = a0 + .5*(nk+1.)
+	b = .5*(b0 + nk*sk + beta0*nk/(beta0+nk)*(xbark-m0)**2.)
+	alpha = alpha0+nk
+
+	iteration = 0
+	ll1 = -np.inf
+	ll0 = -np.inf
+	ll = np.zeros((maxiters))
+
+	while iteration < maxiters:
+		#### E Step
+		E_dld = 1./beta[None,:] + (a/b)[None,:]*(x[:,None]-m[None,:])**2.
+		E_lnlam = psi(a)-np.log(b)
+		E_lnpi = psi(alpha)-psi(np.sum(alpha))
+
+		r[:,0] = np.exp(lnp_normal_max(x,nmax,bg[0],bg[1]))
+		r[:,1:] = np.exp((E_lnpi[1:] + .5*E_lnlam[1:] - .5*np.log(2.*np.pi))[None,:] - .5*E_dld[:,1:])
+		r[x <=bg[0],1:] = 0
+		r /= (r.sum(1) + 1e-10)[:,None]
+
+		#### Calculate ELBO
+		ll0 = ll1
+		lnb0 = a0*np.log(b0) - gammaln(a0)
+		lnbk = a*np.log(b) - gammaln(a)
+		hk = -lnbk -(a-1.)*E_lnlam + a
+
+		lt71 = np.sum(.5 * nk * (E_lnlam - 1./beta - a/b*(sk - (xbark-m)**2.) - np.log(2.*np.pi)))
+		lt74 = .5*(np.log(beta0/2./np.pi) + E_lnlam - beta0/beta - beta0*a/b*(m-m0)**2.)
+		lt74 += lnb0 + (a0-1.)*E_lnlam - a*b0/b
+		lt77 = .5*E_lnlam + .5*np.log(beta/2.*np.pi) - .5 - hk
+		Fgw = np.sum(lt74 - lt77)
+
+		# Dirichlet
+		Fa = gammaln(alpha0.sum()) - np.sum(gammaln(alpha0)) + np.sum((alpha0-1.)*E_lnpi)
+		Fa -= np.sum((a-1.)*E_lnpi) + gammaln(alpha.sum()) - np.sum(gammaln(alpha))
+
+		# Multinomial
+		Fpi = np.sum(r*(E_lnpi[None,:] - np.log(1e-300+r)))
+
+		ll[iteration] = lt71 + Fgw + Fa + Fpi
+		ll1 = ll[iteration]
+
+		## Stoping conditions
+		if iteration > 2:
+			dl = np.abs((ll1 - ll0)/ll0)
+			if dl < threshold or np.isnan(ll1):
+				break
+
+		#### M Step
+		nk = np.sum(r,axis=0)+1e-300
+		xbark = np.sum(r*x[:,None],axis=0)/nk
+		sk = np.sum(r*(x[:,None]-xbark[None,:])**2.,axis=0)/nk
+		beta = beta0+nk
+		m = 1./beta * (beta0*m0 + nk*xbark)
+		a = a0 + .5*(nk+1.)
+		b = .5*(b0 + nk*sk + beta0*nk/(beta0+nk)*(xbark-m0)**2.)
+		alpha = alpha0+nk
+		if iteration % 10 == 5: ## 5,15,25,...
+			out = solve_em(x[r.argmax(1)==0],nmax)
+			bg[0] = out.x[0]
+			bg[1] = 1./out.x[1]
+		m[0] = bg[0]
+		b[0] = bg[1]*a[0]
+
+		if iteration < maxiters:
+			iteration += 1
 
 	if flag_report:
 		result = result_bayesian_gmm(r,a,b,m,beta,alpha,E_lnlam,E_lnpi,ll[:iteration+1],iteration)
