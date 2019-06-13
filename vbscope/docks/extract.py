@@ -77,7 +77,11 @@ class dock_extract(QWidget):
 		if self.traces is None:
 			return
 		if oname is None:
-			oname = QFileDialog.getSaveFileName(self.gui, 'Export data', '.hdf5','*.hdf5')
+                    defaultname = self.gui.data.filename
+                    if defaultname.count('.') > 0:
+                        defaultname = '.'.join(defaultname.split('.')[:-1])
+                    defaultname += '_traces.hdf5'
+                    oname = QFileDialog.getSaveFileName(self.gui, 'Export data', defaultname,'*.hdf5')
 		else:
 			oname = [oname]
 		if oname[0] != "":

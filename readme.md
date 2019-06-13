@@ -16,19 +16,17 @@ Should work on best on Unix-based systems (Mac and Linux); Mostly works on Windo
 * scipy 0.19.0
 * scikit-image 0.13.1
 * numba 0.35
-* tqdm 4.23.3
 * h5py 2.7.1
 
 ### Install using conda
 ``` bash
-conda install scikit-image scipy numpy matplotlib pyqt numba h5py tqdm
+conda install scikit-image scipy numpy matplotlib pyqt numba h5py 
 ```
 
 ## Make a Terminal Shortcut
 To your rc file (eg ~/.bashrc, ~/.zshrc, ~/.profile, etc) add
 ``` bash
 alias vbscope="python /home/username/directory/to/vbscope/vbscope.py"
-alias vbscope_plot="python /home/username/directory/to/vbscope/plotter.py"
 ```
 
 ## Mac hints
