@@ -337,8 +337,8 @@ class dock_spotfind(QWidget):
 
 	def vbscope_range(self):
 		self.gui.set_status('Compiling...')
-		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
-		from src.supporting import normal_minmax_dist as nmd
+		from smfret_plotter.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
+		from smfret_plotter.supporting import normal_minmax_dist as nmd
 		from ..supporting import minmax as minmax
 		from ..ui.ui_progressbar import progressbar
 		self.gui.set_status('Running...')
@@ -452,8 +452,8 @@ class dock_spotfind(QWidget):
 
 	def vb_maxval_gmm_find(self):
 		self.gui.set_status('Compiling...')
-		from src.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
-		from src.supporting import normal_minmax_dist as nmd
+		from smfret_plotter.supporting.hmms.vbmax_em_gmm import vbmax_em_gmm as gmm
+		from smfret_plotter.supporting import normal_minmax_dist as nmd
 		from ..supporting import minmax as minmax
 		self.gui.set_status('Running...')
 		self.gui.app.processEvents()
@@ -561,7 +561,7 @@ class dock_spotfind(QWidget):
 			self.update_spots()
 
 def calc_unimixmax_map(d,bg,nregion):
-	from src.supporting import normal_minmax_dist as nmd
+	from smfret_plotter.supporting import normal_minmax_dist as nmd
 
 	## Most things should be background, but w/e.... equal a priori
 	prior_bg = 0.5
@@ -574,7 +574,7 @@ def calc_unimixmax_map(d,bg,nregion):
 	return pp
 
 def calc_unimix_map(d,bg):
-	from src.supporting import normal_minmax_dist as nmd
+	from smfret_plotter.supporting import normal_minmax_dist as nmd
 
 	## Most things should be background, but w/e.... equal a priori
 	prior_bg = 0.5

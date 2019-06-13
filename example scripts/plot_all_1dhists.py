@@ -1,7 +1,7 @@
 import os, sys
 # sys.path.insert(0,'/home/colin/programs/python_scripts/vbscope')
-from src.ui import launch_vbscope, launch_plotter
-from src.plots import hist_1d
+from smfret_plotter.ui import launch_vbscope, launch_plotter
+from smfret_plotter.plots import hist_1d
 
 # prefixes = [
 # 	'./20180321 vc436LX/vc436LX',
