@@ -16,7 +16,8 @@ matplotlib.rcParams['savefig.format'] = 'pdf'
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['figure.facecolor'] = 'white'
 
-from . import ui_general
+from .ui_log import logger
+from .ui_prefs import preferences
 from .ui_batch_loader import gui_batch_loader
 from .ui_trace_filter import gui_trace_filter
 from .ui_classifier import gui_classifier
@@ -66,20 +67,38 @@ default_prefs = {
 }
 
 ## GUI for plotting 2D smFRET trajectories
-class plotter_gui(ui_general.gui):
+class plotter_gui(QMainWindow):
 	def __init__(self,data,gui):
+		super(QMainWindow,self).__init__()
 		self.gui = gui
+		self.app = gui.app
 		self.data = traj_container(self)
 
-		self._main_widget = QWidget()
-		super(plotter_gui,self).__init__(self.gui.app,self._main_widget,flag_floatprefs=True)
+		self.closeEvent = self.safe_close
+
+		self.init_menus()
+		self.init_docks()
+		self.init_statusbar()
+
+		self._log = logger()
+
+		self.prefs = preferences(self)
+		self.qd_prefs = QDockWidget("Preferences",self)
+		self.qd_prefs.setWidget(self.prefs)
+		self.qd_prefs.setAllowedAreas( Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		self.addDockWidget(Qt.RightDockWidgetArea, self.qd_prefs)
+
+		self.qd_prefs.setFloating(True)
+		self.qd_prefs.hide()
+		self.qd_prefs.topLevelChanged.connect(self.resize_prefs)
+
 		self.prefs.add_dictionary(default_prefs)
 		try:
 			self.prefs.load_preferences(fname='./prefs.txt')
 		except:
 			pass
-		self.initialize_ui()
 
+		self.initialize_ui()
 		self.initialize_connections()
 
 		if not data is None:
@@ -127,6 +146,7 @@ class plotter_gui(ui_general.gui):
 
 	def initialize_ui(self):
 		## Initialize Plots
+		mainwidget = QWidget()
 		self.ncolors = self.gui.data.ncolors
 		self.plot = traj_plot_container(self)
 
@@ -152,7 +172,8 @@ class plotter_gui(ui_general.gui):
 		# self.layout.addWidget(self.slider_select)
 		self.layout.addWidget(qw)
 		# self.layout.addWidget(scalewidget)
-		self._main_widget.setLayout(self.layout)
+		mainwidget.setLayout(self.layout)
+		self.setCentralWidget(mainwidget)
 
 		plt.close(self.plot.f)
 
@@ -1022,6 +1043,162 @@ class plotter_gui(ui_general.gui):
 					msg = 'There was a problem trying to export the classes/cuts'
 					QMessageBox.critical(self,'Export Classes',msg)
 					self.log(msg,True)
+
+################################################################################
+
+	def init_statusbar(self):
+		self.statusbar = self.statusBar()
+		self.statusbar.showMessage('Initialized')
+
+	def add_dock(self,name,title,widget,areas,loc):
+		self.docks[name] = [QDockWidget(title, self), widget]
+		if areas == 'lr':
+			ar = Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
+		elif areas == 'tb':
+			ar = Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea
+		self.docks[name][0].setAllowedAreas(ar)
+		self.docks[name][0].setWidget(self.docks[name][1])
+		if loc == 't':
+			l = Qt.TopDockWidgetArea
+		elif loc == 'b':
+			l = Qt.BottomDockWidgetArea
+		elif loc == 'l':
+			l = Qt.LeftDockWidgetArea
+		elif loc == 'r':
+			l = Qt.RightDockWidgetArea
+		self.addDockWidget(l, self.docks[name][0])
+
+		try:
+			self.prefs.add_dictionary(widget.default_prefs)
+
+		except:
+			pass
+
+	def init_docks(self):
+		# self.docks is a dictionary with [QDockWidget,Widget] for the docks
+		self.docks = {}
+
+	def init_menus(self):
+		self.menubar = self.menuBar()
+		self.menubar.setNativeMenuBar(False)
+
+		### File
+		self.menu_file = self.menubar.addMenu('File')
+
+		file_load = QAction('Load', self, shortcut='Ctrl+O')
+		file_load.triggered.connect(lambda e: self.load())
+
+		file_log = QAction('Log', self,shortcut='F2')
+		file_log.setShortcutContext(Qt.ApplicationShortcut)
+		file_log.triggered.connect(self.open_log)
+
+		file_prefs = QAction('Preferences', self,shortcut='F3')
+		file_prefs.setShortcutContext(Qt.ApplicationShortcut)
+		file_prefs.triggered.connect(self.open_preferences)
+
+		file_saveprefs = QAction('Save Preferences',self)
+		file_saveprefs.triggered.connect(lambda e: self.prefs.save_preferences())
+		file_loadprefs = QAction('Load Preferences',self)
+		file_loadprefs.triggered.connect(lambda e: self.prefs.load_preferences())
+
+		self.about_text = ""
+		file_about = QAction('About',self)
+		file_about.triggered.connect(self.about)
+
+		file_exit = QAction('Exit', self, shortcut='Ctrl+Q')
+		# file_exit.triggered.connect(self.app.quit)
+		file_exit.triggered.connect(self.close)
+
+		for f in [file_load,file_log,file_prefs,file_loadprefs,file_saveprefs,file_about,file_exit]:
+			self.menu_file.addAction(f)
+
+	def log(self,line,timestamp = False):
+		self._log.log(line,timestamp)
+		self.set_status(line)
+
+	def about(self):
+		QMessageBox.about(None,'About %s'%(self.app_name),self.about_text)
+
+	def set_status(self,message=""):
+		self.statusbar.showMessage(message)
+		self.app.processEvents()
+
+	def resizeEvent(self,event):
+		if not self.signalsBlocked():
+			s = self.size()
+			sw = 0
+			if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+				sw = self.qd_prefs.size().width()
+			self.prefs['ui_width'] = s.width()-sw
+			self.prefs['ui_height'] = s.height()
+			super(plotter_gui,self).resizeEvent(event)
+
+	def open_log(self):
+		self._open_ui(self._log)
+
+	def resize_prefs(self):
+		w = self.prefs['ui_width']
+		h = self.prefs['ui_height']
+		self.blockSignals(True)
+		if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+			sw = self.qd_prefs.size().width()
+			self.resize(w+sw+4,h) ## ugh... +4 for dock handles
+			if not self.centralWidget() == 0:
+				self.centralWidget().resize(w,h)
+		else:
+			self.resize(w,h)
+		self.blockSignals(False)
+
+	def open_preferences(self):
+		if self.qd_prefs.isHidden():
+			self.qd_prefs.show()
+			self.qd_prefs.raise_()
+			self.prefs.le_filter.setFocus()
+
+		else:
+			self.qd_prefs.setHidden(True)
+		self.resize_prefs()
+
+	def open_main(self):
+		self._open_ui(self)
+
+	def _open_ui(self,ui):
+		try:
+			if not ui.isVisible():
+				ui.setVisible(True)
+			ui.raise_()
+		except:
+			ui.show()
+		ui.showNormal()
+		ui.activateWindow()
+
+	def ui_update(self):
+		# self.resize(QDesktopWidget().availableGeometry(self).size() * 0.5)
+		# self.menubar.setStyleSheet('background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 lightgray, stop:1 darkgray)')
+
+		for s in [self,self._log,self.prefs]:
+			s.setStyleSheet('''
+			color:%s;
+			background-color:%s;
+			font-size: %spx;
+		'''%(self.prefs['ui_fontcolor'],self.prefs['ui_bgcolor'],self.prefs['ui_fontsize']))
+
+		self.blockSignals(True)
+		sw = 0
+		if not self.qd_prefs.isHidden() and not self.qd_prefs.isFloating():
+			sw = self.qd_prefs.size().width()
+		self.resize(self.prefs['ui_width']+sw,self.prefs['ui_height'])
+		self.blockSignals(False)
+		self.setWindowTitle(self.app_name)
+
+	def safe_close(self,event):
+		reply = QMessageBox.question(self,"Quit?","Are you sure you want to quit?",QMessageBox.Yes | QMessageBox.No)
+		if reply == QMessageBox.Yes:
+			event.accept()
+		else:
+			event.ignore()
+
+
 
 
 def launch_plotter(scriptable=True):
