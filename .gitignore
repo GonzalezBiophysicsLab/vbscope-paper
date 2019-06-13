@@ -3,3 +3,4 @@
 *.nbc
 prefs*
 __pycache__
+.DS_Store
