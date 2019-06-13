@@ -1,6 +1,6 @@
-from smfret_plotter.ui import launch_plotter
+from smfret_plotter import launch
 
-gui = launch_plotter(False)
+gui = launch(False)
 
 # # sample script
 # gui = launch_plotter(True)
