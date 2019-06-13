@@ -6,10 +6,10 @@ import numpy as np
 import matplotlib
 matplotlib.use('Qt5Agg')
 
-from smfret_plotter.ui import movie_viewer
+from src.ui import movie_viewer
 from src import docks
-from smfret_plotter.containers import data_container
-from smfret_plotter.containers import popout_plot_container
+from src.containers import data_container
+from src.containers import popout_plot_container
 from src import plots
 from .ui_ensemble_plot import gui_ensemble_plot
 

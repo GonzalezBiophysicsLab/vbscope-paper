@@ -34,8 +34,8 @@ def icp(reference,transformee,xshift=0.,yshift=0.,maxiters=100):
 		else:
 			dst = c2[:,rmin]
 			src = c1
-		t.estimate(dst.T,smfret_plotter.T)
-		l = np.median(t.residuals(dst.T,smfret_plotter.T))
+		t.estimate(dst.T,src.T)
+		l = np.median(t.residuals(dst.T,src.T))
 		# print i,l
 		if np.isclose(l,last):
 			return t
