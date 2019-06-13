@@ -74,6 +74,8 @@ class plotter_gui(QMainWindow):
 		self.app = gui.app
 		self.data = traj_container(self)
 
+		self.closeEvent = self.safe_close
+
 		self.init_menus()
 		self.init_docks()
 		self.init_statusbar()
@@ -1189,7 +1191,7 @@ class plotter_gui(QMainWindow):
 		self.blockSignals(False)
 		self.setWindowTitle(self.app_name)
 
-	def closeEvent(self,event):
+	def safe_close(self,event):
 		reply = QMessageBox.question(self,"Quit?","Are you sure you want to quit?",QMessageBox.Yes | QMessageBox.No)
 		if reply == QMessageBox.Yes:
 			event.accept()
