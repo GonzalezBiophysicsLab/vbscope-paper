@@ -64,12 +64,12 @@ class dock_extract(QWidget):
 		self.gui.plot.clear_collections()
 		self.gui.plot.canvas.draw()
 		try:
-			from smfret_plot import plotter_gui
-			self.ui_p = plotter_gui(self.traces,gui=self.gui)
-			self.ui_p.setWindowTitle('Plots')
+			from fret_plot import launch_scriptable
+			self.ui_p = launch_scriptable(self.gui.app,self.traces)
+			self.ui_p.show()
 			self.ui_p.show()
 		except:
-			msg = 'There was a problem trying to launch the smfret_plot program. Check python path'
+			msg = 'There was a problem trying to launch the fret_plot program. Check python path'
 			QMessageBox.critical(self,'Export Data',msg)
 
 
