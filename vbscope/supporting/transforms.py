@@ -68,10 +68,10 @@ def interpolated_fft_phase_alignment(d1,d2):
 	from scipy.interpolate import RectBivariateSpline
 
 	## Calculate Cross-correlation
-	f1 = np.fft.fft2(d1)
-	f2 = np.fft.fft2(d2)
-	f = f1*np.conjugate(f2) #/ (np.abs(f1)*np.abs(f2)) ## normalizing can break things....
-	d = np.abs(np.fft.ifft2(f))
+	f1 = np.fft.fft2(d1-d1.mean())
+	f2 = np.fft.fft2(d2-d2.mean())
+	f = np.conjugate(f1)*f2 # / (np.abs(f1)*np.abs(f2))
+	d = np.fft.ifft2(f).real
 
 	## Find maximum in c.c.
 	s1,s2 = np.nonzero(d==d.max())
@@ -94,6 +94,7 @@ def interpolated_fft_phase_alignment(d1,d2):
 	x = np.linspace(xmin,xmax,(xmax-xmin)*10)
 	y = np.linspace(ymin,ymax,(ymax-ymin)*10)
 	di = interp(x,y)
+	# return di
 
 	## get maximum in interpolated c.c. for sub-pixel resolution
 	xy = np.nonzero(di==di.max())

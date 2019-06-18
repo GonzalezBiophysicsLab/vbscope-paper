@@ -92,7 +92,7 @@ def lnp_normal_max(x,n,mu,var):
 	return (n-1.)*np.log(y) + np.log(float(n)) + lnp_normal(x,mu,var)
 
 
-def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1e-6, prior_strengths=None, flag_report=True, init_kmeans = False):
+def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1e-6, prior_strengths=None, flag_report=True, init_kmeans = False,update_bg=True):
 	'''
 	Data convention is NxK
 	bg should be the background normal, not the max val or min val
@@ -150,7 +150,7 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 
 		r[:,0] = np.exp(lnp_normal_max(x,nmax,bg[0],bg[1]))
 		r[:,1:] = np.exp((E_lnpi[1:] + .5*E_lnlam[1:] - .5*np.log(2.*np.pi))[None,:] - .5*E_dld[:,1:])
-		r[x <=bg[0],1:] = 0
+		r[x <= bg[0],1:] = 0
 		r /= (r.sum(1) + 1e-10)[:,None]
 
 		#### Calculate ELBO
@@ -190,7 +190,7 @@ def vbmax_em_gmm(x, nstates, bg, nmax, initials=None, maxiters=1000, threshold=1
 		a = a0 + .5*(nk+1.)
 		b = .5*(b0 + nk*sk + beta0*nk/(beta0+nk)*(xbark-m0)**2.)
 		alpha = alpha0+nk
-		if iteration % 10 == 5: ## 5,15,25,...
+		if update_bg and iteration % 10 == 5: ## 5,15,25,...
 			out = solve_em(x[r.argmax(1)==0],nmax)
 			bg[0] = out.x[0]
 			bg[1] = 1./out.x[1]
@@ -224,4 +224,4 @@ def vbmax_em_gmm_parallel(x, nstates, bg, nmax, initials=None, maxiters=1000, th
 	# return results[best]
 
 
-	return vbmax_em_gmm(x,nstates,bg,nmax,None,maxiters,threshold,prior_strengths,True, True)
+	return vbmax_em_gmm(x,nstates,bg,nmax,None,maxiters,threshold,prior_strengths,True, True,True)

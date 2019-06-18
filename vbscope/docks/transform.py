@@ -4,10 +4,13 @@ from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
 
 import numpy as np
-
+import time
 
 default_prefs = {
-	'transform_alignment_order':4
+	'transform_alignment_order':4,
+	'drift_referenceframe':1,
+	'drift_filterwidth':5,
+	'drift_clipborder':10,
 }
 
 class dock_transform(QWidget):
@@ -36,6 +39,7 @@ class dock_transform(QWidget):
 		self.button_estimate = QPushButton('Estimate from Spots')
 		self.button_fftestimate = QPushButton('Estimate from Image')
 		self.button_export = QPushButton('Export Alignment')
+		self.button_driftcorrection = QPushButton('Drift Correction')
 
 		self.label_load = QLabel('')
 
@@ -49,6 +53,7 @@ class dock_transform(QWidget):
 		self.layout.addWidget(self.button_export,2,1)
 		self.layout.addWidget(self.button_preview,4,0)
 		self.layout.addWidget(self.button_toggle,4,1)
+		self.layout.addWidget(self.button_driftcorrection,5,0)
 
 		self.button_export.clicked.connect(self.export)
 		self.button_preview.clicked.connect(self.preview)
@@ -57,10 +62,67 @@ class dock_transform(QWidget):
 		self.button_estimate.clicked.connect(self.stochastic)
 		self.button_fftestimate.clicked.connect(self.fft_estimate)
 
+		self.button_driftcorrection.clicked.connect(self.driftcorrection)
+
 		self.spin_colors.valueChanged.connect(self.update_colors)
 
 		self.setLayout(self.layout)
 		self.update_colors(self.gui.data.ncolors)
+
+	def update_prog(self):
+		if self.prog_currentframe == 0:
+			self.prog_t0 = time.time()
+			tt = 0
+		else:
+			tt = time.time() - self.prog_t0
+		self.prog_currentframe += 1
+		self.prog.setValue(self.prog_currentframe)
+		label = "%s\n%d/%d - %.4f sec"%(self.prog_label, self.prog_currentframe, self.gui.data.movie.shape[0], tt/self.prog_currentframe)
+		self.prog.setLabelText(label)
+		self.gui.app.processEvents()
+		return self.flag_running
+
+	def cancel_expt(self):
+		self.flag_running = False
+
+	def driftcorrection(self):
+		from ..supporting import drift_correction as dc
+		from ..ui.ui_progressbar import progressbar
+
+		self.prog = progressbar()
+		self.prog.setRange(0,self.gui.data.movie.shape[0])
+		self.prog.setWindowTitle("Drift Correction")
+		self.prog.canceled.connect(self.cancel_expt)
+		self.prog.show()
+		self.gui.app.processEvents()
+
+		self.flag_running = True
+
+		ref = self.gui.prefs['drift_referenceframe']
+		fw = self.gui.prefs['drift_filterwidth']
+		cb = self.gui.prefs['drift_clipborder']
+
+		self.prog_label = 'Aligning Frames'
+		self.prog.setLabelText(self.prog_label)
+		self.prog_currentframe = 0
+		self.drift_shifts = dc.align_stack(self.gui.data.movie,ref,cb,fw,self.update_prog)
+
+		self.prog_label = 'Transforming Movie'
+		self.prog.setLabelText(self.prog_label)
+		self.prog_currentframe = 0
+		self.gui.data.movie = dc.dedrift(self.gui.data.movie,self.drift_shifts,self.update_prog)
+
+		if self.flag_running:
+			dshift = np.mean(self.drift_shifts[1:]-self.drift_shifts[:-1],axis=0)
+			self.gui.log('Drift corrected - <dx>:%f, <dy>:%f'%(dshift[0],dshift[1]))
+
+			self.gui.plot.image.set_data(self.gui.data.movie[self.gui.data.current_frame])
+			self.gui.plot.draw()
+		else:
+			# self.gui.load(self.gui.data.filename)
+			self.gui.log('Canceled drift correction mid-way - you should reload movie')
+		self.prog.setLabelText("Done")
+		self.prog.close()
 
 	def export(self):
 		if self.flag_transforms:
@@ -219,7 +281,8 @@ class dock_transform(QWidget):
 				tts = [None for j in range(nc)]
 				for j in range(nc):
 					if i != j:
-						s1,s2,_,tform = transforms.interpolated_fft_phase_alignment(imgs[j],imgs[i])
+						clip = self.gui.prefs['spotfind_clip_border']
+						s1,s2,_,tform = transforms.interpolated_fft_phase_alignment(imgs[i][clip:-clip,clip:-clip],imgs[j][clip:-clip,clip:-clip])
 						tts[j] = tform
 				ts.append(tts)
 			self.transforms = ts
@@ -250,7 +313,7 @@ class dock_transform(QWidget):
 
 						# tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),1e-6,1e-6,maxiters=100)
 
-						s1,s2,_,tform = transforms.interpolated_fft_phase_alignment(imgs[j],imgs[i])
+						s1,s2,_,tform = transforms.interpolated_fft_phase_alignment(imgs[i],imgs[j])
 
 						#### QUITE POSSIBLE THAT IT SHOULD BE S2,S1... or -S1,-S2... or -S2,-S1.... INSTEAD OF S1,S2....
 						tts[j] = transforms.icp(c1.T.astype('f'),c2.T.astype('f'),s1,s2,maxiters=100)

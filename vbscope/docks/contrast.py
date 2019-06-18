@@ -116,3 +116,10 @@ class dock_contrast(QWidget):
 		self.gamma = 10.**lg
 		self.update_les()
 		self.update_image_contrast()
+
+	def change_contrast(self,l,h,g):
+		self.gui.data.image_contrast[0] = l
+		self.gui.data.image_contrast[1] = h
+		self.gui.data.gamma = g
+		self.update_les()
+		self.update_image_contrast()

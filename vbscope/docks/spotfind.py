@@ -18,12 +18,15 @@ import sys
 default_prefs = {
 	'spotfind_nsearch':3,
 	'spotfind_clip_border':8,
-	'spotfind_threshold':1e-3,
+	'spotfind_threshold':1e-8,
 	'spotfind_maxiterations':250,
 	'spotfind_nstates':1,
 	'spotfind_frameson':5,
 	'spotfind_nrestarts':4,
 	'spotfind_rangefast':False,
+	'spotfind_updatebg':True,
+	'spotfind_acfn':1,
+	'spotfind_acfstd':0.1,
 }
 
 
@@ -62,7 +65,7 @@ class dock_spotfind(QWidget):
 		# self.button_search = QPushButton('Range Find')
 		# self.button_find = QPushButton('Sum Find')
 		# self.button_quick = QPushButton('Quick Find')
-		self.button_threshold = QPushButton('Threshold')
+		self.button_threshold = QPushButton('ACF(t=n)')
 		self.button_vbmax = QPushButton('Mean')
 		self.button_range = QPushButton('Range')
 
@@ -394,7 +397,7 @@ class dock_spotfind(QWidget):
 				if (p['spotfind_rangefast'] and t == start) or (not p['spotfind_rangefast']):
 					bg_values = nmd.estimate_from_min(l0,nregion)
 
-				self.todo[t-start] = [gmm, t,t-start, i, mmax[0], h0, bg_values, nregion, p['spotfind_nstates'], p['spotfind_maxiterations'],p['spotfind_threshold'],self.priors]
+				self.todo[t-start] = [gmm, t,t-start, i, mmax[0], h0, bg_values, nregion, p['spotfind_nstates'], p['spotfind_maxiterations'],p['spotfind_threshold'],self.priors,self.gui.prefs['spotfind_updatebg']]
 
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d/float(total)
 
@@ -536,7 +539,7 @@ class dock_spotfind(QWidget):
 
 			bg_values = nmd.estimate_from_min(l0,nregion)
 
-			out = gmm(h0, self.gui.prefs['spotfind_nstates'], bg_values, nregion, initials=None, maxiters=self.gui.prefs['spotfind_maxiterations'], threshold=self.gui.prefs['spotfind_threshold'], prior_strengths=self.priors[i])
+			out = gmm(h0, self.gui.prefs['spotfind_nstates'], bg_values, nregion, initials=None, maxiters=self.gui.prefs['spotfind_maxiterations'], threshold=self.gui.prefs['spotfind_threshold'], prior_strengths=self.priors[i],update_bg=self.gui.prefs['spotfind_updatebg'])
 
 			prob = np.zeros_like(d)
 			prob[mmax[0]] = (1.-out.r[:,0])
@@ -573,20 +576,26 @@ class dock_spotfind(QWidget):
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 
 			nxy = (p['spotfind_nsearch']-1)//2
-
+			acfn = p['spotfind_acfn']
 			self.disp_image = np.zeros_like(self.gui.data.movie[0],dtype='float32')
 			for i in range(nc):
 				r = regions[i]
-				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').mean(0)
-				d = self.gui.docks['background'][1].bg_filter(d)
+				# d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f').mean(0)
+				# d = self.gui.docks['background'][1].bg_filter(d)
+				d = self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('f')
+				d -= d.mean(0)[None,:,:]
+				d = np.mean(d[acfn:]*d[:-acfn],axis=0)/np.mean(d**2.,axis=0) ## ACF(t=1)
+				# d = self.gui.docks['background'][1].bg_filter(d)
 
+				# d[d<=0] = 0.
 				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
+				nregion = (2*nxy+1)**2
 
-				# bg_values = nmd.estimate_from_min(d[mmin[0]],(2*nxy+1)**2)
-				bg_values = np.array((np.median(d),np.var(d)))
+				bg_values = np.array((0.,p['spotfind_acfstd']**2.))
 
 				prob = np.zeros_like(d)
 				prob[mmax[0]] = calc_unimix_map(d[mmax[0]],bg_values)
+				# prob[mmax[0]] = d[mmax[0]]#calc_unimix_map(d[mmax[0]],bg_values)
 
 				# prob = np.zeros_like(d) + d.min()
 				# prob[mmax[0]] = d[mmax[0]]
@@ -595,7 +604,7 @@ class dock_spotfind(QWidget):
 				# self.spotprobs[i] = prob/d.max()
 
 			self.gui.plot.image.set_array(self.disp_image)
-			self.gui.docks['contrast'][1].update_image_contrast()
+			self.gui.docks['contrast'][1].change_contrast(-.05,1.05,0.0)
 			self.gui.set_status('Finished')
 			self.gui.app.processEvents()
 			self.update_spots()
@@ -628,7 +637,7 @@ def calc_unimix_map(d,bg):
 
 
 def run_todo(params):
-	gmm, t,ti, i, mmax, h0, bg_values, nregion, nstates, maxiters, threshold, priors = params
+	gmm, t,ti, i, mmax, h0, bg_values, nregion, nstates, maxiters, threshold, priors, update_bg = params
 
-	out = gmm(h0, nstates, bg_values, nregion, initials=None, maxiters=maxiters, threshold=threshold, prior_strengths=priors[i])
+	out = gmm(h0, nstates, bg_values, nregion, initials=None, maxiters=maxiters, threshold=threshold, prior_strengths=priors[i],update_bg=update_bg)
 	return [True,t,ti,mmax,1-out.r[:,0]]
