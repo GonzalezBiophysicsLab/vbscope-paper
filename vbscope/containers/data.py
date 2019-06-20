@@ -114,3 +114,18 @@ class data_container():
 				[dy//2,0]
 			]
 		return np.array(r),np.array(shifts)
+
+	def self_dark_cal(self,darkclip=1):
+		q = self.movie[:darkclip].copy().astype('float')
+
+		z = self.movie[darkclip+2:].mean(0)
+		z0 = q.mean()
+		v = self.movie[darkclip+2:].var(0) ## avoid shutter
+		v0 = q.var()
+
+		g = 0.5*np.mean((v-v0)/(z-z0))
+		for i in range(self.movie.shape[0]):
+			dd = self.movie[i].astype('float')
+			dd[dd<z0] = z0
+			self.movie[i] = ((dd-z0)/g).astype('uint16') ## save memory
+		return g
