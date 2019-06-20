@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication,QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget, QFileDialog,QDesktopWidget
 from PyQt5.QtCore import Qt, qInstallMessageHandler
-from PyQt5.QtGui import QKeySequence
+from PyQt5.QtGui import QKeySequence, QIcon
 
 import matplotlib
 matplotlib.use('Qt5Agg')
@@ -117,6 +117,12 @@ class vbscope_gui(QMainWindow):
 
 		self.ui_update()
 		self.resize_prefs()
+
+	def show(self):
+		super(vbscope_gui,self).show()
+		## Toggle to make prefs show up
+		self.resize(self.size().width(),self.size().height()+1)
+		self.resize(self.size().width(),self.size().height()-1)
 
 	def setup_vbscope_menus(self):
 		self.menu_movie = self.menubar.addMenu('Movie')
@@ -406,27 +412,31 @@ class vbscope_gui(QMainWindow):
 	def safe_close(self,event):
 		reply = QMessageBox.question(self,"Quit?","Are you sure you want to quit?",QMessageBox.Yes | QMessageBox.No)
 		if reply == QMessageBox.Yes:
+			# import sys
 			event.accept()
+			## there's a weird double close that this avoids
+			self.closeEvent = super(vbscope_gui,self).closeEvent
 		else:
 			event.ignore()
 
+def launch_scriptable(app=None):
+	if app is None:
+		app = QApplication([])
+		app.setStyle('fusion')
 
-def launch_vbscope(scriptable=True):
-	'''
-	Launch the main window as a standalone GUI (ie without vbscope analyze movies), or for scripting.
-	----------------------
-	Example:
-	from vbscope import launch
-	----------------------
-	'''
+	gui = vbscope_gui(app = app)
+	return gui
 
-	import sys
-	app = QApplication([])
-	app.setStyle('fusion')
-	g = vbscope_gui(app)
+def launch_gui():
+	import os,sys
+	gui = launch_scriptable()
+	gui.show()
+	try:
+		__IPYTHON__
+		return gui
+	except:
+		path = os.path.join(os.path.dirname(sys.modules[__name__].__file__), 'icon.png')
+		print(path)
+		gui.app.setWindowIcon(QIcon(path))
 
-	if scriptable:
-		return g
-	else:
-		g.show()
-		sys.exit(app.exec_())
+		sys.exit(gui.app.exec_())

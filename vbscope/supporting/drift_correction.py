@@ -67,8 +67,39 @@ def align_stack(d,reference=0,clip=10,filter_width=5,callback=lambda : True):
 		if not callback():
 			break
 	from scipy import ndimage as nd
-	shifts = nd.median_filter(shifts,(filter_width,1))
+	shifts = nd.median_filter(shifts,(3,1))
+	shifts = nd.gaussian_filter(shifts,(filter_width,1))
 	return shifts
+
+# def align_stack(d,reference=0,clip=10,filter_width=5,callback=lambda : True):
+# 	'''
+# 	Calculate the XY translations (shifts) of each image relative to the reference frame
+#
+# 	d - data - (N,X,Y)
+# 	reference - reference frame number - int
+# 	clip - number of border pixels in each direction - int
+# 	filter_width - number pixels to calculate moving median filter the resulting shifts. This removes outliers
+# 	'''
+#
+# 	## Precompute
+# 	#### sum approach inspired by motioncorr2
+# 	dsum = d.sum(0)[clip:-clip,clip:-clip].astype('float64')
+# 	hdx = dsum.shape[0]//2
+# 	hdy = dsum.shape[1]//2
+#
+# 	shifts = np.zeros((d.shape[0],2))
+# 	for i in range(d.shape[0]):
+# 		dd = dsum - d[reference,clip:-clip,clip:-clip]
+# 		dd -= dd.mean()
+# 		f0 = np.fft.fft2(dd).conj()
+#
+# 		shifts[i] = _get_shift(d[i,clip:-clip,clip:-clip].astype('float64'),f0,hdx,hdy)
+# 		if not callback():
+# 			break
+# 	from scipy import ndimage as nd
+# 	# shifts = nd.median_filter(shifts,(filter_width,1))
+# 	shifts = nd.gaussian_filter(shifts,(filter_width,1))
+# 	return shifts
 
 def dedrift(d,shifts,callback=lambda : True):
 	'''

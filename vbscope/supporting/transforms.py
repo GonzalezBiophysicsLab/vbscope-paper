@@ -16,10 +16,14 @@ def icp(reference,transformee,xshift=0.,yshift=0.,maxiters=100):
 	c1 = reference.T
 	c2 = transformee.T
 
+	# if xshift == 0. and yshift == 0.:
+	# 	t = EuclideanTransform(translation=np.median(c1,axis=1) - np.median(c2,axis=1))
+	# else:
+	# 	t = EuclideanTransform(translation=[xshift,yshift])
 	if xshift == 0. and yshift == 0.:
-		t = EuclideanTransform(translation=np.median(c1,axis=1) - np.median(c2,axis=1))
+		t = AffineTransform(translation=np.median(c1,axis=1) - np.median(c2,axis=1))
 	else:
-		t = EuclideanTransform(translation=[xshift,yshift])
+		t = AffineTransform(translation=[xshift,yshift])
 
 	last = np.inf
 	for i in range(maxiters):
