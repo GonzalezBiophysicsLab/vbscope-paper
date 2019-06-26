@@ -38,7 +38,8 @@ default_prefs = {
 
 	'channels_colors':['green','red','blue','purple'],
 	'channels_wavelengths':np.array((570.,680.,488.,800.)),
-	'calibrate_darkcut':1,
+	'calibrate_gain':12.952,
+	'calibrate_offset':482.,
 }
 
 class vbscope_gui(QMainWindow):
@@ -134,7 +135,7 @@ class vbscope_gui(QMainWindow):
 			self.menu_movie.addAction(self.docks[mm][0].toggleViewAction())
 		## Add menu items
 		menu_analysis = self.menubar.addMenu('Analysis')
-		analysis_calibrate = QAction('Self-Dark Calibrate',self)
+		analysis_calibrate = QAction('Convert to electrons',self)
 		analysis_calibrate.triggered.connect(self.dark_cal)
 		menu_analysis.addAction(analysis_calibrate)
 		m = ['spotfind', 'background', 'transform', 'extract']
@@ -347,10 +348,10 @@ class vbscope_gui(QMainWindow):
 
 	def dark_cal(self):
 		if not self.data.movie is None:
-			dc = self.prefs['calibrate_darkcut']
-			g = self.data.self_dark_cal(dc)
-			print(g)
-			self.log('dark calibrated at - %d'%(dc))
+			offset = self.prefs['calibrate_offset']
+			gain = self.prefs['calibrate_gain']
+			self.data.calibrate(gain,offset)
+			self.log('Converted to electrons with %f,%f'%(gain,offset))
 
 
 ################################################################################
