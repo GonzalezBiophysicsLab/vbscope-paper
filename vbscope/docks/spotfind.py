@@ -586,6 +586,8 @@ class dock_spotfind(QWidget):
 				d -= d.mean(0)[None,:,:]
 				d = np.mean(d[acfn:]*d[:-acfn],axis=0)/np.mean(d**2.,axis=0) ## ACF(t=1)
 				# d = self.gui.docks['background'][1].bg_filter(d)
+				import scipy.ndimage as nd
+				d = nd.gaussian_filter(d,.5)
 
 				# d[d<=0] = 0.
 				mmin,mmax = minmax.minmax_map(d[None,:,:],0,nxy,nxy,p['spotfind_clip_border'])
