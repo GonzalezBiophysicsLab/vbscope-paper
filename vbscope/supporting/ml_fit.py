@@ -204,7 +204,7 @@ def ml_psf(l,z,sigma,xyi,maxiters=1000,fastflag=False):
 		gx,gy = np.mgrid[xmin:xmax,ymin:ymax]
 		gx = gx.astype('f').flatten()
 		gy = gy.astype('f').flatten()
-		m = z[:,xmin:xmax,ymin:ymax].astype('f').reshape((z.shape[0],gx.size))
+		m = z[:,xmin:xmax,ymin:ymax].astype('f').reshape((z.shape[0],gx.size)).copy()
 
 		## Find COM
 		# xyi = com(m.sum(0)) + xyi - l
@@ -252,9 +252,9 @@ def ml_psf(l,z,sigma,xyi,maxiters=1000,fastflag=False):
 			else:
 				n0 = n1
 				# iter += 1
-		if fastflag:
-			b = np.median(m - n[:,None]*psi[None,:],axis=(1))
-			n = np.sum((m - b[:,None])*psi[None,:],axis=(1))/psum
+		# if fastflag:
+			# b = np.median(m - n[:,None]*psi[None,:],axis=(1))
+			# n = np.sum((m - b[:,None])*psi[None,:],axis=(1))/psum
 		# b = np.median(m - n[:,None,None]*psi[None,:,:],axis=(1,2))
 		# n = np.sum((m - b[:,None,None])*psi[None,:,:],axis=(1,2))/np.sum(psi**2.)
 	except:
