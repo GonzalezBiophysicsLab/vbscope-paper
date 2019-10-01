@@ -141,23 +141,27 @@ class vbscope_gui(QMainWindow):
 		m = ['spotfind', 'background', 'transform', 'extract']
 		for mm in m:
 			menu_analysis.addAction(self.docks[mm][0].toggleViewAction())
-		self.menu_movie.addAction(self.docks['tag_viewer'][0].toggleViewAction())
+		# self.menu_movie.addAction(self.docks['tag_viewer'][0].toggleViewAction())
+
+		action_psftool = QAction('PSF Tool',self)
+		action_psftool.triggered.connect(self.launch_psftool)
+		self.menubar.addAction(action_psftool)
 
 	def setup_vbscope_plots(self):
-		menu_plot = self.menubar.addMenu('Plots')
-		# plt_region = QAction('Region plot',self)
-		# plt_region.triggered.connect(self.plot_region)
-		#
-		# for a in [plt_region]:
-		# 	menu_plot.addAction(a)
-		#
-		# # self.popout_plots = {
-		# # 	'plot_region':None
-		# # }
+		# menu_plot = self.menubar.addMenu('Plots')
+		# # plt_region = QAction('Region plot',self)
+		# # plt_region.triggered.connect(self.plot_region)
+		# #
+		# # for a in [plt_region]:
+		# # 	menu_plot.addAction(a)
+		# #
+		# # # self.popout_plots = {
+		# # # 	'plot_region':None
+		# # # }
 
-		plots_ensemble = QAction('Ensemble Plots',self)
-		plots_ensemble.triggered.connect(self.show_ensemble_plot)
-		menu_plot.addAction(plots_ensemble)
+		# plots_ensemble = QAction('Ensemble Plots',self)
+		# plots_ensemble.triggered.connect(self.show_ensemble_plot)
+		# menu_plot.addAction(plots_ensemble)
 		self.ui_update()
 
 	def show_ensemble_plot(self):
@@ -171,7 +175,8 @@ class vbscope_gui(QMainWindow):
 			self.ui_ensemble_plot.show()
 
 	def setup_shortcuts(self):
-		self.shortcut_esc = QShortcut(QKeySequence(Qt.Key_Escape),self,self.plot.remove_rectangle)
+		pass
+		# self.shortcut_esc = QShortcut(QKeySequence(Qt.Key_Escape),self,self.plot.remove_rectangle)
 
 	def init_statusbar(self):
 		self.statusbar = self.statusBar()
@@ -352,6 +357,17 @@ class vbscope_gui(QMainWindow):
 			gain = self.prefs['calibrate_gain']
 			self.data.calibrate(gain,offset)
 			self.log('Converted to electrons with %f,%f'%(gain,offset))
+
+	def launch_psftool(self):
+		from .ui_psf import psf_tool
+		try:
+			self.psf_tool.close()
+			del self.psf_tool
+		except:
+			pass
+
+		self.psf_tool = psf_tool(gui=self)
+		self.psf_tool.show()
 
 
 ################################################################################

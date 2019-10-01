@@ -12,10 +12,11 @@ from time import time
 
 default_prefs = {
 	'extract_same_cutoff':1.42,
-	'extract_numerical_aperture':1.2,
-	'extract_pixel_size':13300.0,
-	'extract_magnification':60.0,
-	'extract_binning':2,
+	# 'extract_numerical_aperture':1.2,
+	# 'extract_pixel_size':13300.0,
+	# 'extract_magnification':60.0,
+	# 'extract_binning':2,
+	'extract_sigma_pixels':[0.85,.85,.85,.85],
 	'extract_nintegrate':7,
 	'extract_ml_psf_maxiters':1000,
 	'extract_fast_avg':False,
@@ -240,11 +241,11 @@ class dock_extract(QWidget):
 
 	def get_sigma(self,j):
 		''' j is the color index to pick the wavelenght of light '''
-
-		c = 0.42 # .45 or .42, airy disk to gaussian
-		psf_sig = c*self.gui.prefs['channels_wavelengths'][j]*self.gui.prefs['extract_numerical_aperture']
-		sigma = psf_sig/self.gui.prefs['extract_pixel_size']*self.gui.prefs['extract_magnification']/self.gui.prefs['extract_binning']
-		return sigma
+		return self.gui.prefs['extract_sigma_pixels'][j]
+		# c = 0.42 # .45 or .42, airy disk to gaussian
+		# psf_sig = c*self.gui.prefs['channels_wavelengths'][j]*self.gui.prefs['extract_numerical_aperture']
+		# sigma = psf_sig/self.gui.prefs['extract_pixel_size']*self.gui.prefs['extract_magnification']/self.gui.prefs['extract_binning']
+		# return sigma
 
 	def extract(self):
 		self.gui.statusbar.showMessage('Starting Extraction')

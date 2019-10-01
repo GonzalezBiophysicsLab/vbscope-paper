@@ -36,7 +36,7 @@ class image_plot_container():
 		self.ax.set_axis_off()
 		self.ax.set_visible(False)
 
-		self.setup_rectangle()
+		# self.setup_rectangle()
 
 		self.f.subplots_adjust(left=.05,right=.95,top=.95,bottom=.05)
 		self.canvas.draw()
@@ -64,11 +64,11 @@ class image_plot_container():
 		self.ax.add_collection(pc)
 		# self.canvas.draw()
 
-	def setup_rectangle(self):
-		def on_select(eclick, erelease):
-			pass
-		self.rectangle = None
-		self.rectangle = RectangleSelector(self.ax, on_select, drawtype='box',useblit=False,button=[1,3],spancoords='pixels',interactive=True,rectprops = dict(facecolor='red', edgecolor = 'red', alpha=0.2, fill=True))
+	# def setup_rectangle(self):
+	# 	def on_select(eclick, erelease):
+	# 		pass
+	# 	self.rectangle = None
+	# 	self.rectangle = RectangleSelector(self.ax, on_select, drawtype='box',useblit=False,button=[1,3],spancoords='pixels',interactive=True,rectprops = dict(facecolor='red', edgecolor = 'red', alpha=0.2, fill=True))
 
 	def home_fxn(self):
 		self.ax.autoscale()
@@ -79,7 +79,7 @@ class image_plot_container():
 		self.canvas.setSizePolicy(sizePolicy)
 		self.draw()
 
-	def remove_rectangle(self):
-		for artist in self.rectangle.artists:
-			artist.set_visible(False)
-		self.rectangle.update()
+	# def remove_rectangle(self):
+	# 	for artist in self.rectangle.artists:
+	# 		artist.set_visible(False)
+	# 	self.rectangle.update()
