@@ -288,57 +288,88 @@ class vbscope_gui(QMainWindow):
 		else:
 			fname = [fname]
 		if fname[0] != "":
-			d = data_container(self)
-			success = d.load(fname[0])
+			if fname[0].endswith('.hdf5') or fname[0].endswith('.hdf'):
+				from fret_plot.ui.ui_hdf5view import hdf5_dataset_load
+				try:
+					self.hdf5_dataset_load.new_dataset.disconnect()
+					self.hdf5_dataset_load.close()
+					del self.hdf5_dataset_load
+				except:
+					pass
 
-			if success:
-				self.data = d
-				# print self.data.total_frames
-
-				y,x = self.data.movie.shape[1:]
-				self.plot.image.set_extent([-.5,x-.5,-.5,y-.5])
-				self.plot.ax.set_xlim(-.5,x-.5)
-				self.plot.ax.set_ylim(-.5,y-.5)
-
-				self.plot.ax.set_visible(True) # Turn on the plot -- first initialization
-				self.plot.canvas.draw() # Need to initialize on first showing -- for fast plotting
-
-				self.docks['play'][1].slider_frame.setMaximum(self.data.total_frames)
-				self.docks['play'][1].slider_frame.setValue(self.data.current_frame+1)
-				self.docks['play'][1].update_frame_slider()
-				self.docks['play'][1].update_label()
-
-
-				self.docks['render'][1].spin_start.setMaximum(self.data.total_frames)
-				self.docks['render'][1].spin_end.setMaximum(self.data.total_frames)
-				self.docks['render'][1].spin_end.setValue(self.data.total_frames)
-
-				self.plot.image.set_data(self.data.movie[self.data.current_frame])
-
-				if self.docks['contrast'][1].flag_first_time:
-					self.docks['contrast'][1].flag_first_time = False
-					self.docks['contrast'][1].guess_contrast()
-				else:
-					self.data.image_contrast = np.array((float(self.docks['contrast'][1].le_floor.text()),float(self.docks['contrast'][1].le_ceiling.text())))
-
-				self.plot.image.set_cmap(self.prefs['plot_colormap'])
-				self.plot.draw()
-
-				self.log('Loaded %s'%(self.data.filename),True)
-
-				self.setWindowTitle('%s - %s'%(self.app_name,self.data.filename))
-				self.prefs['movie_filename'] =self.data.filename
-
-				self.docks['spotfind'][1].setup_sliders()
-				self.docks['spotfind'][1].flush_old()
-				self.docks['tag_viewer'][1].init_model()
-				return True
+				try:
+					self.hdf5_dataset_load = hdf5_dataset_load(filename=fname[0])
+					self.hdf5_dataset_load.show()
+					self.hdf5_dataset_load.new_dataset.connect(lambda x: self._load_hdf5(x,fname[0]))
+					return False
+				except:
+					pass
+				return False
 
 			else:
-				message = 'Could not load file: %s.'%(fname[0])
-				QMessageBox.critical(None,'Could Not Load File',message)
-				self.log(message,True)
-		return False
+				d = data_container(self)
+				success = d.load_file(fname[0])
+				if success:
+					self._load(d)
+					return True
+				else:
+					message = 'Could not load file: %s.'%(fname[0])
+					QMessageBox.critical(None,'Could Not Load File',message)
+					self.log(message,True)
+					return False
+
+	def _load_hdf5(self,nd,filename):
+		d = data_container(self)
+		success = d.load(nd,filename)
+		if success:
+			self._load(d)
+			return True
+		else:
+			return
+
+	def _load(self,d):
+		## d should be a data_container
+
+		self.data = d
+		# print self.data.total_frames
+
+		y,x = self.data.movie.shape[1:]
+		self.plot.image.set_extent([-.5,x-.5,-.5,y-.5])
+		self.plot.ax.set_xlim(-.5,x-.5)
+		self.plot.ax.set_ylim(-.5,y-.5)
+
+		self.plot.ax.set_visible(True) # Turn on the plot -- first initialization
+		self.plot.canvas.draw() # Need to initialize on first showing -- for fast plotting
+
+		self.docks['play'][1].slider_frame.setMaximum(self.data.total_frames)
+		self.docks['play'][1].slider_frame.setValue(self.data.current_frame+1)
+		self.docks['play'][1].update_frame_slider()
+		self.docks['play'][1].update_label()
+
+
+		self.docks['render'][1].spin_start.setMaximum(self.data.total_frames)
+		self.docks['render'][1].spin_end.setMaximum(self.data.total_frames)
+		self.docks['render'][1].spin_end.setValue(self.data.total_frames)
+
+		self.plot.image.set_data(self.data.movie[self.data.current_frame])
+
+		if self.docks['contrast'][1].flag_first_time:
+			self.docks['contrast'][1].flag_first_time = False
+			self.docks['contrast'][1].guess_contrast()
+		else:
+			self.data.image_contrast = np.array((float(self.docks['contrast'][1].le_floor.text()),float(self.docks['contrast'][1].le_ceiling.text())))
+
+		self.plot.image.set_cmap(self.prefs['plot_colormap'])
+		self.plot.draw()
+
+		self.log('Loaded %s'%(self.data.filename),True)
+
+		self.setWindowTitle('%s - %s'%(self.app_name,self.data.filename))
+		self.prefs['movie_filename'] =self.data.filename
+
+		self.docks['spotfind'][1].setup_sliders()
+		self.docks['spotfind'][1].flush_old()
+		self.docks['tag_viewer'][1].init_model()
 
 	def log(self,line,timestamp = False):
 		self._log.log(line,timestamp)
