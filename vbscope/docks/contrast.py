@@ -75,7 +75,7 @@ class dock_contrast(QWidget):
 	def update_image_contrast(self):
 		norm = PowerNorm(self.gamma,*self.gui.data.image_contrast)
 		self.gui.plot.image.set_norm(norm)
-		self.gui.plot.draw()
+		self.gui.plot.canvas.draw()
 		self.clear_le_focus()
 
 	def guess_contrast(self):

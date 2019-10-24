@@ -96,7 +96,8 @@ class dock_play(QWidget):
 		# self.gui.docks['background'][1].update_background()
 		# self.gui.plot.image.set_data(self.gui.data.movie[self.gui.data.current_frame] - self.gui.data.background)
 		self.gui.plot.image.set_data(self.gui.data.movie[self.gui.data.current_frame])
-		self.gui.plot.draw()
+		# self.gui.plot.draw()
+		self.gui.plot.canvas.draw()
 
 	def stop_playing(self):
 		self.timer_playing.stop()

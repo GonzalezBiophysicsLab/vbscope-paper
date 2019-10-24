@@ -361,6 +361,7 @@ class vbscope_gui(QMainWindow):
 
 		self.plot.image.set_cmap(self.prefs['plot_colormap'])
 		self.plot.draw()
+		self.plot.canvas.draw()
 
 		self.log('Loaded %s'%(self.data.filename),True)
 
