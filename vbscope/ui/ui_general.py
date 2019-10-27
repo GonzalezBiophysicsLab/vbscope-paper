@@ -120,6 +120,10 @@ class vbscope_gui(QMainWindow):
 		self.ui_update()
 		self.resize_prefs()
 
+	def mousePressEvent(self,event):
+		self.setFocus()
+		super(QMainWindow,self).mousePressEvent(event)
+
 	def show(self):
 		super(vbscope_gui,self).show()
 		## Toggle to make prefs show up

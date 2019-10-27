@@ -42,6 +42,12 @@ class image_plot_container():
 		self.canvas.draw()
 		plt.close(self.f)
 
+		self.canvas.mousePressEvent = self.mousePressEvent
+
+	def mousePressEvent(self,event):
+		self.canvas.setFocus()
+		super(FigureCanvas,self.canvas).mousePressEvent(event)
+
 	def draw(self):
 		try:
 			self.ax.draw_artist(self.image)
