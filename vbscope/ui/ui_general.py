@@ -322,6 +322,12 @@ class vbscope_gui(QMainWindow):
 					self.log(message,True)
 					return False
 
+	def _load_hdf5_dataset(self,filename,datasetname):
+		import h5py as h
+		with h.File(filename,'r') as f:
+			dataset = f[datasetname][:]
+		return self._load_hdf5(dataset,filename)
+
 	def _load_hdf5(self,nd,filename):
 		d = data_container(self)
 		success = d.load(nd,filename)
@@ -329,7 +335,7 @@ class vbscope_gui(QMainWindow):
 			self._load(d)
 			return True
 		else:
-			return
+			return False
 
 	def _load(self,d):
 		## d should be a data_container
@@ -483,6 +489,11 @@ class vbscope_gui(QMainWindow):
 			self.closeEvent = super(vbscope_gui,self).closeEvent
 		else:
 			event.ignore()
+
+	def quick_close(self):
+		self.closeEvent = super(vbscope_gui,self).closeEvent
+		self.close()
+
 
 def launch_scriptable(app=None):
 	if app is None:
