@@ -66,7 +66,12 @@ class dock_extract(QWidget):
 		self.gui.plot.canvas.draw()
 		try:
 			from fret_plot import launch_scriptable
-			self.ui_p = launch_scriptable(self.gui.app,self.traces)
+			info_dict = {}
+			info_dict['type'] = 'vbscope'
+			info_dict['ncolors'] = self.gui.data.shape[2]
+			info_dict['file'] = self.gui.data.filename
+			info_dict['dimensions'] = 'N,T,[C,(A,B,Mx,My,Sx,Sy)]'
+			self.ui_p = launch_scriptable(self.gui.app,self.traces,info_dict=info_dict)
 			self.ui_p.show()
 			self.ui_p.show()
 		except:
@@ -75,6 +80,7 @@ class dock_extract(QWidget):
 
 
 	def save_traces(self,event=None,oname=None):
+		## format is NxTxCxD
 		if self.traces is None:
 			return
 
@@ -99,7 +105,7 @@ class dock_extract(QWidget):
 			oname = [oname]
 		if oname[0] != "":
 			try:
-				n = self.traces.shape[1]
+				n = self.traces.shape[2]
 
 				import h5py
 				f = open(oname[0],'w')
@@ -107,6 +113,8 @@ class dock_extract(QWidget):
 				f = h5py.File(oname[0],'w')
 				f.attrs['type'] = 'vbscope'
 				f.attrs['ncolors'] = n
+				f.attrs['file'] = self.gui.data.filename
+				f.attrs['dimensions'] = 'N,T,[C,(A,B,Mx,My,Sx,Sy)]'
 				f.create_dataset('data',data=self.traces,dtype='float32',compression="gzip")
 				f.flush()
 				f.create_dataset('pre_time',data=np.zeros(self.traces.shape[0],dtype='int32'),dtype='int32',compression="gzip")
@@ -320,21 +328,28 @@ class dock_extract(QWidget):
 						bgg[i] = np.median(self.gui.data.movie[-10:,xyi[0][i],xyi[1][i]])
 				ns = ns - bgg[None,:]
 
-
-				traces.append(ns)
+				out = np.zeros((ns.shape[0],ns.shape[1],6)) ## t,c,[a,b,mx,my,sx,sy]
+				out[:,:,0] = ns
+				out[:,:,1] = bgg[None,:]
+				out[:,:,2] = xyi[0]
+				out[:,:,3] = xyi[1]
+				out[:,:,4] = 1.
+				out[:,:,5] = 1.
+				traces.append(out)
 
 			elif self.combo_method.currentIndex() == 1:
 				# ns = self.ml_psf(np.round(xy).astype('i'),sigma)
 				# traces.append(ns)
-				ns = self.ml_psf(xy,sigma,j)
-				traces.append(ns)
+				out = self.ml_psf(xy,sigma,j)
+				traces.append(out)
 
 			elif self.combo_method.currentIndex() == 2:
-				ns = self.experimental(np.round(xy).astype('i'),sigma)
-				traces.append(ns)
+				out = self.experimental(np.round(xy).astype('i'),sigma)
+				traces.append(out)
 
 		traces = np.array(traces)
-		traces = np.moveaxis(traces,2,0)
+		traces = np.moveaxis(np.moveaxis(traces,2,0),2,1)
+		## change CxTxNxD to NxTxCxD
 
 		# np.save('test.dat',traces)
 		self.traces = traces
@@ -346,7 +361,7 @@ class dock_extract(QWidget):
 
 	def experimental(self,xy,sigma):
 		l = (self.gui.prefs['extract_nintegrate']-1)/2
-		out = np.empty((self.gui.data.movie.shape[0],xy.shape[1]))
+		out = np.empty((self.gui.data.movie.shape[0],xy.shape[1],6))
 		prog = progress(out.shape[0],out.shape[1])
 		prog.canceled.connect(self.cancel_expt)
 		prog.show()
@@ -373,7 +388,13 @@ class dock_extract(QWidget):
 					# p = fit(l,z,sigma,xyi)
 					# print t,i,p[4],p[5]
 					# out[t,i] = p[4]
-					out[t,i] = ps[i][4]
+					# out[t,i] = ps[i][4]
+					out[t,i,0] = ps[i][4]
+					out[t,i,1] = ps[i][5]
+					out[t,i,2] = ps[i][0]
+					out[t,i,3] = ps[i][1]
+					out[t,i,4] = ps[i][2]
+					out[t,i,5] = ps[i][3]
 				t1 = time()
 				prog.setLabelText('Fitting %d spots, %d frames\ntime/fit = %f sec'%(out.shape[0],out.shape[1],(t1-t0)/out.shape[1]))
 		prog.close()
@@ -386,7 +407,7 @@ class dock_extract(QWidget):
 		from time import time
 
 		l = (self.gui.prefs['extract_nintegrate']-1)/2
-		out = np.zeros((self.gui.data.movie.shape[0],xy.shape[1]))
+		out = np.zeros((self.gui.data.movie.shape[0],xy.shape[1],6))
 
 		prog = progress(out.shape[0],out.shape[1])
 		prog.setWindowTitle("Fitting Color %d"%(color))
@@ -406,9 +427,14 @@ class dock_extract(QWidget):
 					self.gui.app.processEvents()
 				try:
 					t0 = time()
-					o = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['extract_ml_psf_maxiters'],fastflag=self.gui.prefs['extract_fast_avg'])
+					ns,bs = ml_psf(l,self.gui.data.movie,sigma,xy[:,i].astype('double'),maxiters=self.gui.prefs['extract_ml_psf_maxiters'],fastflag=self.gui.prefs['extract_fast_avg'])
 					t1 = time()
-					out[:,i] = o
+					out[:,i,0] = ns
+					out[:,i,1] = bs
+					out[:,i,2] = xy[0,i]
+					out[:,i,3] = xy[1,i]
+					out[:,i,4] = sigma
+					out[:,i,5] = sigma
 					ts.append(t1-t0)
 				except:
 					pass

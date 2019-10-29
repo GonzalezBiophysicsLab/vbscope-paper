@@ -260,4 +260,4 @@ def ml_psf(l,z,sigma,xyi,maxiters=1000,fastflag=False):
 	except:
 		n = np.zeros(z.shape[0])
 		b = np.zeros(z.shape[0])
-	return n
+	return n,b
