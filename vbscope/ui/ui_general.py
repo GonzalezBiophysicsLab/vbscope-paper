@@ -512,7 +512,6 @@ def launch_gui():
 		return gui
 	except:
 		path = os.path.join(os.path.dirname(sys.modules[__name__].__file__), 'icon.png')
-		print(path)
 		gui.app.setWindowIcon(QIcon(path))
 
 		sys.exit(gui.app.exec_())
