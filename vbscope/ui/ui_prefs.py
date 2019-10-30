@@ -295,10 +295,10 @@ class preferences(QWidget):
 	def load_str(self,s):
 		d = {}
 		ss =[ss.split(":") for ss in s.split('\n')]
-		try:
-			for i in range(len(ss)):
-				if len(ss[i]) == 2:
-					k,v = ss[i]
+		for sss in ss:
+			try:
+				if len(sss) == 2:
+					k,v = sss
 					if v[0] in ["\"","\'"]:
 						v = v[1:-1]
 					elif v in ['True','true','T','t']:
@@ -310,8 +310,8 @@ class preferences(QWidget):
 					else: ## Will probably break if not anything yet and not int
 						v = int(v)
 					d[k] = v
-		except:
-			pass
+			except:
+				pass
 		self.add_dictionary(d)
 
 	def show(self):
@@ -320,7 +320,14 @@ class preferences(QWidget):
 
 	def load_preferences(self,fname=None):
 		if fname is None:
-			fname,_ = QFileDialog.getOpenFileName(self,'Choose preferences file to load','./prefs.txt')
+			from PyQt5.QtCore import QFileInfo
+			import os
+			newfname = self.gui.latest_directory + os.sep + 'prefs.txt'
+			fname = QFileDialog.getOpenFileName(self,'Choose preferences file to load',newfname)
+			if fname[0] != "" and fname[1] != '':
+				self.gui.latest_directory = QFileInfo(fname[0]).path()
+
+			fname = fname[0]
 		if fname != "":
 			try:
 				f = open(str(fname),'r')
@@ -342,7 +349,19 @@ class preferences(QWidget):
 
 	def save_preferences(self,fname=None):
 		if fname is None:
-			fname,_ = QFileDialog.getSaveFileName(self,'Save preferences text file','./prefs.txt','.txt')
+			try:
+				import os
+				from PyQt5.QtCore import QFileInfo
+				path = self.gui.latest_directory + os.sep
+				newfilename = path + 'prefs.txt'
+				fname = QFileDialog.getSaveFileName(self.gui, 'Save preferences text file', newfilename,'*.txt')
+				if fname[0] != "" and fname[1] != '':
+					self.gui.latest_directory = QFileInfo(fname[0]).path()
+			except:
+				fname = QFileDialog.getSaveFileName(self.gui, 'Save preferences text file', './prefs.txt','*.txt')
+
+			fname = fname[0]
+
 		if fname != "":
 			try:
 				p = self.output_str()
