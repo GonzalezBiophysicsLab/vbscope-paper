@@ -103,23 +103,18 @@ class dock_extract(QWidget):
 		if self.traces is None:
 			return
 
-		# ## get xy positions
-		# spots = self.get_spots()
-		# regions,shifts = self.gui.data.regions_shifts()
-		# ts = self.gui.docks['transform'][1].transforms
-		#
-		# for j in range(self.gui.data.ncolors):
-		# 	xy = spots.copy()
-		# 	if j > 0:
-		# 		xy = ts[j][0](xy.T).T
-		# 	xy += shifts[j][:,None]
-
 		if oname is None:
-			defaultname = self.gui.data.filename
-			if defaultname.count('.') > 0:
-				defaultname = '.'.join(defaultname.split('.')[:-1])
-			defaultname += '_traces.hdf5'
-			oname = QFileDialog.getSaveFileName(self.gui, 'Export data', defaultname,'*.hdf5')
+			try:
+				import os
+				from PyQt5.QtCore import QFileInfo
+				defaultname = QFileInfo(self.gui.data.filename)
+				path = self.gui.latest_directory + os.sep
+				newfilename = path + defaultname.fileName().split('.')[0]+'_traces.hdf5'
+				oname = QFileDialog.getSaveFileName(self.gui, 'Export data', newfilename,'*.hdf5')
+				if oname[0] != "" and oname[1] != '':
+					self.gui.latest_directory = QFileInfo(oname[0]).path()
+			except:
+				oname = QFileDialog.getSaveFileName(self.gui, 'Export data', './','*.hdf5')
 		else:
 			oname = [oname]
 		if oname[0] != "":

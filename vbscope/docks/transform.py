@@ -150,7 +150,18 @@ class dock_transform(QWidget):
 					out.append(o[0])
 				out = np.array((out)).T + 1.
 
-				oname = QFileDialog.getSaveFileName(self, 'Export vbscope Alignment', self.gui.data.filename[:-4]+'_alignment.dat','*.dat')
+				try:
+					import os
+					from PyQt5.QtCore import QFileInfo
+					defaultname = QFileInfo(self.gui.data.filename)
+					path = self.gui.latest_directory + os.sep
+					newfilename = path + defaultname.fileName().split('.')[0]+'_alignment.dat'
+					oname = QFileDialog.getSaveFileName(self.gui, 'Export vbscope Alignment', newfilename,'*.dat')
+					if oname[0] != "" and oname[1] != '':
+						self.gui.latest_directory = QFileInfo(oname[0]).path()
+				except:
+					oname = QFileDialog.getSaveFileName(self.gui, 'Export vbscope Alignment', './','*.dat')
+
 				if oname[0] != "":
 					try:
 						np.savetxt(oname[0],out,delimiter=',')
@@ -188,7 +199,11 @@ class dock_transform(QWidget):
 
 	def load(self,event=None,fname=None):
 		if fname is None:
-			fname = QFileDialog.getOpenFileName(self,'Choose an alignment file to load','./')#,filter='TIF File (*.tif *.TIF)')
+			from PyQt5.QtCore import QFileInfo
+			fname = QFileDialog.getOpenFileName(self,'Choose an alignment file to load',self.gui.latest_directory)
+			if fname[0] != "" and fname[1] != '':
+				self.gui.latest_directory = QFileInfo(fname[0]).path()
+
 		else:
 			fname = [fname]
 		if fname[0] != "":

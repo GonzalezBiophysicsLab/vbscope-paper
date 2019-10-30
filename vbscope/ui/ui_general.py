@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication,QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget, QFileDialog,QDesktopWidget
-from PyQt5.QtCore import Qt, qInstallMessageHandler
+from PyQt5.QtCore import Qt, qInstallMessageHandler, QFileInfo
 from PyQt5.QtGui import QKeySequence, QIcon
 
 import matplotlib
@@ -78,6 +78,7 @@ class vbscope_gui(QMainWindow):
 		self.app = app
 		self.app_name = "vbscope"
 		self.setWindowTitle(self.app_name)
+		self.latest_directory = './'
 
 		self.data  = data_container(self)
 		self.plot  = plot_container()
@@ -288,7 +289,9 @@ class vbscope_gui(QMainWindow):
 	def load(self,fname=None):
 		self.docks['play'][1].stop_playing()
 		if fname is None:
-			fname = QFileDialog.getOpenFileName(self,'Choose Movie to load','./')
+			fname = QFileDialog.getOpenFileName(self,'Choose Movie to load',self.latest_directory)
+			if fname[0] != "" and fname[1] != '':
+				self.latest_directory = QFileInfo(fname[0]).path()
 		else:
 			fname = [fname]
 		if fname[0] != "":

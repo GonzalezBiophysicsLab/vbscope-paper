@@ -237,7 +237,21 @@ class dock_spotfind(QWidget):
 
 	def exportspots(self):
 		if self.gui.data.flag_movie:
-			oname = QFileDialog.getSaveFileName(self, 'Export Spots', self.gui.data.filename[:-4]+'_spots.dat','*.dat')
+			# oname = QFileDialog.getSaveFileName(self, 'Export Spots', self.gui.data.filename[:-4]+'_spots.dat','*.dat')
+
+			try:
+				import os
+				from PyQt5.QtCore import QFileInfo
+				defaultname = QFileInfo(self.gui.data.filename)
+				path = self.gui.latest_directory + os.sep
+				newfilename = path + defaultname.fileName().split('.')[0]+'_spots.dat'
+				oname = QFileDialog.getSaveFileName(self.gui, 'Export Spots', newfilename,'*.dat')
+				if oname[0] != "" and oname[1] != '':
+					self.gui.latest_directory = QFileInfo(oname[0]).path()
+			except:
+				oname = QFileDialog.getSaveFileName(self.gui, 'Export Spots', './','*.dat')
+
+
 			if oname[0] != "":
 				try:
 					for i in range(self.gui.data.ncolors):
@@ -251,7 +265,11 @@ class dock_spotfind(QWidget):
 
 	def loadpriors(self):
 		if self.gui.data.flag_movie:
-			fname = QFileDialog.getOpenFileName(self,'Choose priors to load','./')#,filter='TIF File (*.tif *.TIF)')
+			from PyQt5.QtCore import QFileInfo
+			fname = QFileDialog.getOpenFileName(self,'Choose priors to load',self.gui.latest_directory)
+			if fname[0] != "" and fname[1] != '':
+				self.gui.latest_directory = QFileInfo(fname[0]).path()
+
 			if fname[0] != "":
 				try:
 					self.priors = np.loadtxt(fname[0]).astype('double')
@@ -263,7 +281,18 @@ class dock_spotfind(QWidget):
 
 	def savepriors(self):
 		if self.gui.data.flag_movie:
-			oname = QFileDialog.getSaveFileName(self, 'Save Priors', self.gui.data.filename[:-4]+'_priors.dat','*.dat')
+			try:
+				import os
+				from PyQt5.QtCore import QFileInfo
+				defaultname = QFileInfo(self.gui.data.filename)
+				path = self.gui.latest_directory + os.sep
+				newfilename = path + defaultname.fileName().split('.')[0]+'_priors.dat'
+				oname = QFileDialog.getSaveFileName(self.gui, 'Save Priors', newfilename,'*.dat')
+				if oname[0] != "" and oname[1] != '':
+					self.gui.latest_directory = QFileInfo(oname[0]).path()
+			except:
+				oname = QFileDialog.getSaveFileName(self.gui, 'Save Priors', './','*.dat')
+
 			if oname[0] != "":
 				if not self.priors is None:
 					try:
