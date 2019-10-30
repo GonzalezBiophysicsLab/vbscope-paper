@@ -20,6 +20,10 @@ default_prefs = {
 	'extract_nintegrate':7,
 	'extract_ml_psf_maxiters':1000,
 	'extract_fast_avg':False,
+
+	'draw_spot':True,
+	'draw_spotalpha':0.5,
+	'draw_spotcolor':'cyan'
 }
 
 class dock_extract(QWidget):
@@ -77,11 +81,21 @@ class dock_extract(QWidget):
 				positions = positions[:,0,:,:][:,None,:,:]
 
 			self.ui_p = launch_scriptable(self.gui.app, self.traces[:,:,:,:2], positions=positions, info_dict=info_dict)
+			self.ui_p.new_spot_location.connect(self.showspots)
 			self.ui_p.show()
 			self.ui_p.show()
 		except:
 			msg = 'There was a problem trying to launch the fret_plot program. Check python path'
 			QMessageBox.critical(self,'Export Data',msg)
+
+	def showspots(self,pos):
+		if self.gui.prefs['draw_spot']:
+			self.gui.plot.clear_collections()
+			color = self.gui.prefs['draw_spotcolor']
+			alpha = self.gui.prefs['draw_spotalpha']
+			self.gui.plot.scatter(pos[:,0],pos[:,1],radius=5.,facecolor="None",edgecolor=color,alpha=alpha)
+			self.gui.plot.canvas.draw()
+			self.gui.app.processEvents()
 
 
 	def save_traces(self,event=None,oname=None):

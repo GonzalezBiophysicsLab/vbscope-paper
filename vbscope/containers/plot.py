@@ -64,9 +64,12 @@ class image_plot_container():
 		for i in range(len(self.ax.collections)):
 			self.ax.collections[0].remove()
 
-	def scatter(self,x,y,radius=.66,color='red'):
+	def scatter(self,x,y,radius=.66,color=None,edgecolor='red',facecolor='red',alpha=.6):
 		ps = [RegularPolygon([y[i],x[i]],4,radius=radius) for i in range(len(x))]
-		pc = PatchCollection(ps,alpha=.6,facecolor=color,edgecolor=color)
+		if not color is None:
+			pc = PatchCollection(ps,alpha=alpha,facecolor=color,edgecolor=color)
+		else:
+			pc = PatchCollection(ps,alpha=alpha,facecolor=facecolor,edgecolor=edgecolor)
 		self.ax.add_collection(pc)
 		# self.canvas.draw()
 
