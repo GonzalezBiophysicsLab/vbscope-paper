@@ -35,7 +35,8 @@ class psf_tool(popplot_widget):
 		def fitfxn(theta,z,gx,gy):
 			return np.sum((z-psf_fxn(gx,gy,*theta))**2.)
 
-		img = self.gui.data.movie.max(0)
+		# img = self.gui.data.movie.max(0)
+		img = self.gui.data.movie.mean(0)
 
 		for color in range(self.ncolors):
 			mask = np.zeros_like(img).astype('int32')
@@ -48,13 +49,14 @@ class psf_tool(popplot_widget):
 			cmap = self.gui.prefs['plot_colormap']
 			self.ax[color][0].imshow(mask,cmap=cmap)
 			## 1
-			punches /= punches.sum((1,2))[:,None,None]
-			psf = np.median(punches,axis=0)
+			# punches /= punches.sum((1,2))[:,None,None]
+			# psf = np.median(punches,axis=0)
 			## 2
 			# psf = punches.mean(0)
 			## 3
 			# punches -= punches.min((1,2))[:,None,None]
 			# punches /= punches.sum((1,2))[:,None,None]
+			## 4
 			psf = np.mean(punches,axis=0)
 			psf -= psf.min()
 			psf /= psf.max()

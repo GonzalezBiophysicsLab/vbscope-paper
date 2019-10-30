@@ -68,10 +68,15 @@ class dock_extract(QWidget):
 			from fret_plot import launch_scriptable
 			info_dict = {}
 			info_dict['type'] = 'vbscope'
-			info_dict['ncolors'] = self.gui.data.shape[2]
+			info_dict['ncolors'] = self.traces.shape[2]
 			info_dict['file'] = self.gui.data.filename
-			info_dict['dimensions'] = 'N,T,[C,(A,B,Mx,My,Sx,Sy)]'
-			self.ui_p = launch_scriptable(self.gui.app,self.traces,info_dict=info_dict)
+			info_dict['dimensions'] = 'N,T,[C,(A,B)]'
+
+			positions = self.traces[:,:,:,2:4]
+			if np.all(positions == positions[:,0,:,:][:,None,:,:]):
+				positions = positions[:,0,:,:][:,None,:,:]
+
+			self.ui_p = launch_scriptable(self.gui.app, self.traces[:,:,:,:2], positions=positions, info_dict=info_dict)
 			self.ui_p.show()
 			self.ui_p.show()
 		except:
@@ -112,11 +117,19 @@ class dock_extract(QWidget):
 				f.close()
 				f = h5py.File(oname[0],'w')
 				f.attrs['type'] = 'vbscope'
-				f.attrs['ncolors'] = n
+				f.attrs['ncolors'] = str(n)
 				f.attrs['file'] = self.gui.data.filename
-				f.attrs['dimensions'] = 'N,T,[C,(A,B,Mx,My,Sx,Sy)]'
-				f.create_dataset('data',data=self.traces,dtype='float32',compression="gzip")
+				f.attrs['dimensions'] = 'N,T,[C,(A,B)]'
+				f.create_dataset('data',data=self.traces[:,:,:,:2],dtype='float32',compression="gzip")
 				f.flush()
+
+				positions = self.traces[:,:,:,2:4]
+				if np.all(positions == positions[:,0,:,:][:,None,:,:]):
+					positions = positions[:,0,:,:][:,None,:,:]
+				f.create_dataset('positions', data=positions.astype('float32'), dtype='float32', compression="gzip")
+				f.flush()
+
+				f.create_dataset('index',data=np.arange(self.traces.shape[0]),dtype='int64')
 				f.create_dataset('pre_time',data=np.zeros(self.traces.shape[0],dtype='int32'),dtype='int32',compression="gzip")
 				f.create_dataset('post_time',data=np.zeros(self.traces.shape[0],dtype='int32')+self.traces.shape[0],dtype='int32',compression="gzip")
 				f.create_dataset('class',data=np.zeros(self.traces.shape[0],dtype='int8'),dtype='int8',compression="gzip")
