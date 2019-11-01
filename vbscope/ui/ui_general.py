@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication,QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget, QFileDialog,QDesktopWidget
+from PyQt5.QtWidgets import QApplication,QMainWindow, QDockWidget, QAction, QMessageBox,QProgressDialog,QMessageBox,QShortcut, QDockWidget, QFileDialog,QDesktopWidget,QInputDialog
 from PyQt5.QtCore import Qt, qInstallMessageHandler, QFileInfo
 from PyQt5.QtGui import QKeySequence, QIcon
 
@@ -148,9 +148,13 @@ class vbscope_gui(QMainWindow):
 			menu_analysis.addAction(self.docks[mm][0].toggleViewAction())
 		# self.menu_movie.addAction(self.docks['tag_viewer'][0].toggleViewAction())
 
+		menu_tools = self.menubar.addMenu('Tools')
 		action_psftool = QAction('PSF Tool',self)
 		action_psftool.triggered.connect(self.launch_psftool)
-		self.menubar.addAction(action_psftool)
+		action_removeframes = QAction('Remove Frames',self)
+		action_removeframes.triggered.connect(lambda ev: self.remove_frames())
+		for ac in [action_psftool,action_removeframes]:
+			menu_tools.addAction(ac)
 
 	def setup_vbscope_plots(self):
 		# menu_plot = self.menubar.addMenu('Plots')
@@ -413,6 +417,19 @@ class vbscope_gui(QMainWindow):
 
 		self.psf_tool = psf_tool(gui=self)
 		self.psf_tool.show()
+
+	def remove_frames(self,nframes=None):
+		if nframes is None:
+			nframes,success = QInputDialog.getInt(self,"Remove Frames","Number of frames to remove starting from the beginning of the movie",value=1)
+		else:
+			success = True
+		if success:
+			if nframes > 0 and nframes < self.data.movie.shape[0]:
+				self.data.current_frame = 0
+				self.data.movie = self.data.movie[nframes:]
+				self.data.total_frames = self.data.movie.shape[0]
+				self._load(self.data)
+
 
 
 ################################################################################
