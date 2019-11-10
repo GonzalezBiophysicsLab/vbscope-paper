@@ -300,7 +300,7 @@ class vbscope_gui(QMainWindow):
 			fname = [fname]
 		if fname[0] != "":
 			if fname[0].endswith('.hdf5') or fname[0].endswith('.hdf'):
-				from fret_plot.ui.ui_hdf5view import hdf5_dataset_load
+				from fret_plot.ui.ui_hdf5view import hdf5_datasetgroup_load
 				try:
 					self.hdf5_dataset_load.new_dataset.disconnect()
 					self.hdf5_dataset_load.close()
@@ -309,9 +309,9 @@ class vbscope_gui(QMainWindow):
 					pass
 
 				try:
-					self.hdf5_dataset_load = hdf5_dataset_load(filename=fname[0])
+					self.hdf5_dataset_load = hdf5_datasetgroup_load(filename=fname[0],allowed='dataset')
 					self.hdf5_dataset_load.show()
-					self.hdf5_dataset_load.new_dataset.connect(lambda x: self._load_hdf5(x,fname[0]))
+					self.hdf5_dataset_load.new_dataset.connect(lambda x,y: self._load_hdf5_dataset(x,y))
 					return False
 				except:
 					pass

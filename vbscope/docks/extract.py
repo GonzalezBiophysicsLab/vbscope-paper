@@ -21,6 +21,8 @@ default_prefs = {
 	'extract_ml_psf_maxiters':1000,
 	'extract_fast_avg':False,
 
+	'author_name':'I. M.-A. Biophysicist',
+
 	'draw_spot':True,
 	'draw_spotalpha':0.5,
 	'draw_spotcolor':'cyan'
@@ -71,18 +73,21 @@ class dock_extract(QWidget):
 		try:
 			from fret_plot import launch_scriptable
 			info_dict = {}
-			info_dict['type'] = 'vbscope'
-			info_dict['ncolors'] = self.traces.shape[2]
-			info_dict['file'] = self.gui.data.filename
-			info_dict['dimensions'] = 'N,T,[C,(A,B)]'
+			info_dict['description'] = 'vbscope'
+			info_dict['data description'] = 'Nmol,Ntime,Ncolors'
+			info_dict['technique'] = 'Wide-field single-molecule fluorescence microscopy'
+			info_dict['source name'] = self.gui.data.filename
+			info_dict['author'] = self.gui.prefs['author_name']
 
-			positions = self.traces[:,:,:,2:4]
-			if np.all(positions == positions[:,0,:,:][:,None,:,:]):
-				positions = positions[:,0,:,:][:,None,:,:]
+			positions = self.traces[:,:,:,2:4].copy()
+			# if np.all(positions == positions[:,0,:,:][:,None,:,:]):
+				# positions = positions[:,0,:,:][:,None,:,:]
+			positions = positions.mean(1) ## for now until fret_plot takes time dependent
 
-			self.ui_p = launch_scriptable(self.gui.app, self.traces[:,:,:,:2], positions=positions, info_dict=info_dict)
-			self.ui_p.new_spot_location.connect(self.showspots)
-			self.ui_p.show()
+			self.ui_p = launch_scriptable(self.gui.app)
+			self.ui_p.load_externaldata(self.traces[:,:,:,0].copy(), positions=positions, info_dict=info_dict)
+			self.ui_p.signal_new_spot_location.connect(self.showspots)
+
 			self.ui_p.show()
 		except:
 			msg = 'There was a problem trying to launch the fret_plot program. Check python path'
