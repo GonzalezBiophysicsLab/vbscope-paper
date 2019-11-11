@@ -380,93 +380,96 @@ class dock_spotfind(QWidget):
 
 		if not self.gui.data.flag_movie:
 			return
-		nc = self.gui.data.ncolors
-		self.xys = [None for _ in range(nc)]
-		self.spotprobs = [None for _ in range(nc)]
-		self.gui.plot.clear_collections()
 
-		start = self.spin_start.value() - 1
-		end = self.spin_end.value() - 1
-		total = end + 1 - start
+		try:
+			nc = self.gui.data.ncolors
+			self.xys = [None for _ in range(nc)]
+			self.spotprobs = [None for _ in range(nc)]
+			self.gui.plot.clear_collections()
 
-		self.priors_check(nc)
-		regions,self.shifts = self.gui.data.regions_shifts()
+			start = self.spin_start.value() - 1
+			end = self.spin_end.value() - 1
+			total = end + 1 - start
 
-		p = self.gui.prefs
-		nregion = self.gui.prefs['spotfind_nsearch']**2
-		nxy = (p['spotfind_nsearch']-1)//2
-		nt = 0
+			self.priors_check(nc)
+			regions,self.shifts = self.gui.data.regions_shifts()
 
-		self.disp_image = np.zeros_like(self.gui.data.movie[0]).astype('double')
-		self.spotprobs = [None for _ in range(nc)]
+			p = self.gui.prefs
+			nregion = self.gui.prefs['spotfind_nsearch']**2
+			nxy = (p['spotfind_nsearch']-1)//2
+			nt = 0
 
-		for i in range(nc):
-			self.gui.set_status('Finding spots - %d'%(i))
-			self.gui.app.processEvents()
+			self.disp_image = np.zeros_like(self.gui.data.movie[0]).astype('double')
+			self.spotprobs = [None for _ in range(nc)]
 
-			r = regions[i]
-			probs =  np.zeros((total,*self.disp_image.shape))[:,r[0][0]:r[0][1],r[1][0]:r[1][1]]
-			self.todo = [None,]*(end+1-start)
+			for i in range(nc):
+				self.gui.set_status('Finding spots - %d'%(i))
+				self.gui.app.processEvents()
 
-			for t in range(start,end+1):
-				# if self.flag_abort:
-					# break
+				r = regions[i]
+				probs =  np.zeros((total,*self.disp_image.shape))[:,r[0][0]:r[0][1],r[1][0]:r[1][1]]
+				self.todo = [None,]*(end+1-start)
 
-				d = self.gui.docks['background'][1].bg_filter(self.gui.data.movie[t, r[0][0]:r[0][1], r[1][0]:r[1][1]].astype('double'))
+				for t in range(start,end+1):
+					# if self.flag_abort:
+						# break
 
-				if not self.flag_priorsloaded and t == start:
-					self.priors[i] = self.estimate_prior_set(d)
+					d = self.gui.docks['background'][1].bg_filter(self.gui.data.movie[t, r[0][0]:r[0][1], r[1][0]:r[1][1]].astype('double'))
 
-				if (p['spotfind_rangefast'] and t == start) or (not p['spotfind_rangefast']):
-					mmin,mmax = minmax.minmax_map(d[None,:,:], nt,nxy,nxy, p['spotfind_clip_border'])
+					if not self.flag_priorsloaded and t == start:
+						self.priors[i] = self.estimate_prior_set(d)
 
-				h0 = d[mmax[0]].astype('double')
-				l0 = d[mmin[0]]
+					if (p['spotfind_rangefast'] and t == start) or (not p['spotfind_rangefast']):
+						mmin,mmax = minmax.minmax_map(d[None,:,:], nt,nxy,nxy, p['spotfind_clip_border'])
 
-				if (p['spotfind_rangefast'] and t == start) or (not p['spotfind_rangefast']):
-					bg_values = nmd.estimate_from_min(l0,nregion)
+					h0 = d[mmax[0]].astype('double')
+					l0 = d[mmin[0]]
 
-				self.todo[t-start] = [gmm, t,t-start, i, mmax[0], h0, bg_values, nregion, p['spotfind_nstates'], p['spotfind_maxiterations'],p['spotfind_threshold'],self.priors,self.gui.prefs['spotfind_updatebg']]
+					if (p['spotfind_rangefast'] and t == start) or (not p['spotfind_rangefast']):
+						bg_values = nmd.estimate_from_min(l0,nregion)
 
-				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d/float(total)
+					self.todo[t-start] = [gmm, t,t-start, i, mmax[0], h0, bg_values, nregion, p['spotfind_nstates'], p['spotfind_maxiterations'],p['spotfind_threshold'],self.priors,self.gui.prefs['spotfind_updatebg']]
 
-			self.setup_todo_prog(i,start,end)
-			with mp.Pool(processes=p['computer_ncpu']) as pool:
-				# out = pool.map_async(run_todo,todo)
-				results = [pool.apply_async(run_todo,args=(tt,),callback=self.receive_prog) for tt in self.todo]
-				for result in results:
-					if self.flag_abort:
-						del pool
-						self.cleanup_progress()
-						return None
-					result.wait()
-					if self.parallel_total > 0:
-					# self.parallel_total%1 == 0:
-						t1 = time.clock()
-						self.todo_prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(self.todo_prog_data[0],self.todo_prog_data[1]+1,self.todo_prog_data[2]+1,self.parallel_total +2, (t1-self.todo_t0)/self.parallel_total))
-						self.todo_prog.setValue(self.parallel_total)
-						self.gui.app.processEvents()
+					self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d/float(total)
 
-			for result in self.todo:
-				if result[0]:
-					probs[result[2]][result[3]] = result[4]
-			self.cleanup_progress()
+				self.setup_todo_prog(i,start,end)
+				with mp.Pool(processes=p['computer_ncpu']) as pool:
+					# out = pool.map_async(run_todo,todo)
+					results = [pool.apply_async(run_todo,args=(tt,),callback=self.receive_prog) for tt in self.todo]
+					for result in results:
+						if self.flag_abort:
+							del pool
+							self.cleanup_progress()
+							return None
+						result.wait()
+						if self.parallel_total > 0:
+						# self.parallel_total%1 == 0:
+							t1 = time.clock()
+							self.todo_prog.setLabelText('Color %d, %d - %d\nCurrent: %d - %.4f sec'%(self.todo_prog_data[0],self.todo_prog_data[1]+1,self.todo_prog_data[2]+1,self.parallel_total +2, (t1-self.todo_t0)/self.parallel_total))
+							self.todo_prog.setValue(self.parallel_total)
+							self.gui.app.processEvents()
 
-				# results = [pool.apply_async(run_todo,args=(tt,self.flag_abort),callback=self.update_todo_prog) for tt in self.todo]
-				# pool.close()
-				# pool.join()
-			# self.todo = [result.get() for result in results]
+				for result in self.todo:
+					if result[0]:
+						probs[result[2]][result[3]] = result[4]
+				self.cleanup_progress()
 
-			# 	results = [p.get() for p in results]
-			# 	pool.close()
-			# out = map(self.run_todo,todo)
-			# for result in self.todo:
-				# if result[0]:
-					# probs[result[2]][result[3]] = result[4]
-			# self.cleanup_progress()
+					# results = [pool.apply_async(run_todo,args=(tt,self.flag_abort),callback=self.update_todo_prog) for tt in self.todo]
+					# pool.close()
+					# pool.join()
+				# self.todo = [result.get() for result in results]
 
-			self.spotprobs[i] = probs
+				# 	results = [p.get() for p in results]
+				# 	pool.close()
+				# out = map(self.run_todo,todo)
+				# for result in self.todo:
+					# if result[0]:
+						# probs[result[2]][result[3]] = result[4]
+				# self.cleanup_progress()
 
+				self.spotprobs[i] = probs
+		except:
+			return
 		self.gui.plot.image.set_array(self.disp_image)
 		self.update_spots()
 
@@ -532,52 +535,55 @@ class dock_spotfind(QWidget):
 
 		if not self.gui.data.flag_movie:
 			return
-		nc = self.gui.data.ncolors
-		self.xys = [None for _ in range(nc)]
-		self.spotprobs = [None for _ in range(nc)]
-		self.gui.plot.clear_collections()
+		try:
+			nc = self.gui.data.ncolors
+			self.xys = [None for _ in range(nc)]
+			self.spotprobs = [None for _ in range(nc)]
+			self.gui.plot.clear_collections()
 
-		start = self.spin_start.value() - 1
-		end = self.spin_end.value() - 1
-		total = end + 1 - start
+			start = self.spin_start.value() - 1
+			end = self.spin_end.value() - 1
+			total = end + 1 - start
 
-		self.priors_check(nc)
-		regions,self.shifts = self.gui.data.regions_shifts()
+			self.priors_check(nc)
+			regions,self.shifts = self.gui.data.regions_shifts()
 
-		p = self.gui.prefs
-		nregion = self.gui.prefs['spotfind_nsearch']**2
-		nxy = (p['spotfind_nsearch']-1)//2
-		nt = 0
+			p = self.gui.prefs
+			nregion = self.gui.prefs['spotfind_nsearch']**2
+			nxy = (p['spotfind_nsearch']-1)//2
+			nt = 0
 
-		self.disp_image = np.zeros_like(self.gui.data.movie[0]).astype('double')
+			self.disp_image = np.zeros_like(self.gui.data.movie[0]).astype('double')
 
-		for i in range(nc):
-			self.gui.set_status('Finding spots - %d'%(i))
-			self.gui.app.processEvents()
+			for i in range(nc):
+				self.gui.set_status('Finding spots - %d'%(i))
+				self.gui.app.processEvents()
 
-			r = regions[i]
-			d = self.gui.docks['background'][1].bg_filter(self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('double').mean(0))
+				r = regions[i]
+				d = self.gui.docks['background'][1].bg_filter(self.gui.data.movie[start:end+1,r[0][0]:r[0][1],r[1][0]:r[1][1]].astype('double').mean(0))
 
-			mmin,mmax = minmax.minmax_map(d[None,:,:],nt,nxy,nxy,p['spotfind_clip_border'])
+				mmin,mmax = minmax.minmax_map(d[None,:,:],nt,nxy,nxy,p['spotfind_clip_border'])
 
-			h0 = d[mmax[0]].astype('double')
-			l0 = d[mmin[0]]
+				h0 = d[mmax[0]].astype('double')
+				l0 = d[mmin[0]]
+
+				if not self.flag_priorsloaded:
+					self.priors[i] = self.estimate_prior_set(d)
+
+				bg_values = nmd.estimate_from_min(l0,nregion)
+
+				out = gmm(h0, self.gui.prefs['spotfind_nstates'], bg_values, nregion, initials=None, maxiters=self.gui.prefs['spotfind_maxiterations'], threshold=self.gui.prefs['spotfind_threshold'], prior_strengths=self.priors[i],update_bg=self.gui.prefs['spotfind_updatebg'])
+
+				prob = np.zeros_like(d)
+				prob[mmax[0]] = (1.-out.r[:,0])
+
+				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
+				self.spotprobs[i] = prob
 
 			if not self.flag_priorsloaded:
-				self.priors[i] = self.estimate_prior_set(d)
-
-			bg_values = nmd.estimate_from_min(l0,nregion)
-
-			out = gmm(h0, self.gui.prefs['spotfind_nstates'], bg_values, nregion, initials=None, maxiters=self.gui.prefs['spotfind_maxiterations'], threshold=self.gui.prefs['spotfind_threshold'], prior_strengths=self.priors[i],update_bg=self.gui.prefs['spotfind_updatebg'])
-
-			prob = np.zeros_like(d)
-			prob[mmax[0]] = (1.-out.r[:,0])
-
-			self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
-			self.spotprobs[i] = prob
-
-		if not self.flag_priorsloaded:
-			self.flag_priorsloaded = True
+				self.flag_priorsloaded = True
+		except:
+			return
 
 		self.gui.plot.image.set_array(self.disp_image)
 		self.gui.docks['contrast'][1].update_image_contrast()
@@ -587,7 +593,9 @@ class dock_spotfind(QWidget):
 
 
 	def threshold_find(self):
-		if self.gui.data.flag_movie:
+		try:
+			if not self.gui.data.flag_movie:
+				return
 			self.xys = [None for _ in range(self.gui.data.ncolors)]
 			self.spotprobs = [None for _ in range(self.gui.data.ncolors)]
 			self.gui.plot.clear_collections()
@@ -633,12 +641,14 @@ class dock_spotfind(QWidget):
 				self.disp_image[r[0][0]:r[0][1],r[1][0]:r[1][1]] += d
 				self.spotprobs[i] = prob
 				# self.spotprobs[i] = prob/d.max()
+		except:
+			return
 
-			self.gui.plot.image.set_array(self.disp_image)
-			self.gui.docks['contrast'][1].change_contrast(-.05,1.05,0.0)
-			self.gui.set_status('Finished')
-			self.gui.app.processEvents()
-			self.update_spots()
+		self.gui.plot.image.set_array(self.disp_image)
+		self.gui.docks['contrast'][1].change_contrast(-.05,1.05,0.0)
+		self.gui.set_status('Finished')
+		self.gui.app.processEvents()
+		self.update_spots()
 
 def calc_unimixmax_map(d,bg,nregion):
 	from ..supporting import normal_minmax_dist as nmd

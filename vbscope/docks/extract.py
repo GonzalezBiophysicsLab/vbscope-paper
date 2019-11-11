@@ -66,7 +66,6 @@ class dock_extract(QWidget):
 		self.traces = None
 		self.bgs=None
 
-
 	def launch_plotter(self):
 		self.gui.plot.clear_collections()
 		self.gui.plot.canvas.draw()
@@ -84,7 +83,11 @@ class dock_extract(QWidget):
 				# positions = positions[:,0,:,:][:,None,:,:]
 			positions = positions.mean(1) ## for now until fret_plot takes time dependent
 
-			self.ui_p = launch_scriptable(self.gui.app)
+			try:
+				self.ui_p.isVisible()
+			except:
+				self.ui_p = launch_scriptable(self.gui.app)
+
 			self.ui_p.load_externaldata(self.traces[:,:,:,0].copy(), positions=positions, info_dict=info_dict)
 			self.ui_p.signal_new_spot_location.connect(self.showspots)
 
