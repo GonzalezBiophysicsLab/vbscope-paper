@@ -253,7 +253,7 @@ class preferences(QWidget):
 
 	def resize_columns(self):
 		w = self.proxy_view.size().width()
-		self.proxy_view.setColumnWidth(0,w/2)
+		self.proxy_view.setColumnWidth(0,int(w//2))
 
 	def get(self,s):
 		x = self.model.findItems(s)
