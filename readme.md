@@ -1,3 +1,5 @@
+**Note**: we are in the process of developing a new package to perform spot-fiding in single-molecule TIRF microscopy data. This code is provided as legacy information.
+
 # Installation
 Should work on best on Unix-based systems (Mac and Linux); Mostly works on Windows
 
